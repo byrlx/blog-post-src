@@ -2,7 +2,9 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 
-#+TITLE: CoordinatorLayout及相关代码阅读笔记在Android Studio中通过邮件"New"创建一个Activity时, 会有一个
+#+TITLE: CoordinatorLayout及相关代码阅读笔记
+
+在Android Studio中通过邮件"New"创建一个Activity时, 会有一个
 Scrolling Activity选项, 本文基于该选项创建的Activity的源码.
 * 基本代码
 使用该方法创建的Activity的代码很简单.

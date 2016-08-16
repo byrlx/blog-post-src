@@ -1,0 +1,16 @@
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+TITLE: 关于这个博客,以及OrgMode
+
+2013发现了Github Page这么个东西, 就建了这个博客. 偶尔写点琐碎文章.
+刚开始使用的工具是标准的 "markdown + jeklly", 学习了markdown的语法,
+也算用的顺手. 
+
+后来, 就遇到了 [[http://orgmode.org/][OrgMode]], 被深深吸引, 遂抛弃了 vim 转投 Emacs 怀抱.
+markdown也不用了, 博客工具也编程了 "orgmode + jeklly", 用orgmode写完然后
+发布成jekyll支持的html格式.
+
+然后, [[http://orgmode.org/worg/][Worg]] 上的多了, 就顺理成章的把 Worg 这一套拿了过来, 跟前面比就是完全把
+jekyll抛弃了, 这样可以更自在的畅游org的世界.

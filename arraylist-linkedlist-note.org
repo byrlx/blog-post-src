@@ -2,7 +2,9 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 
-#+TITLE: ArrayList, LinkedList源码笔记最近工作不忙, 抽空看了一下ArrayList和LinkedList的源码. 下面是一些主要知识点的笔记. 
+#+TITLE: ArrayList, LinkedList源码笔记
+
+最近工作不忙, 抽空看了一下ArrayList和LinkedList的源码. 下面是一些主要知识点的笔记. 
 
 * Iterable
 实现了Iterable的接口类, 可以使用 "for-loop" 形式的语法. 

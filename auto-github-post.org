@@ -1,0 +1,73 @@
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+TITLE: 自动生成github文章名
+
+用github写文章有一个比较麻烦的事,就是文章名称必须是'Year-Month-Day-title.md'的格式,觉得有些麻烦,尤其是忘记日期的情况下.(我想不是我一个人常常忘记今天几号吧)
+
+所以就想写一个程序,能够自动根据title名创建文件名,并加入标准的markdown开头语法内容,同时还能在编辑完成后自动上传到github中.
+
+代码如下:
+#+BEGIN_EXAMPLE
+
+	#!/usr/bin/python
+	
+	import time
+	import sys
+	import os
+	import re
+	
+	# mardown 语法,写在每篇文章的开始,其中LX会被替换为title名
+	raw_format= \
+	'''---
+	layout: default
+	title: LX
+	---
+	
+	\{\{page.title\}\}
+	-----------
+	'''
+	
+	# 保留当前工作目录,并且换到文章目录
+	oldpath = os.getcwd()
+	post_dir = "/home/byrlx/lx-git/byrlx.github.io/_posts/"
+	os.chdir(post_dir)
+	
+	# 获取格式化日期
+	prefix = time.strftime('%Y-%m-%d-')
+	suffix = ".md"
+	
+	if(len(sys.argv) != 2):
+		print "Usage %s post_name" % sys.argv[0]
+		exit(-1)
+	
+	
+	file = prefix + sys.argv[1]
+	title = sys.argv[1]
+	last_three_chr = title[-3:]
+	#判断有没有后缀名,没有则加上,有则将其从title中去掉
+	if last_three_chr != suffix:
+		file = file+suffix
+	else:
+		title = title[0:-3]
+	
+	#将markdown语法中的字符串替换为 title 名
+	file_format = re.sub('LX',title,raw_format)
+	
+	#如果文件不存在,创建文件并写入开始内容
+	if not os.path.isfile(file):
+		lxfile = open(file,"w");
+		lxfile.write(file_format)
+		lxfile.close()
+	
+	#打开文件,编辑,编辑结束后调用git命令上传
+	cmd = "emacs -nw " + file
+	os.system(cmd)
+	os.system("git add -A")
+	os.system("git commit -m \"modify post\"")
+	os.system("git push")
+	
+	os.chdir(oldpath)
+
+#+END_EXAMPLE

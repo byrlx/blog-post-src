@@ -2,7 +2,9 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 
-#+TITLE: Orgmode手册1:文档结构#+BEGIN_VERSE
+#+TITLE: Orgmode手册1:文档结构
+
+#+BEGIN_VERSE
 [BG]: We’ve got a lot more books coming out in the pipeline. The one which is my favourite is the Emacs Org-Mode Reference Manual. Honestly, it’s the greatest Emacs mode in 20 years. 
 
 [CW]: Would you say Org-Mode is one of the more exciting projects in the Free Software world at the moment? 

@@ -2,7 +2,9 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 
-#+TITLE: Emacs gnus 的日常使用* 读取Gmail邮件
+#+TITLE: Emacs gnus 的日常使用
+
+* 读取Gmail邮件
   主要架构: offlineimap同步邮件, gnus读邮件
 ** offlineimap配置
  1. mac安装:  brew install offlineimap

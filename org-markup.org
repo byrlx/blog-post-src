@@ -2,7 +2,9 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 
-#+TITLE: Orgmode手册6:富文本标记(导出前准备)org mode另一个牛X闪闪的功能就是导出功能, 
+#+TITLE: Orgmode手册6:富文本标记(导出前准备)
+
+org mode另一个牛X闪闪的功能就是导出功能, 
 可以将org文件导出为计算机领域主流的文件格式, 例如HTML/PDF/LaTex/Markdown等等, 
 为了支持这些文本丰富的格式要求, org mode定义了一系列的标记, \\
 这篇文章就先来看一下这些标记规则.

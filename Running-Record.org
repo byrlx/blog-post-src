@@ -2,7 +2,8 @@
 #+AUTHOR: Luis404
 #+EMAIL: luisxu404@gmail.com
 
-#+TITLE: 跑步日志* 关于跑步
+#+TITLE: 跑步日志
+* 关于跑步
 爱好不多, 跑步算得上一个. 虽然越跑越胖, 但仍然断断续续坚持着, 无论如何, 对身体总是好的.
 
 跑过几次[[http://xuzhengchao.com/life/%E7%AC%AC%E4%BA%8C%E6%AC%A1%E5%8C%97%E4%BA%AC%E9%A9%AC%E6%8B%89%E6%9D%BE.html][马拉松]], 成绩都烂的很, 后半程总是以走为主. 不过心态略好, 仍然一年年的跑. 
