@@ -1,0 +1,68 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: 求解函数 f(x)=0
+本文是 [[http://book.douban.com/subject/1148282/][SICP]] 的第一章的一段阅读笔记, 旨在求解函数 *f(x)=0* 在一段
+区间内的解, 同时更深入了解一下Lisp "过程同时也为数据" 的精髓.
+
+* 高阶抽象lxsearch
+在开始讲解代码之前, 需要先讲一下程序对方程 f(x) 做一些限制,在下面的
+程序中, 需要传入区间参数(a, b), 方程f(x)在该区间上必须是连续函数, 
+且 f(a)<0, f(b)>0. 这样在该区间上必存在 x 使得 *f(x)=0*; 
+
+基于上面的限制, 使用"类似折半查找"的方法来解方程, 首先查找去该区间的
+中间值 mid=(a+b)/2, 判断 f(mid)的值, 如果 f(mid)>0, 在解在区间(a,mid),
+否则解在区间 (mid, b), 根据此规则递归求解.
+
+先看一下函数的源码, 这里定义了函数lxsearch, 该函数接受三个参数: 
++ f 即函数 f(x)
++ a 为一个参数使得 f(a) < 0
++ b 为参数使得 f(b) > 0
+下面为该函数的流程(*注*:代码中lxaverage和lxclose-enough等基本函数的
+定义未给出):
+1. 定义局部变量mid为a和b的平均数
+2. 判断a和b的差值是否已经足够接近, 如果是, 返回mid
+3. 如果差值还不接近, 计算f(mid)的值
+   1. 如果f(mid)>0, 递归调用lxsearch计算区间(a, mid)
+   2. 否则, 如果f(mid)<0, 递归调用lxsearch计算区间(mid, b)
+   3. 如果f(mid)=0, 直接返回mid.
+#+BEGIN_EXAMPLE
+(defun lxsearch (f a b)
+  (let ((mid (lxaverage a b)))
+    (if (lxclose-enough? a b)
+	(lxformat-float mid)
+      (let ((test-value (funcall f mid)))
+	(cond ((> test-value 0) (lxsearch f a mid)) 
+	      ((< test-value 0) (lxsearch f mid b))
+	      (t (lxformat-float mid)))))))
+#+END_EXAMPLE  
+
+这里需要说明的是lxsearch是一个很抽象的定义, 这里的f可以为我们在学校里
+学习过的任意函数, 只要它满足前面中提到的限制即可. 下面通过几个实例来
+看一下lxsearch的使用.
+
+* lxsearch使用实例
+** 计算方程 x^2 - 52x + 100 = 0 在区间 (10, 100)上的解
+在计算之前, 我们先用代码写出该方程:
+#+BEGIN_EXAMPLE
+(defun f (x)
+  (+ (- (* x x)
+	(* 52 x))
+     100))
+#+END_EXAMPLE
+
+然后将函数f作为参数传给lxsearch, 就可以得到解为50
+#+BEGIN_EXAMPLE
+(lxsearch 'f 10 100)
+#+END_EXAMPLE
+** 方程 x^3 -100x = 0, 区间(1,11)
+前面可以讲过, lxsearch是一个高阶的抽象函数, 我们可以将满足条件的
+任意方程传给他来求解函数的解, 这里通过传入一个lambda表达式来
+展示lambda表达式如何作为函数参数.
+#+BEGIN_EXAMPLE
+(lxsearch
+ '(lambda (x) (- (lxcube x) (* 100 x)))
+ 1
+ 11)
+#+END_EXAMPLE

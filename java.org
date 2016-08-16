@@ -1,0 +1,40 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: Java琐碎笔记
+* FutureTask
+1. FutureTask的状态使用了 "volatile" 修饰, 因为task只在一个线程
+   上运行, 所以只有这个线程才会修改状态. 所以可以用volatile.
+2. 只要state!=NEW, idDone()函数即返回true.
+3. 
+* ThreadPoolExecutor
+1. state和worker用一个int表示,mask 29位, 对应的bit值为.
+   |            |        |
+   |------------+--------|
+   | RUNNING    | -1<<29 |
+   | SHUTTING   | 0<<29  |
+   | STOP       | 1<<29  |
+   | TYDYING    | 2<<29  |
+   | TERMINATED | 3<<29  |
+2. 通过submit()函数添加一个Runnable或Callable, 该函数内部会
+   调用execute()函数执行. 该函数的流程:
+   1. 判断当前的worker数量是否小于coolPoolSize, 如果是.
+      1. 尝试调用addWorker()函数创建一个新的worker(新worker在构造
+	 函数中会创建一个新的线程变量). 该函数流程:
+	 1. 如果当前状态为STOP/TIDYING/TERMINATED, 则添加失败.
+	 2. 如果当前状态是RUNNING.
+	    1. 参数为Null, 添加失败.
+	    2. 工作队列为空, 添加失败.
+	 3. 如果1/2都通过, 判断当前的worker数是否已到上线(2^29 - 1).
+	    到了则添加失败.
+	 4. 检查worker数量是否已经到了设置的最大值. 是则添加失败.
+	 5. 增加workerCount的值, 如果成功则跳出循环. 如果不成功, 重新
+	    检测state,如果不同则进入大循环. 如果state没改, 则说明workerCount
+	    在添加时发生了改动,重新走一遍循环检查workCount的值.
+	 6. 走到这儿说明可以创建一个worker, 则创建一个worker实例.
+	    将其添加到worker set中. 这个过程需要拿住锁.
+	 7. 执行新worker中的线程.
+	 8. 如果新worker添加过程失败. 则调用addWorkerFailed()函数
+	    将worker从set中删除, 并调用tryTerminate()函数.
+3. 

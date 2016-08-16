@@ -1,0 +1,188 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: The Roots of Lisp阅读笔记
+#+BEGIN_VERSE
+Lisp is worth learning for the profound enlightenment experience you will have when you finally get it; that experience will make you a better programmer for the rest of your days, even if you never actually use Lisp itself a lot.
+
+- Eric Raymond
+#+END_VERSE
+
+最近在阅读Paul Graham的Lisp相关系列文章,并做了一些笔记, 
+原文章在这里可以找到: [[http://www.paulgraham.com/lisp.html]].
+
+本文为 [[http://www.paulgraham.com/rootsoflisp.html][The Roots of Lisp]] 的阅读笔记, 在这篇文章里, 
+Paul Graham通过Common Lisp代码来讲解John McCarthy的Lisp[[http://www-formal.stanford.edu/jmc/recursive.ps][论文]],
+通过对论文循序渐进的阐述, 来展现Lisp的魅力.
+
+笔者对Common Lisp的语法并不熟悉, 故使用Elisp实验了本文中的
+所有Common Lisp代码, Elisp跟Common Lisp的差异部分会标注出来.
+
+* 1. 基本概念和运算符
+** 1.1 基本概念
+开始作者先定义了几个基本的概念:
++ atom: atom为一系列的字符, 例如foo.
++ 表达式(expression): 表达式或者为一个atom, 或者为零个或多个
+  表达式的集合, 多个表达式之间用空格分开, 并用括号包住.
+  (这里使用了递归定义, 一个或多个表达式被称为list). 
+  就像数学表达式 "1+1=2"一样, 这里定义的表达式同样可以表示一个值. 
+** 1.2 基本操作
+首先对list表达式进行了定义:
+#+BEGIN_QUOTE
+即如果一个表达式为list(用括号包住),
+那么把该list的第一个元素作为运算符, 剩下的元素作为运算符参数.
+#+END_QUOTE
+
+基于上面的规则, 定义了最基本的7个操作符:
++ quote:
+  当第一个元素为quote时, 表达式的值为第二个参数. 即(quote x) = x.
+  quote只能接受一个参数.
++ atom: 
+  该操作符用来判断其参数是否为atom, 如果是返回"t"(表示真), 
+  否则返回"()"(表示假,在elisp中用"nil"表示假)
++ eq: 
+  判断两个参数是否相等. 相等的条件为两个参数为同一个atom或都为空列表.
++ car: 
+  返回参数的第一个元素, 参数必须为list
++ cdr: 
+  返回参数第一个元素后的元素, 参数必须为list.
++ cons:
+  接受两个参数, 第二个参数为list, 返回一个第一个参数和第二个参数合成的list.
+  (注: elisp上第二个参数也可以为atom).
++ cond:
+  cond可以接受多个参数, 形式为(cond (p1 e1) ... (pn en)), 
+  每个参数为一个list, cond会依次解析每个参数的
+  第一个元素, 如果其值为true, 然后该list的表达式返回对应的e表达式的值.
+
+通过上述定义可以看到, 在Lisp中代码和数据的表示方式是一样的, 都是
+通过list来表示, 那么如何对代码和数据进行区分呢, 答案就是quote.
+由于quote返回其参数本身,所以用quote修饰的即可看做数据,否则即为代码
+(即不用quote修饰的list, 其第一个元素为操作符). 例如:
+#+BEGIN_EXAMPLE
+(atom '(atom e)) => 值为false, 参数为一个list
+(atom (atom e))  => 值为true, 参数会被认为是代码, 所以先解析参数表达式.
+#+END_EXAMPLE 
+
+* 2. 函数定义
+这一节首先给出了函数的lambda定义, 其中p1-pn为atom参数, e为表达式.
+如果一个表达式的第一个元素为lambda表达式, 则表示为函数调用.
+a1-an会替换表达式中的p1-pn, 然后计算表达式的结果并返回.
+#+BEGIN_EXAMPLE
+;;函数定义
+(lambda (p1...pn) e)
+
+;;函数调用
+((lambda (p1...pn) e) a1...an)
+#+END_EXAMPLE
+
+根据上面的定义, 可以归纳出更一般的函数调用:
+*如果表达式e的第一个元素是atom类型f, 且f不是[[1. 基本概念和运算符][基本概念和运算符]]中定义的*
+*基本运算符, 那么该元素f是一个函数,其形式为 (lambda (p1...pn) e).*
+
+基于上面的定义, 同样可以归纳出这个结论: 函数参数也可以为函数,
+例如下面的表达式, 参数f也是一个lambda函数. 
+注: 作者用的是common lisp版, 在elisp上需要使用funcall
+函数, 见示例:
+#+BEGIN_EXAMPLE
+((lambda (f) (f '(b c))) '(lambda (x) (cons 'a x))) => common lisp
+((lambda (f) (funcall f '(b c))) '(lambda (x) (cons 'a x))) => elisp
+#+END_EXAMPLE
+
+该章节还解释了递归函数. 通过给函数命名, 可以实现函数的递归调用, 这个
+跟基本的计算机理论中递归函数的定义是一样的.
+* 3. 基本函数
+前两节的内容给出了函数和基本操作符的一般形式, 
+因此第三节定义了一些使用率非常频繁的基本函数, 
+这些函数是由第一节定义了基本操作符组成的.
+** 3.1 cXr函数簇
+cXr不是一个函数, 而是一系列函数的缩写. X由
+零个或多个a或b组成, 代表car和cdr.
+例如 (cadr e) 表示 (car (cdr e)), 返回e的第二个元素.
+(cadadr e) 表示 (car (cdr (car (cdr e)))).
+** 3.2 list函数
+还函数用于生成list, 其定义为 (list e1..en) = (cons e1 ..(cons en '())).
+例如(list 'a 'b 'c) = (cons 'a (cons 'b (cons 'c '())))
+** 3.3 其他函数
++ null. 判断参数是否为空list, 是返回true.
++ and. 判断两个参数是否都为true.
++ not. 判断参数是否返回false.
++ append. 连接两个参数, 参数必须为list.
++ pair. 接受两个长度相等的list参数, 并交叉拼接在一个
+  #+BEGIN_EXAMPLE
+  (pair '(a b c) '(x y z)) ==> ((x a) (y b) (z c))
+  #+END_EXAMPLE
++ assoc 接受一个atom参数和pair生成的list参数.并查找
+  list中第一个元素为atom的元素.
+  #+BEGIN_EXAMPLE 
+  (assoc 'x ((x a) (y b))) ==> a
+  #+END_EXAMPLE
+* 4. eval大杀器
+通过前三节的内容, 已经可以写出常用的lisp程序了, 在这一节作者
+给出了eval的实现, eval可以作为程序解释器了执行传入的参数. 
+可以看下Emacs文档中对eval的定义.
+从上面的引用可以看出eval的一个很强大的功能, 运行时插入代码, 我们可以
+在程序中生成另一个程序, 然后通过eval来这行这个程序, 这也是Lisp的强大
+功能之一.
+#+BEGIN_QUOTE
+Most often, forms are evaluated automatically, 
+by virtue of their occurrence in a program being run. 
+On rare occasions, you may need to write code that evaluates 
+a form that is computed at run time, such as after reading 
+a form from text being edited or getting one from a property list. 
+On these occasions, use the eval function. 
+#+END_QUOTE  
+
+** 4.1 eval实现
+作者首先给出了eval的实现代码. eval函数接受两个参数:a, e. 
+参数e为一个list, 代表需要被执行的表达式. 
+参数a为pair生成的list, 代表参数1的"执行上下文".
+
+file:../../../../public/img/eval.png
+
+代码主体由主要四个cond条件组成, 代表e的四种表现形式:
+1. e为atom, 则调用assoc查找a中是否有相应的e对, 
+   即查找环境变量e的值.
+2. (car e)为atom, 则判断(car e)的值:
+   1. 为quote: 表示e为(quote e1), 直接返回(cadr e).即第二个元素.
+   2. atom: 说明这是个atom表达式, 则将其转化为(atom (eval (cadr e) a))的
+      形式, 即继续递归解析atom的参数.
+   3. eq: eq表达式, 递归解析eq的两个参数.
+   4. car/cdr/cons: 同前面一样, 都转化为相应的基本运算符表达式.并
+      递归对参数进行解析.
+   5. cond: 代表cond表达式, 调用函数自定义函数([[4.2 evcon][evcon]] (cdr e) a)
+   6. 如果上述都不满足, 即表示表达式的第一个元素不是基本的操作符, 
+      那么就去"上下文"a中查找(car e)的值, 并尝试继续解析.
+3. 如果(caar e)的值为lambda, 标志这是一个函数, 
+   会先执行(caddar e)取出函数的执行体, 然后将lambda的参数
+   生成为pair化然后添加到上下文a中. 这里用到了自定义函数
+   [[4.3 evlis][evlis]].
+4. (caar e)为label, 代表一个命名函数, 会先通过(caddar e)将
+   lambda函数主体解析出来, 再将lambda的形参和实参添加到
+   上下文中, 最后再递归解析lambda表达式(第三步).
+** 4.2 evcon
+evcon是自定义函数, 在解析cond表达式中使用, 其代码实现如下.
+首先会解析表达式的第一个list的第一个元素, 如果为真, 则
+执行其第二个元素. 否则继续递归解析剩下的元素.
+#+BEGIN_EXAMPLE
+(defun evcon (c a)
+  (cond ((eval (caar c) a)
+         (eval (cadar c) a))
+         ('t (evcon (cdr c) a))))
+#+END_EXAMPLE
+** 4.3 evlis
+在本文中,该函数接受两个参数: m是lambda函数的实参, a是上下文.
+首先判断m是否为null,如果是返回nil. 依次调用eval解析实参,
+并将其生成一个cons.
+#+BEGIN_EXAMPLE
+(defun evlis (m a)
+  (cond ((null m) '())
+        ('t (cons (eval (car m) a)
+                  (evlis (cdr m) a)))))
+#+END_EXAMPLE
+* 关于eval
+本文通过几个有限的操作符, 定义出了eval这个函数, 通过eval, 我们可以
+写出任意的函数, 甚至可以在运行时将生成的数据作为代码来执行.
+
+Paul Graham说理解了McCarthy的eval, 你就理解了Lisp. 
+嗯, 我还在尝试.

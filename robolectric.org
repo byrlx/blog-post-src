@@ -1,0 +1,97 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: 使用开源项目Robolectric测试Android代码
+(持续更新) 
+
+该项目官网 [[http://robolectric.org/]]. github地址: [[https://github.com/robolectric/robolectric]].
+
+该文章基于Robolectric3.0
+
+* 项目介绍
+Robolectric是一个开源的单元测试框架, 它可以实现直接在JVM里跑Android相关的测试(Activity/Service),
+避免Android自家出品的 *古老* 的必须要在虚拟机上跑的测试. (注: 目前来看, Android的后续版本对测试的支持越来越好.....)
+
+官网上给出了Robolectric的几点特性:
+1. 模拟SDK, 资源和native方法:
+   总的来说, robolectric可以模拟虚拟机环境, 使你可以在
+   JVM就可以实现大部分测试. 
+2. 摆脱虚拟机的束缚.
+   省去编译/打包/安装流程, 加快测试和重构速度.
+3. 不需要Mocking框架
+   
+* 简单的测试项目
+** 加入到项目工程
+添加robolectric的依赖, 由于要使用Junit和assert相关的函数,
+所以把他们的依赖也一起加上.
+#+BEGIN_SRC xml
+    testCompile 'junit:junit:4.12'
+    testCompile "org.assertj:assertj-core:1.7.0"
+    testCompile 'org.robolectric:robolectric:3.0'
+#+END_SRC
+
+加入完成后, 把Build Variants的 "Test Artifact" 设置为 *Unit Tests*.
+** 编写简单测试代码
+在src目录下创建test目录, 然后在test目录下创建与main相同的package目录. 
+创建TestMainActivity.class类, 来测试MainActivity.
+在类名的前面加入以下两个注解:
+#+BEGIN_SRC java
+   @RunWith(RobolectricGradleTestRunner.class)
+   @Config(constants = BuildConfig.class)
+   public class TestMainActivity {
+#+END_SRC
+第二个注解必须要将constants设置为编译系统生成的BuildConfig文件.
+
+可以在类里面有 @Test 注解编写测试方法.例如:
+#+BEGIN_SRC  java
+@RunWith(RobolectricGradleTestRunner.class)
+@Config(constants = BuildConfig.class)
+public class TestMainActivity {
+    @Test
+    public void init(){
+        ActivityController controller = Robolectric.buildActivity(MainActivity.class).create().start();
+        MainActivity activity = (MainActivity)controller.get();
+
+        controller.resume();
+
+        FloatingActionButton button = (FloatingActionButton)activity.findViewById(R.id.fab);
+        button.performClick();
+
+        assertTrue(button.getVisibility() == View.GONE);
+    }
+}
+#+END_SRC
+
+最后可以右键该类点击运行或通过gradle命令来实现跑测试.
+* Robolectric文档
+** 模拟Activity的生命周期
+通过ActivityController这个API可以实现对Activity生命周期
+的控制. 通过以下API可以获取一个ActivityController实例化.
+#+BEGIN_SRC java
+ActivityController controller = Robolectric.buildActivity(MyAwesomeActivity.class).create().start();
+#+END_SRC
+
+controller创建出来之后, 就可以调用start(), pause(), stop()
+或者destroy()等函数来模仿Activity流程, 例如下面的代码就是
+一个完整的activity流程:
+#+BEGIN_SRC  java
+Activity activity = Robolectric.buildActivity(MyAwesomeActivity.class).create().start().resume().visible().get();
+#+END_SRC
+
+注: visible()函数用来模拟activity attach到一个窗口的过程, 如果需要使用activity中
+view相关的函数, 必须要先调用visible().
+
+** 用Intent 或 savedInstanceState启动/恢复 Activity
+#+BEGIN_SRC java
+//intent
+Intent intent = new Intent(Intent.ACTION_VIEW);
+Activity activity = Robolectric.buildActivity(MyAwesomeActivity.class).withIntent(intent).create().get();
+
+/bundle
+Bundle savedInstanceState = new Bundle();
+Activity activity = Robolectric.buildActivity(MyAwesomeActivity.class)
+    .create()
+    .restoreInstanceState(savedInstanceState)
+    .get();
+#+END_SRC

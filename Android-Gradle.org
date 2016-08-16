@@ -1,0 +1,691 @@
+#+SEQ_TODO: TODO(t!) DONE(d@/!)
+#+OPTIONS: toc:t H:3
+
+#+TITLE: Android Gradle Plugin User Guide 文档翻译
+(持续更新)
+
+原文地址 [[http://tools.android.com/tech-docs/new-build-system/user-guide#TOC-Introduction]].
+
+* 介绍
+本文档针对>=0.9版本的gradle插件,之前的插件不兼容.
+** Android新编译系统的目标
+包括:
++ 代码和资源重用更方便.
++ 更容易生成应用的多个"形式", 例如多个APK文件或多个flavor.
++ 更容易配置/扩展/定制编译过程.
++ 更好的IDE整合.
+
+** 为什么选择Gradle?
+Gradle是个高级的编译系统,能够通过插件的方式建立客制化的编译逻辑.
+Gradle的一些迷人特质包括:
++ 使用DSL(Domain Specific Language)描述和操作编译逻辑.
++ 编译文件基于Groovy,通过混合DSL元素声明和代码操控来提供客制化逻辑.
++ 内置Maven/Ivy依赖.
++ 灵活性很高.
++ 插件可以提供自定义的DSL和API.
++ 提供了很好的IDE整合接口.
+* 要求
+1. Gradle1.10以上,插件0.11.1.
+2. Android SDK 19.
+* 基础配置
+在工程跟目录下定义了 build.gradle 描述工程的编译信息.
+** 简单配置文件
+1. 对于一个简单的java工程,需要在build.gradle里加入
+    #+BEGIN_EXAMPLE 
+     apply plugin: 'java'
+    #+END_EXAMPLE
+   上述代码表示使用java插件,该插件随着Gradle包发布.可以使用该插件来
+   编译和测试java应用程序.
+2. 对于一个简单的Android工程,build.gradle的内容一般为
+   (该文件一般位于每个模块的目录下面):
+   #+BEGIN_EXAMPLE 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:0.11.1'
+    }
+}
+
+apply plugin: 'android'
+
+android {
+    compileSdkVersion 19
+    buildToolsVersion "19.0.0"
+}
+   #+END_EXAMPLE
+   上述代码描述了Android编译的三个方面:
+   + buildscript{...}: 配置编译驱动代码.
+     repositories描述了使用的仓库类型.这里使用MavenCentral()仓库.同时
+     dependencies描述了编译需要使用的依赖.这里使用0.11.1版本的build gradle.
+     注: 这里只是定义了编译相关的代码,与项目无关.项目需要定义自己的仓库和
+     依赖.
+   + apply plugin: 'android'. 定义使用android插件.
+   + <<andriod>>{...}段描述了Android DSL的入口.
+     默认情况下只需要定义编译目标和编译工具版本.即 compileSdkVersion 和
+     buildtoolsVersion字段.
+     + 注:这里只能定义 /*android*/ plugin,如果使用 /*java*/ plugin会报错.
+     + 注:对于编译使用的sdk目录,可以在工程目录下定义 *local.properties* 文件
+       并在其中配置 *sdk.dir*.
+       或者也可以定义全局变量 ANDROID_HOME.
+** 工程结构
+*** 默认目录结构
+上节描述的配置文件需要一个默认的目录结构.但是,gradle遵循
+约定优于配置(convention over configuration)的概念,并在
+需要的时候提供配置默认值.
+source sets一般有两个目录:源码目录和测试目录.他们的位置:
+   + src/main/
+   + src/androidTest/
+每个目录都如果下的一些子目录:
+   + java/
+   + resources/ (这两个字段对Java和Android插件都适用)
+对于Android插件,还有一些额外的目录和文件:
+   + AndroidManifest.xml
+   + res/
+   + assets/
+   + aidl/
+   + rs/
+   + jni/
+注: src/androidTest/AndroidManifest.xml并不需要,AS会自动创建.
+     
+*** 配置目录结构
+1. java工程
+   gradle同时支持目录配置.例如对于一个java工程,可以使用如下配置:
+   #+BEGIN_EXAMPLE 
+sourceSets {
+    main {
+        java {
+            srcDir 'src/java'
+        }
+        resources {
+            srcDir 'src/resources'
+        }
+    }
+}
+   #+END_EXAMPLE
+   注: srcDir会自动将目录添加到已存的"源码"列表中.
+
+   可以使用 *srcDirs* 关键字来替换默认的source目录.该字段后面跟着
+   路径数组,例如:
+   #+BEGIN_EXAMPLE 
+sourceSets {
+    main.java.srcDirs = ['src/java']
+    main.resources.srcDirs = ['src/resources']
+}
+   #+END_EXAMPLE
+2. Android工程
+   android插件使用的语法跟上一节相同.但是会放在[[andriod]]字段中.
+   下面是一段实例代码,用于映射老的android架构到gradle中:
+   #+BEGIN_EXAMPLE 
+android {
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            resources.srcDirs = ['src']
+            aidl.srcDirs = ['src']
+            renderscript.srcDirs = ['src']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+        }
+
+        androidTest.setRoot('tests')
+    }
+}
+   #+END_EXAMPLE
+   由于老架构将所有的源文件放到一个目录,所以这里需要设置所有组件的
+   路径为"src".
+   setRoot()函数可以将源码目录移动到新目录.例如这里将 src/androidTest/* 
+   移动到 test/*.
+** 编译任务
+*** 一般任务
+使用插件会自动生成一个可以运行的任务集.一般的任务集包括:
++ assemble
+  生成工程的输出 outputs.
++ check
+  执行所有的检查.
++ build
+  同时执行assemble和check.
++ clean 
+  清理工程的输出.
+assemble/check/build本身并不做什么实际工作.他们是一些"钩子"
+任务,可以添加"真实"的任务来完成具体工作.这种特点可以实现对于
+不同类型的工程(java/android/...), 可以调用相同的任务.
+例如:使用 *findbugs* 插件会创建一个新任务,并将 *check* 任务依赖
+到新任务上,这样,当去调用check任务是会触发新任务.
+
+在命令行: 可以使用下述命令运行 *高层次* 的任务: gradle task.
+*gradlw tasks -all* 可以显示所有的任务及其依赖.
+*** TODO Java工程任务
+*** Android工程任务
+Android工程的任务一般包括:
++ assemble:  生成输出
++ check: 检查
++ connectedCheck: 执行检查动作,需要一个可以连接的设备或模拟器.该任务会同时
+  在机器上运行.
++ deviceCheck: 使用API连接远程机器.
++ build: 同时执行assemble和check.
++ clean: 清理输出.
+
+每个Android工程,至少包含两个输出: debug APK和release APK. 这两种类型的APK分别
+有对应的"钩子"任务可以分别编译:
++ assemble
+  + assembleDebug
+  + assembleRelease
+执行assemble任务会同时运行这两个子任务生成两个APK.
+
+提示: Gradle支持"驼峰"格式的任务缩写.所有 "gradle assembleRelease"可以简写为
+"gradle aR"(必须保证只有一个任务可以简写成这样).
+
+对于check类型的任务,他们有自己的依赖:
++ check
+  + lint
++ connectedCheck
+  + connectedAndroidTest
+  + connectedUiAutomatorTest
+
+同时,gradle插件对于所有的编译类型(debug/release/test),都创建了install/uninstall
+任务.
+** 基础的编译客制化
+Android插件提供了丰富的DSL语言来实现编译系统的客制化.
+*** Manifest项
+使用DSL,可以配置如下的manifest项:
++ minSdkVersion
++ targetSdkVersion
++ versionCode
++ versionName
++ applicationId
++ 测试程序包名
++ 测试runner 方法
+例如: 
+#+BEGIN_EXAMPLE 
+android {
+    compileSdkVersion 19
+    buildToolsVersion "19.0.0"
+
+    defaultConfig {
+        versionCode 12
+        versionName "2.0"
+        minSdkVersion 16
+        targetSdkVersion 16
+    }
+}
+#+END_EXAMPLE
+上述所有的配置都放在 *android* 段的 *defaultConfig* 段中.
+
+之前的android plugin版本,使用 *packageName* 字段来替代 manifest文件
+中的 'packageName'字段.
+从0.11.0开始,通过在build.gradle文件中定义 "applicationId"来实现上述替换.
+以消除应用程序的包名和java包之间的混淆.
+
+在build文件中进行上述配置的一个优势是灵活性高.例如,可以在其他文件或build文件
+的其他地方定义一个函数并在defaultConfig中调用他.
+#+BEGIN_EXAMPLE 
+def computeVersionName() {
+    ...
+}
+
+android {
+    compileSdkVersion 19
+    buildToolsVersion "19.0.0"
+
+    defaultConfig {
+        versionCode 12
+        versionName computeVersionName()
+        minSdkVersion 16
+        targetSdkVersion 16
+    }
+}
+#+END_EXAMPLE
+
+如果没有在配置文件中设置某个属性,会使用默认值.如果默认值是null(一些property的
+默认值是null),则在编译过程中会使用manifest文件中定义的值.
+*** 编译类型
+Android插件默认会编译两个类型的应用程序:debug和release版本.
+debug版本使用一个"已知"的name/password来签名应用(这样在编译过程
+不会有提示).
+
+可以使用<<BuildType>>标签来对编译类型做配置,默认有debug和release段.
+同时可以创建其他的编译类型.
+
+例如下面有关buildType的DSL配置：
+#+BEGIN_EXAMPLE 
+android {
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+        }
+
+        jnidebug.initWith(buildTypes.debug)
+        jnidebug {
+            packageNameSuffix ".jnidebug"
+            jniDebuggable true
+        }
+    }
+}
+#+END_EXAMPLE
+上述配置实现了以下功能:
++ 对默认的 debug 类型进行了定制:
+  + 将包名设置为 "applicationId.debug"(添加 debug 后缀).这样可以实现在一台机器上
+    同时安装 debug 包和 release 包.
++ 创建新编译类型 jnidebug, 该类型复制了 debug 类型.
++ 客制化 jnidebug 类型,将后缀改为 "jnidebug",并开启 jni 调试功能.
+从上面是示例可以看到,创建一个新的编译类型就是在"buildType"下面创建新的元素.可以通过
+调用initWith()复制,也可以用在后面跟大括号进行配置.
+可以配置的属性包括:
+TBD: 从原地址截图放在这里.
+
+除了上述属性,还可以在编译代码或资源的时候使用编译类型,对于每个编译类型,默认都会在
+src目录下创建一个同名目录(所以自定义编译类型不能为main或androidTest).
+
+也可以使用如下代码重定向编译类型的sourceSets.
+#+BEGIN_EXAMPLE 
+android {
+    sourceSets.jnidebug.setRoot('foo/jnidebug')
+}
+#+END_EXAMPLE
+
+同时,对于每个新的编译类型,都会创建一个相应的 assemble<BuildTypeName> 的任务.
+所以上述示例会创建一个名为assembleJnidebug的任务.同时该任务也向assembleDebug和
+assembleRelease一样,成为assemble任务的依赖.
+注: 同样可以使用简写 "gradle aJ"来运行该任务.
+
+关于编译类型的适用场景:
++ debug版本加入一些"权限", release版本去掉.
++ 自定义调试
++ 不同的模式使用不同的资源(例如在签名认证时使用不同的资源值).
+
+每个子目录下的代码/资源按照以下原则使用:
++ manifest文件跟app的manifest合并.
++ 代码作为另外一个源码目录.
++ 资源目录覆盖主目录中的相同值.
+
+*** 签名配置
+对一个应用做签名需要以下东西:
++ 一个keystore
++ 一个keystore 密码
++ 一个key别名
++ 一个key密码
++ 存储类型
+上述内容组成了签名配置,可以在buildType中使用"signingConfig"来引用.
+
+默认情况下,会在$HOME/.android/目录下创建一个debug.keystore文件.该文件属于默认的
+debug配置,即有一个已知的"keystore密码+别名+密码". "debug编译类型"默认使用这个
+"debug签名配置".
+
+Android插件支持签名配置的创建和客制化.通过<<signingConfigs>>来实现.例如:
+#+BEGIN_EXAMPLE 
+android {
+    signingConfigs {
+        debug {
+            storeFile file("debug.keystore")
+        }
+
+        myConfig {
+            storeFile file("other.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+
+    buildTypes {
+        foo {
+            debuggable true
+            jniDebuggable true
+            signingConfig signingConfigs.myConfig
+        }
+    }
+}
+#+END_EXAMPLE
+上述代码修改了debug编译类型的keystore文件位置.并创建了一个新的签名配置和一个使用
+该签名配置的新编译类型.
+
+注:一般情况下,keystore文件存于工程的根目录下,但是也可以使用绝对路径(不推荐,可能会由于
+操作系统的不同而导致问题.但是默认的debug编译类型除外).
+
+注:如果工程使用版本控制系统.尽量不要将密码存在文件里.可以参考stackoverflow上的这个帖子.
+[[http://stackoverflow.com/questions/18328730/how-to-create-a-release-signed-apk-file-using-gradle]].
+
+*** 运行ProGuard混淆
+Gradle插件支持4.10版本的ProGuard. ProGuard插件默认是启用的.如果在"编译类型"中设置了
+*minifyEnable* 属性.会自动创建相关任务.例如在编译类型和flavor中使用ProGuard:
+#+BEGIN_EXAMPLE 
+android {
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFile getDefaultProguardFile('proguard-android.txt')
+        }
+    }
+
+    productFlavors {
+        flavor1 {
+        }
+        flavor2 {
+            proguardFile 'some-other-rules.txt'
+        }
+    }
+}
+#+END_EXAMPLE
+默认有两个规则文件:
++ proguard-android.txt
++ proguard-android-optimize.txt
+它们位于SDK中,可以通过getDefaultProguardFile()函数返回文件路径.除了启用优化功能外,
+这两个文件的内容是一样的.
+
+*** 压缩资源
+可以在编译期间自动移除没用的资源.具体可以参考[[http://tools.android.com/tech-docs/new-build-system/resource-shrinking]].
+
+* 依赖,库以及多工程设置
+一个gradle工程可能会依赖其他的组件,这些组件可以是库或者其他gradle工程.
+** 依赖二进制包
+*** 本地包
+当需要使用外部的jar包时,需要在<<dependencies>>段中添加<<compile>>配置(dependencies是标准的DSL元素,不属于android段).
+#+BEGIN_EXAMPLE 
+dependencies {
+    compile files('libs/foo.jar')
+}
+
+android {
+    ...
+}
+#+END_EXAMPLE
+*compile* 配置一般用于配置主工程.这些jar包会被添加到编译路径并包入最后的APK中.
+其他可以添加的依赖包括:
++ compile: 主工程
++ androidTestCompile: 测试工程
++ debugCompile: debug编译类型
++ releaseCompile: release编译类型
+每创建一个新的类型,都会自动创建一个类似"<buildtype>Compile"的配置.
+如果不同的编译类型需要不同的库依赖(或依赖库的不同版本),上述配置会很有用.
+*** 远程组件
+Gradle支持从Maven和Ivy库中下载依赖库.
+首先将仓库添加到 *repositories* 段中.然后在 *dependencies* 中添加依赖.
+#+BEGIN_EXAMPLE 
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'com.google.guava:guava:11.0.2'
+}
+#+END_EXAMPLE
+注: Gradle支持本地和远端仓库.
+注: 如果依赖自身也有依赖的话,都会被下载.
+具体使用可以参考[[http://gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html]]
+和 [[http://gradle.org/docs/current/dsl/org.gradle.api.artifacts.dsl.DependencyHandler.html]].
+
+** 多工程设置
+可以通过多工程设置来使一个gradle工程依赖其他的gradle工程.一般的多工程设置
+是通过在项目根目录下添加子目录来实现的.例如:
+#+BEGIN_EXAMPLE 
+MyProject/
+ + app/
+ + libraries/
+    + lib1/
+    + lib2/
+#+END_EXAMPLE
+上述代码设置了三个工程:
++ :app
++ :libraries:lib1
++ :libraries:lib2
+每个工程都有自己的"build.gradle"文件.另外,在根目录下需要定义"settings.gradle"
+文件来声明这些工程.所以最后架构变为:
++ RootProject
+  - settings.gradle
+  + app/
+    - build.gradle
+  + libraries
+    + lib1/
+      - build.gradle
+    + lib2/
+      - build.gradle
+
+"settings.gradle"文件的内容为:"include ':app', ':libraries:lib1', ':libraries:lib2'";
+文件定义了那些目录是一个gradle工程.
+
+如果gradle工程之间有依赖的话,可以做如下设置.
+#+BEGIN_EXAMPLE 
+dependencies {
+    compile project(':libraries:lib1')
+}
+#+END_EXAMPLE
+更多信息参考[[http://gradle.org/docs/current/userguide/multi_project_builds.html]].
+** 库工程设置
+在上一节中,":libraries:lib1"和":libraries:lib2"可以是java工程,":app"会
+使用它们生成的jar包.
+如果上面的库要使用android的API,应该将它们定义成Android库工程.
+*** 创建Android库工程
+创建一个android库工程需要使用一个不同的plugin.
+#+BEGIN_EXAMPLE 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:0.5.6'
+    }
+}
+
+apply plugin: 'android-library'
+
+android {
+    compileSdkVersion 15
+}
+#+END_EXAMPLE
+*** 工程和库工程的区别
+一个库工程会编译为"aar"(Android archive)包.该包整合了代码和资源.同时也可以在库工程中
+编译测试APK来对库做测试.
+
+其他的基本与正常的工程相同.
+** 引用库
+库引用和其他的工程引用一样,需要在dependencies中添加 "compile project"即可.
+*** 库发布
+默认情况下,库只发布release版本,无论依赖该库的其他工程发布的是那个版本.
+可以通过配置来控制发布那个版本:
+#+BEGIN_EXAMPLE 
+android {
+    defaultPublishConfig "debug"
+}
+#+END_EXAMPLE
+需要注意的是配置名必须为全名,如果需要使用flavor,要写成"flavorDebug"的形式.
+
+也可以通过配置来取消默认的发布.这样会导致生产所有版本的aar文件.
+#+BEGIN_EXAMPLE 
+android {
+   publishNonDefault true
+}
+#+END_EXAMPLE
+* 测试
+Gradle插件在应用的工程中整合了测试工程.
+** 单元测试
+在Android Studio1.1版本中引入了单元测试支持,不过目前还在试验阶段, 文档参考[[http://tools.android.com/tech-docs/unit-testing-support]].
+** 基本配置
+前面提到,在工程的src目录下一般包括main目录和androidTest目录.
+该目录通过使用Android测试框架来生产可以安装在设备上的测试APK文件.
+
+可以在测试目录下创建AndroidManifest.xml文件定义其他组件.
+
+在build.gradle的android段中可以配置以下属性:
+#+BEGIN_EXAMPLE 
+android {
+    defaultConfig {
+        testPackageName "com.test.foo"
+        testInstrumentationRunner "android.test.InstrumentationTestRunner"
+        testHandleProfiling true
+        testFunctionalTest true
+    }
+}
+#+END_EXAMPLE
+targetPackage属性会自动被设置为test程序的package名称,即使通过defaultConfig或其他
+编译选项进行配置.
+
+另外,可以对test工程单独设置依赖,标签为"androidTestCompile". 
+编译test工程使用"assembleTest"任务,该任务不是"assemble"任务的依赖.
+目前默认情况下只有"debug编译类型"被测试.可以通过 "testBuildType name"来配置要测试的
+编译类型.
+** TODO 运行测试
+** TODO 测试库
+* 编译变量
+新编译系统的一个目标就是可以创建同一个程序的不同版本.
+需要这么做的原因:
+1. 可能需要一个程序的不同版本:例如 免费/demo版 VS "专业"付费版.
+2. Google Play Store需要上传多个版本的APK文件,参考[[http://developer.android.com/google/play/publishing/multiple-apks.html]].
+3. 同时需要做1和2.
+
+所以新版本的目标就是可以满足上述需要,能够使用一个工程生成不同APK.
+而不是为了编译不同的APK创建多个工程.
+** 产品flavors
+通过flavor可以客制化工程编译出来的产品.一个工程可以有多个flavor.
+flavor这个概念通常用于改变非常小的场景.
+
+使用DSL的 *productFlavor* 关键字来定义flavor.
+#+BEGIN_EXAMPLE 
+android {
+    productFlavors {
+        flavor1 {
+            ...
+        }
+
+        flavor2 {
+            ...
+        }
+    }
+}
+#+END_EXAMPLE
+上述代码创建了两个flavor: flavor1和flavor2.
+记住flavor的名字不能与 *编译类型* 和 *androidTest的sourceSet* 混淆.
+** 编译变量=编译类型+产品flavor
+前面讲过,每个编译类型都会生成一个APK.
+Flavor可以完成同样的功能: 所以一个工程可以生成的APK是所有编译类型
+和flavor的组合.每个组合被称作编译变量.
+
+例如,前面定义的两个flavor,再加上系统默认的debug和release编译类型,可以生成
+四种编译变量:
++ Flavor1-debug
++ Flavor2-debug
++ Flavor1-release
++ Flavor2-release
+** Flavor配置
+flavor的配置跟其他的配置一样,每个flavor都要用大括号括起来.
+例如:
+#+BEGIN_EXAMPLE 
+android {
+    ...
+
+    defaultConfig {
+        minSdkVersion 8
+        versionCode 10
+    }
+
+    productFlavors {
+        flavor1 {
+            packageName "com.example.flavor1"
+            versionCode 20
+        }
+
+        flavor2 {
+            packageName "com.example.flavor2"
+            minSdkVersion 14
+        }
+    }
+}
+#+END_EXAMPLE
+需要说明的是androd.productFlavors.*对象属于<<ProductFlavor>>类型,该类型
+与前面提到的android.defaultConfig类型共享同样的属性.
+所以每个flavor都可以重写defaultConfig提供的<<部分>>配置.例如上面的代码最后创建了如
+下两个flavor:
++ flavor1
+  + packagName: com.example.flavor1
+  + minSdkVersion: 8
+  + versionCode: 20
++ flavor2
+  + packageName: com.example.flavor2
+  + minSdkVersion: 14
+  + versionCode: 10
+通常,编译类型的配置会和flavor的配置"合并', 例如在编译类型中配置了"packageNameSuffix",
+那么最后生成的表名就等于flavor中配置的"packageName"加上该suffix.
+
+对于编译类型和flavor都可以配置的属性, 要根据需求设置.例如signingConfig属性,如果
+想要设置所有的release包使用同一个SigningConfig.可以设置 *android.buildTypes.release.signingConfig*,
+或者为每个flavor单独设置该属性.
+** 资源集和依赖
+和编译类型一样,Flavor同样也有自己的代码和资源目录.
+例如上一节的例子创建出如下的资源集合:
++ android.sourceSets.flavor1
+  Location: src/flavor1
++ android.sourceSets.flavor2
+  Location: src/flavor2
++ android.sourceSets.androidTestFlavor1
+  Location: src/androidTestFlavor1
++ android.sourceSets.androidTestFlavor2
+  Location: src/androidTestFlavor2
+
+这些资源集合与 *android.sourceSets.main+编译类型* 一起生成最后的APK文件.
+这个过程会遵循如下规则:
+1. 使用所有的相关代码目录共同编译APK.
+2. 所有的manifest文件被合并为一个文件.这使得flavors可以像编译类型一样,可以
+   有不同的组件和权限.
+3. 资源使用"覆盖"策略,编译类型覆盖flavor, flavor覆盖main.
+4. 每个编译变量都生成自己的R类. 编译变量之间不共享.
+
+同时,flavor也可以设置自己的依赖.例如,如果一个flavor版本需要生成一个有广告的版本
+或一个收费版本,可以为该flavor设置依赖广告SDK.
+#+BEGIN_EXAMPLE 
+dependencies {
+  flavor1Compile "..."
+}
+#+END_EXAMPLE
+
+每个编译变量都会生成相应的资源集合:
++ android.sourceSets.flavor1Debug
+  Location: src/flavor1Debug
++ android.sourceSets.flavor2Debug
+  Location: src/flavor2Debug
+...
+这些目录的优先级要高于编译类型的优先级,并可以客制化.
+** 编译和任务
+前面的内容说过,每个编译类型都有自己的 *assemble<name>* 任务,但是因为
+编译变量是编译类型和flavor的组合.所以当使用flavor时,会有多个assemble类型
+的任务被创建.它们是:
+1. assemble<编译变量>
+2. assemble<编译类型>
+3. assemble<Flavor>
+使用可以生成一个APK. 使用2可以编译所有该编译类型的APK(例如flavorDebug和flavor2Debug).
+使用3可以编译所有该flavor的APK(flavorDebug/flavorRelease).
+** 测试
+测试多个flavor工程与测试单个工程和相似. 使用 *androidTest* 可以为所有的
+flavor做一般测试.每个flavor还可以设置自己的测试.
+
+每个flavor都会创建相应的资源集合:
++ android.sourceSets.androidTestFlavor1
+  Location: src/androidTestFlavor1
++ android.sourceSets.androidTestFlavor2
+  Location: src/androidTestFlavor2
+
+同样, 它们可以配置相关的依赖:
+#+BEGIN_EXAMPLE 
+dependencies {
+    androidTestFlavor1Compile "..."
+}
+#+END_EXAMPLE
+
+可以通过 *deviceCheck* 或 *androidTest* 任务来运行所有的测试任务.
+每个flavor也有自己的测试任务 androidTest<名称>:
++ assembleFlavor1Test
++ installFlavor1Debug
++ installFlavor1Test
++ uninstallFlavor1Debug
+
+任务完成生成的HTML结果支持flavor集合.测试结果的位子如下例所述,先是flavor版本,
+然后是集合版本.可以对root目录(build)做客制化.
++ build/androidTest-results/flavors/<FlavorName>
++ build/androidTest-results/all/
++ build/reports/androidTests/flavors<FlavorName>
++ build/reports/androidTests/all/
+** TODO 多flavor变量
+* TODO 高级配置

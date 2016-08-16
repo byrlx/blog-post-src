@@ -1,0 +1,81 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: 使用OrgMode撰写博客
+本文的主要目的是介绍本博客的架构, 以及说明如何用[[http://xuzhengchao.com/orgmode/org-mode-outline.html][OrgMode]] 来体验纯粹写作的快乐, 
+就像你们用markdown所做的那样.
+
+/注1: 本博客搭建在github之上, 关于如何在github上搭建blog, 网上一搜有N多的教程./\\
+/注2: 本博客的模板使用了[[http://painterlin.com/pages/about.html][PainterLin]] 同学的开源模板并做了一点UI修改./\\
+/注3: 阅读本文 "maybe" 需要一些markdown和jekyll的经验./
+
+* OrgMode"写作"一切
+该blog最初的几篇文章, 都是用Markdown写成了, 作为目前最流行的文本标记语言, markdown
+简洁明了并被Github大力支持. 
+
+然而, [[http://xuzhengchao.com/orgmode/%E4%BD%BF%E7%94%A8-org-mode-%E7%AE%A1%E7%90%86%E5%B7%A5%E4%BD%9C%E7%94%9F%E6%B4%BB.html][自从认识了Orgmode并变成重度依赖用户]]之后, 所有有文本相关的工作, 基本都在尝试用 OrgMode 来完成,
+目前已经用OrgMode可以做的工作包括:
+1. 读书/代码笔记.
+2. 日程管理(GTD).
+3. PDF写作. (任何内容转PDF).
+4. 制作PPT.
+5. 表格计算.
+6. 博客.
+
+* OrgMode写博客
+ 本部分内容对 Mac Pro 的 *Emacs 24.4.1 + org mode 8.3.3* 有效.
+** 基本架构 
+写过github博客的人都知道, 文章一般都是放在 _posts 目录下面, 
+对于用Markdown写作的人来说, 只要把markdown格式的文章放到该目录下面,
+然后提交到github, 等几秒钟github的jekyll就会把它解析成html.
+
+由于jekyll并不支持org格式的文件, 所以不能直接放在 _posts 目录下然后提交,
+需要进行一次转换, 将org格式文件转成markdown或html. 幸运的是, orgmode基本
+支持[[http://xuzhengchao.com/orgmode/org-markup.html][org文件到所有主流格式的转化]].
+
+** 工程发布功能
+转化使用了orgMode的"工程发布"功能, 相较于依次对文章执行转化命令, "工程发布"可以
+通过将所有文章看做一个工程实现批量转化.
+
+在本博客中, org文件都存放在org目录下, 并有一些子目录. 通过下面代码的"工程发布"配置,
+可以将生成的html存放到 _posts 目录下, 由于转化后的html文章没有使用博客的前端配置, 
+所以我写了一个 lisp 程序来自动创建文章, 并在创建过程中自动添加文章的配置 "header".
+这段程序在 [[http://xuzhengchao.com/lisp/create-post-and-input-header.html][这篇文章]] 做了介绍. 
+#+BEGIN_EXAMPLE
+ ;; =============== Org Publish =====================
+ (setq org-publish-project-alist
+       '(("github-blog"
+	  :base-directory "/Users/douhua/lx/github/blog/org/post/"
+	  :publishing-directory "/Users/douhua/lx/github/blog/_posts/"
+	  ;;:base-directory "/Users/douhua/lx/org/post/"
+	  ;;:publishing-directory "/Users/douhua/lx/org/_posts/"
+	  :prepare-function nil
+	  :completion-function nil
+	  :exclude "*.html"
+	  :recursive nil
+	  :base-extension "org"
+	  :publishing-function org-html-publish-to-html
+	  :body-only t
+	  )))
+
+ #+END_EXAMPLE
+
+** 自动提交发布
+前面的工作只是将org文章转成了html, 然而并没有提交到github服务器, 作为一个"有追求"
+的程序员, 怎么能够忍受每次写完文章都要输入一堆的 git 命令. 故写了个小程序并将其
+绑定到了Emacs的 *F9* 快捷键.
+#+BEGIN_EXAMPLE
+;;自动更新blog
+(defun lx-update-blog ()
+  (interactive)
+  (org-publish "github-blog")
+  (shell-command (concat "cd " LXBLOG " && git add -A && git ci -m 'update blog' && git push")))
+(global-set-key (kbd "<f9>") 'lx-update-blog)
+
+#+END_EXAMPLE
+
+OK, 现在每次写完文章, 只要按一下F9, 等几秒, 就可以在网站上看到了.
+#+BEGIN_VERSE
+                     使用OrgMode, 体验"更"纯粹写作的乐趣.
+#+END_VERSE

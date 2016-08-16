@@ -1,0 +1,261 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis404
+#+EMAIL: luisxu404@gmail.com
+
+#+TITLE: 开源项目Topeka的Material Design
+* 项目配置
+1. minSdkVersion: 21
+   由于Material Design是随着Android5.0发布, 所以一般情况下支持的sdk最小版本为21, 如果要再5.0之前的系统使用, 
+   可以参考Android开发者官网关于Material Desing兼容性的相关文章.
+2. 使用的依赖
+   + compile 'com.android.support:cardview-v7:22.2.0'
+   + compile 'com.android.support:recyclerview-v7:22.2.0'
+* 项目结构
+** 组件
+该项目的AndroidManifest.xml中只有三个Activity.其中登陆界面是默认的启动界面.
+
+#+BEGIN_SRC xml
+<activity android:name=".activity.SignInActivity"
+            android:windowSoftInputMode="adjustPan">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+<activity android:name=".activity.CategorySelectionActivity" />
+
+<activity android:name=".activity.QuizActivity"
+            android:parentActivityName=".activity.CategorySelectionActivity"
+            android:windowSoftInputMode="adjustPan" />
+#+END_SRC
+** 自定义Theme
+*** 该程序使用了自定义的Theme, 该Theme定义在style.xml文件中, 名称为Topeka.
+    #+BEGIN_SRC xml
+    <application
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:theme="@style/Topeka">
+#+END_SRC
+*** Topeka的实现, 先看下源码.
+    #+BEGIN_SRC xml
+    <style name="Topeka" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/topeka_primary</item>
+        <item name="android:colorPrimaryDark">@color/topeka_primary_dark</item>
+        <item name="android:colorAccent">@color/topeka_accent</item>
+        <item name="android:textColorPrimary">@android:color/black</item>
+        <item name="android:textColorPrimaryInverse">@color/text_light</item>
+        <item name="android:statusBarColor">@color/topeka_primary_dark</item>
+        <item name="android:textColor">@color/text_dark</item>
+        <item name="android:radioButtonStyle">@style/Topeka.CompoundButton.Radio</item>
+        <item name="android:windowContentTransitions">true</item>
+        <item name="android:titleTextAppearance">@style/Topeka.TextAppearance.Title</item>
+        <item name="android:buttonStyle">@style/Topeka.CompoundButton</item>
+        <item name="android:windowBackground">@color/light_grey</item>
+    </style>
+#+END_SRC
+   可以看到该style继承了 *Theme.Material.Light.NoActionBar* 风格, 这事Material Design的一个风格.
+   同时应用也重写了该风格的一些属性:
+   
+   | Name                     |                   |
+   |--------------------------+-------------------|
+   | colorPrimary             | 标题栏颜色        |
+   | colorPrimaryDark         | 状态栏颜色        |
+   | colorAccent              | 像是checkbox颜色? |
+   | textColorPrimary         | 标题栏字体        |
+   | textColorPrimaryInverse  |                   |
+   | statusBarColor           | 状态栏颜色        |
+   | textColor                | 字体颜色          |
+   | radioButtonStyle         | 自定义style       |
+   | windowContentTransitions | 动画转化效果      |
+   | titleTextAppearance      | 自定义style       |
+   | buttonStyle              | 自定义style       |
+   | windowBackground         | window背景        |
+
+重写的属性大部分都使用了单一的值, 只有radioButtonStyle/titleTextAppearance/buttonStyle这三个使用了
+自定义的风格.自定义的style都放在drawable目录下.以radioButtonStyle为例
+
+#+BEGIN_SRC xml
+//style.xml
+    <style name="Topeka.CompoundButton.Radio" parent="Topeka.CompoundButton">
+        <item name="android:background">@drawable/selector_checkable</item>
+    </style>
+
+//res/drawable/selector_checkable.xml
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?android:attr/colorControlHighlight">
+    <item>
+        <selector>
+            <item android:state_checked="false">
+                <color android:color="?android:attr/colorButtonNormal" />
+            </item>
+            <item android:state_checked="true">
+                <color android:color="?android:attr/colorPrimary" />
+            </item>
+        </selector>
+    </item>
+</ripple>
+#+END_SRC
+
+ripple用于设置水纹效果.
+* 登陆界面 SignInActivity.java
+** onCreate()
+在onCreate函数中,直接通过FragmentManager启动一个SignInFragment的实例来显示登录界面.
+** SignInFragment
+SignInFragment会在onCreateView中会判断是否需要登录, 如果不需要则直接进入CategoryActivity页面,
+如果需要, 则显示登录信息, 输入登录信息后, 再跳转到CategoryActivity页面.
+上述过程有两个地方用到了MaterialDesign的设计
+** Material Design 1: DonFab (Floating Button)
+在SignInFragment中会让用户填写姓名和选择头像, 当用户填写完FirstName后, 左下角就会出现一个floating button,
+点击即可进入Category Activity, 这个Floating Button即是Material Design的风格之一.
+*** 实现
+SignInFragment中FloatingButton的具体实现为DoneFab类, 该类继承自 FloatingActionButton,后者也是该应用的
+自定义view, 继承自ImageView.
+
+#+BEGIN_SRC java
+    public FloatingActionButton(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+        setFocusable(true);
+        setClickable(true);
+        setOutlineProvider(new FabOutlineProvider());
+        setClipToOutline(true);
+        setScaleType(ScaleType.CENTER_INSIDE);
+        setBackgroundResource(R.drawable.fab_background);
+        setElevation(getResources().getDimension(R.dimen.elevation_fab));
+    }
+#+END_SRC
+
+1. 在Material的主题中,通过设置view的elevation即可让主题呈现出阴影效果.
+2. 通过重写RoundOutlineProvider()函数来设置button的size大小.
+3. 通过使用自定义backgroundResource来设置按钮的水纹点击效果, holo_green_dark即为
+   水纹颜色.
+   #+BEGIN_SRC java
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@android:color/holo_green_dark">
+    <item android:drawable="@android:color/white" />
+</ripple>
+#+END_SRC 
+** Material Design 2: 动画过渡
+当输入完名称, 点击确定按钮时, 按钮的水纹效果完成后, 会进入CategoryActivity界面, 从视觉上来看, 
+确定按钮从登陆界面的右下角移动到了Category界面的左上角,并变成了头像. 这种控件在两个activity之间的
+移动也是MaterialDesign的一种风格.
+*** 实现
+1. 当单击登录界面的确定按钮时, 会执行performSignInWithTransition()函数跳转到
+   CategoryActivity中.该函数的实现如下:
+
+   #+BEGIN_SRC java
+    private void performSignInWithTransition(View v) {
+        Activity activity = getActivity();
+        ActivityOptions activityOptions = ActivityOptions
+                .makeSceneTransitionAnimation(activity, v,
+                        activity.getString(R.string.transition_avatar));
+        CategorySelectionActivity.start(activity, mPlayer, activityOptions);
+        activity.finishAfterTransition();
+    }
+   #+END_SRC
+
+   通过代码可以看到, 在启动activity时传入了一个ActivityOptions参数, 该参数是通过调用
+   makeSceneTransitionAnimation()生成.该函数接受三个参数:
+   + activity: 包含 *共享元素* 的activity. 在这里即为SignInActivity.
+   + view: 共享元素在activity中的值. 在这里即为SignInFragment中的确定按钮.
+   + name: 目标activity中 *共享元素* 的transitionName值. 
+     这里为CatogeryActivity中该名称的view.打开Category的layout文件可以找transitionName值为
+     name的值.可以看到该view即为category界面的头像.所以从登录界面跳刀category界面时, 右下角的登录按钮会
+     变化为左上角的头像按钮.
+
+     #+BEGIN_SRC java
+        <com.google.samples.apps.topeka.widget.AvatarView
+            android:id="@+id/avatar"
+            android:layout_width="@dimen/size_fab"
+            android:layout_height="@dimen/size_fab"
+            android:layout_marginEnd="@dimen/spacing_double"
+            android:transitionName="@string/transition_avatar" />
+     #+END_SRC
+* Category界面
+** onCreate() and Layout
+*** 标题栏: toolbar
+该activity的标题栏使用了Toolbar这个控件, 然后再onCreate()函数中通过调用
+setActionBar(toolbar)将toolbar作为传统的actionbar使用.同时activity的
+option menu也会添加到toolbar上.
+
+最后在onCreate()里加载CategoryGridFragment的一个实例.
+
+*** CategoryGridFragment
+该fragment使用了GridView来显示目录列表.每个列表项由一个图片和文字构成.
+使用到的gridview属性
+|                   |                                                                                                   |
+|-------------------+---------------------------------------------------------------------------------------------------|
+| drawSelectorOnTop | 选中条目的时候颜色是否显示在上边                                                                  |
+| listSelector      | 选中条目时的可绘制对象                                                                           |
+| clipToPadding     | 如果ListView/GridView设置了paddingTop/Bottom. 该值为true,滚动时padding不会消失. false会消失. |
+| scrollBarStyle    | outsideOverlay, 滚动时显示滚动条                                                                          |
+
+listSelector同样使用了ripple风格. 通过设置mask的shape可以设置水纹的形状.
+
+#+BEGIN_SRC xml
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/touch_effect">
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/white" />
+        </shape>
+    </item>
+</ripple>
+#+END_SRC
+** Material Design 3: 多动画过渡
+从category界面选中某一项会打开该类别的答题界面, 在页面切换过程中,
+该项的文字栏会变成下一页的标题栏, 而头像会变成播放按钮.这种同时有多个
+view进行动画过渡的效果是通过ActivityOptions.makeSceneTransitionAnimation()
+函数实现的.
+
+#+BEGIN_SRC android
+        //find activity view
+        AvatarView avatarView = (AvatarView)getActivity().findViewById(R.id.lx_avatar);
+        // Create pair of transition participants.
+        List<Pair> participants = new ArrayList<>(3);
+        participants.add(new Pair<>(toolbar, activity.getString(R.string.transition_toolbar)));
+        participants.add(new Pair<>(avatarView, activity.getString(R.string.transition_avatar)));
+        @SuppressWarnings("unchecked")
+        ActivityOptions sceneTransitionAnimation = ActivityOptions
+                .makeSceneTransitionAnimation(activity,
+                        participants.toArray(new Pair[participants.size()]));
+
+        // Starts the activity with the participants, animating from one to the other.
+        final Bundle transitionBundle = sceneTransitionAnimation.toBundle();
+        activity.startActivity(QuizActivity.getStartIntent(activity, category), transitionBundle);
+#+END_SRC
+
+在下一页的layout文件中设置了相应的transitionName
+
+#+BEGIN_SRC android
+    <com.google.samples.apps.topeka.widget.fab.FloatingActionButton
+        android:id="@+id/fab_quiz"
+        android:layout_width="@dimen/size_fab"
+        android:layout_height="@dimen/size_fab"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="@dimen/spacing_double"
+        android:layout_marginEnd="@dimen/spacing_double"
+        android:transitionName="@string/transition_avatar" />  <---here---->
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <Toolbar
+            android:id="@+id/toolbar_activity_quiz"
+            android:layout_width="match_parent"
+            android:layout_height="?android:attr/actionBarSize"
+            android:layout_gravity="top"
+            android:background="?android:colorPrimary"
+            android:contentInsetStart="@dimen/spacing_huge"
+            android:elevation="@dimen/elevation_header"
+            android:navigationContentDescription="@string/up"
+            android:navigationIcon="@drawable/ic_arrow_back"
+            android:transitionName="@string/transition_toolbar"> <---here---->
+        </Toolbar>
+#+END_SRC
+* 答题页

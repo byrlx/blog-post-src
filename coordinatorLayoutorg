@@ -1,0 +1,160 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: CoordinatorLayout及相关代码阅读笔记在Android Studio中通过邮件"New"创建一个Activity时, 会有一个
+Scrolling Activity选项, 本文基于该选项创建的Activity的源码.
+* 基本代码
+使用该方法创建的Activity的代码很简单.
+#+BEGIN_EXAMPLE
+public class LearnScrollingActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_learn_scrolling);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+            }
+        });
+    }
+}
+#+END_EXAMPLE
+
+主要的动画交互逻辑其实都是在控件里实现的, 这些控件包括
+CoordinateLayout, AppbarLayout, CollapsingToolbarLayout,
+Toolbar以及FloatingActionButton和SnackBar等. 下面是layout布局文件.
+#+BEGIN_EXAMPLE
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context="com.lx.androidexperiments.coordinatelayout.LearnScrollingActivity">
+
+    <android.support.design.widget.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/app_bar_height"
+        android:fitsSystemWindows="true"
+        android:theme="@style/AppTheme.AppBarOverlay">
+
+        <android.support.design.widget.CollapsingToolbarLayout
+            android:id="@+id/toolbar_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fitsSystemWindows="true"
+            app:contentScrim="?attr/colorPrimary"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed">
+
+            <android.support.v7.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:layout_collapseMode="pin"
+                app:popupTheme="@style/AppTheme.PopupOverlay"/>
+
+        </android.support.design.widget.CollapsingToolbarLayout>
+    </android.support.design.widget.AppBarLayout>
+
+    <android.support.v4.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        tools:context="com.lx.androidexperiments.coordinatelayout.LearnScrollingActivity"
+        tools:showIn="@layout/activity_learn_scrolling">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/text_margin"
+            android:text="@string/large_text"/>
+
+    </android.support.v4.widget.NestedScrollView>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/fab_margin"
+        android:src="@android:drawable/ic_dialog_email"
+        app:layout_anchor="@id/app_bar"
+        app:layout_anchorGravity="bottom|end"/>
+
+</android.support.design.widget.CoordinatorLayout>
+
+#+END_EXAMPLE
+* 动画效果
+当对NestedScrollView的内容进行滚动时, 其上方的AppBarLayout会
+产生"缩小/放大"的动画效果. 其里面的文字也会同步产生"缩放"效果.
+本文主要track这种机制的源码实现.
+* CoordinatorLayout
+该类直接继承自ViewGroup. 并实现了[[NestedScrollingParent]]接口.
+该类的一个重要特性就是"可以方便实现子view之间的互动".
+** NestedScrollingParent
+该接口一般由ViewGroup继承, 用于ViewGroup支持子view传过来的滚动操作事件.
+该接口的API包括(NS代表NestedScroll):
+| name                   | description | note   |
+|------------------------+--------+--------|
+|                        | <6>    | <6>    |
+| onNestedScrollAccepted | 可用于对NS初始化一些配置 | onStartNestedScroll()返回true时被调用 |
+| onStopNestedScroll     | 对scroll停止事件做出反应 |        |
+| onNesetedScroll        | 对NS事件做出反应 | onSstartNestedScroll必须返回true才会被调用到 |
+| onPreNestedScroll      | 在onNestedScroll开始之前调用, parent有可能会消耗事件 |        |
+| onNestedFling          |        |        |
+| onNestedPreFling       | 在子view消耗fling事件之前做出反应 |        |
+| getNestedScrollAxes    | 返回NS方向 |        |
+
+** Behavior
+behavior定义了子view之间进行"交互"的XXX. 该类的一些接口:
+|                        |                                                                                                                                                                    |
+|------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| onInterceptTouchEvent  | 如果想接管事件流, 返回true                                                                                                                                         |
+| onTouchEvent           | 响应Touch事件                                                                                                                                                      |
+| getScrimColor          | 返回scrim层的颜色                                                                                                                                                  |
+| getScrimOpacity        | 返回scrim层的透明度                                                                                                                                                |
+| blocksInteractionBelow |                                                                                                                                                                    |
+| layoutDependsOn        | 判断一个view是否是另一个view的dependcy view, 如果是, 那么依赖view会在"被依赖"view之后被layout. 而且"被依赖"view的layout改变之后会调用onDependentViewChanged()函数. |
+| onDependentViewChanged | 对dependent view的改变做反应                                                                                                                                       |
+| onDependentViewRemoved | 相应DV的移除事件.                                                                                                                                                  |
+| isDirty                | 判断view是否dirty,如果是会除非CL重新查询子view属性.                                                                                                                |
+| onMeasureChild         |                                                                                                                                                                    |
+| onLayoutChild          |                                                                                                                                                                    |
+
+** 事件拦截
+*** onInterceptTouchEvent
+1. 如果是ACTION_DOWN, 调用[[resetTouchBehaviors]]
+** onMeasure
+1. 调用[[prepareChildren]]
+2. 调用[[ensurePreDrawListener]]
+3. 遍历children:
+   1. [ ] keyline 有关
+   2. 如果这个child不去fits insets的话, 需要将child的
+      w/h减去insets所占的空间.
+   3. 如果child没有behavior或这behavior不负责measure child.
+      那么调用CoordinatorLayout的[[onMeasureCHild]]函数来measure child.
+   4. 更新CL的widthUsed和heightUsed
+4. 调用setMeasuredDimension
+*** onMeasureChild
+该函数调用measureChildWithMargins
+** onLayout
+1. 遍历children, 如果child的behavior负责layout
+   则调用onLayoutChild. 否则调用 [[onLayoutChild]].
+*** onLayoutChild
+1. 如果lp有mAnchorView, 调用[[layoutChildWithAnchor]]
+2. 如果lp有keyline, 调用[[layoutChildWithKeyline]].
+3. 否则调用[[layoutChild]]
+*** layoutChild
+** 函数们
+*** getResolvedLayoutParams
+用于设置child的behavior.

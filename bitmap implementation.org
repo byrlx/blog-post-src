@@ -1,0 +1,167 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: 一个bitmap的实现代码
+是在阅读RecyclerView的源码时, 在里面发现了该部分代码, 觉得很有趣, 故记录一下. \\
+该部分代码用于实现了bitmap, 在RecyclerView的包中用于管理子view. \\
+代码位于RecyclerView包的 ChildHelper.java 文件, 是一个子类, 类名为 *Bucket*.
+
+* 介绍
+该类使用一个 *LONG链表* 作为bitmap的存储器, 该结构的主要特点包括:
+1. 理论上可以存放无限多个bit.
+2. 支持动态扩展.
+3. 支持添加/删除/插入/统计等操作.
+* 代码实现
+** 成员变量
+该类只有四个变量, BITS_PER_WORD代笔每个Bucket对象可以存放的bit数量,
+这里使用了Long类型, 故可以存放64位. 
+mData是具体存放bit的数据, next指向下一个Bucket对象.
+#+BEGIN_EXAMPLE
+static class Bucket {
+  final static int BITS_PER_WORD = Long.SIZE;
+  final static long LAST_BIT = 1L << (Long.SIZE - 1);
+  long mData = 0;
+  Bucket next;
+#+END_EXAMPLE
+** 设置bit: set(index)
+~set(int index)~ 函数用于将index位置的bit设置为1. \\
+该函数首先检查要插入的位置, 是不是大于当前的Bucket的范围,
+1. 如果不大于, 那么通过 "或" 来设置该bit位.
+2. 如果大于, 先调用ensureNext()函数确定是否需要生成一个新
+   的Bucket放到链表尾部, 然后调用下个Bucket的set()函数, 但是传入的参数
+   为 index 减去当前Bucket的长度(64). 如果下个bucket还是不满足, 会一直
+   顺着链表调用下去, 直到找到一个合适的位置. 
+   
+#+BEGIN_EXAMPLE
+void set(int index) {
+      if (index >= BITS_PER_WORD) {
+           ensureNext();
+           next.set(index - BITS_PER_WORD);
+      } else {
+           mData |= 1L << index;
+      }
+}
+#+END_EXAMPLE
+
+ensureNext()的代码如下:
+#+BEGIN_EXAMPLE
+private void ensureNext() {
+     if (next == null) {
+          next = new Bucket();
+     }
+}
+#+END_EXAMPLE
+** 清除操作: clear(index)
+   其原理跟设置一样, 通过 "与" 操作将bit位清除.
+#+BEGIN_EXAMPLE
+        void clear(int index) {
+            if (index >= BITS_PER_WORD) {
+                if (next != null) {
+                    next.clear(index - BITS_PER_WORD);
+                }
+            } else {
+                mData &= ~(1L << index);
+            }
+        }
+#+END_EXAMPLE
+** 判断: get(index)
+递归查找链表, 判断指定位置是否设置了bit位.
+#+BEGIN_EXAMPLE
+        boolean get(int index) {
+            if (index >= BITS_PER_WORD) {
+                ensureNext();
+                return next.get(index - BITS_PER_WORD);
+            } else {
+                return (mData & (1L << index)) != 0;
+            }
+        }
+#+END_EXAMPLE
+** 插入: insert(index, b)
+在指定的位置插入一个bit的设置, 该位置后面的内容后移. 
+这个操作是通过下述步骤实现:
+1. 先获取该位置之前位置的mask: ~long mask = (1L << index) - 1;~
+2. 通过"与"操作获取该位置之前的内容. 
+3. 通过"与"操作与"移位"操作将该位置之后的内容后移一位. 
+4. 使用第二个参数设置该位置的bit值.
+   
+注: 如果插入之前, Bucket对象的最高位的bit被设置(为1), 那么在后移过程中,
+该位置会被移除该Bucket, 所以需要记录下来, 将其重新插入到下一个Bucket中.
+这个过程会一直持续下去, 直到碰到一个最高位没被设置的Bucket.
+#+BEGIN_EXAMPLE
+        void insert(int index, boolean value) {
+            if (index >= BITS_PER_WORD) {
+                ensureNext();
+                next.insert(index - BITS_PER_WORD, value);
+            } else {
+                final boolean lastBit = (mData & LAST_BIT) != 0;
+                long mask = (1L << index) - 1;
+                final long before = mData & mask;
+                final long after = ((mData & ~mask)) << 1;
+                mData = before | after;
+                if (value) {
+                    set(index);
+                } else {
+                    clear(index);
+                }
+                if (lastBit || next != null) {
+                    ensureNext();
+                    next.insert(0, lastBit);
+                }
+            }
+        }
+#+END_EXAMPLE
+** 移除: remove(index)
+该函数用于将该位置的bit位移除, 并将其后面的bit前移一位. 
+该函数的步骤:
+1. 通过"与"操作将index位置的bit设为0.
+2. 缓存index之前的数据.
+3. 调用Long.rotateRight(), 将index之后的数据前移一位.
+   因为rotate之前已经将前面(低位)的数据置位0, 所以rotate之后
+   最高位一直是0. 
+4. 将第2步和第3步的数据合并成新数据.
+5. 判断下一个Bucket的第一位是否为1. 如果是则将该bucket的最高位置1.
+6. 调用下一个bucket的remove(0). 遍历链表, 重复这个操作.
+
+#+BEGIN_EXAMPLE
+        boolean remove(int index) {
+            if (index >= BITS_PER_WORD) {
+                ensureNext();
+                return next.remove(index - BITS_PER_WORD);
+            } else {
+                long mask = (1L << index);
+                final boolean value = (mData & mask) != 0;
+                mData &= ~mask;
+                mask = mask - 1;
+                final long before = mData & mask;
+                // cannot use >> because it adds one.
+                final long after = Long.rotateRight(mData & ~mask, 1);
+                mData = before | after;
+                if (next != null) {
+                    if (next.get(0)) {
+                        set(BITS_PER_WORD - 1);
+                    }
+                    next.remove(0);
+                }
+                return value;
+            }
+        }
+#+END_EXAMPLE
+
+** 统计: countOnesBefore(index)
+统计index之前的bit数量. 基于 Long 的 bitCount() 函数实现.
+#+BEGIN_EXAMPLE
+        int countOnesBefore(int index) {
+            if (next == null) {
+                if (index >= BITS_PER_WORD) {
+                    return Long.bitCount(mData);
+                }
+                return Long.bitCount(mData & ((1L << index) - 1));
+            }
+            if (index < BITS_PER_WORD) {
+                return Long.bitCount(mData & ((1L << index) - 1));
+            } else {
+                return next.countOnesBefore(index - BITS_PER_WORD) + Long.bitCount(mData);
+            }
+        }
+#+END_EXAMPLE

@@ -1,0 +1,29 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: 使用 orgmode + beamer 写幻灯片
+(on-going)
+
+之前的一次报告使用 orgmode 结合 [[https://github.com/yjwen/org-reveal][org-reveal]] 写幻灯片, 写过还行,
+对于简单的报告可以使用这个方法. 但是总是感觉效果没达到自己的要求. 
+于是使用了比较复杂的 LaTex Beamer 结合 orgmode 写幻灯片. 
+
+* 安装MacTex
+网上找了个[[http://orgmode.org/worg/exporters/beamer/tutorial.html][例子]], 写完后需要使用 *org-beamer-export-to-pdf* 命令导成为PDF文件,
+结果报错, 提示找不到 *pdflatex* 命令, 上网搜索发现是因为电脑没装LaTex, 
+真是个LaTex菜鸟啊 (= =!). 
+
+于是从网上下载了[[https://tug.org/mactex/][MacTex]], 很大, 有两个G, 安装上之后对里面的一些应用做了升级, 
+升级原因[[https://tug.org/mactex/mactex-download.html][这里]] 提到了, 主要是EI Captian版本的兼容问题. 
+
+然后将 MacTex的命令目录加入到了PATH中. 就可以在OrgMode下使用beamer了.
+#+BEGIN_EXAMPLE
+export PATH="/Library/TeX/texbin":$PATH
+#+END_EXAMPLE
+* TODO 支持中文
+这个没时间查资料, 等有时间再配置. 
+* 语法
+对LaTex一无所知, 暂时使用网上的 [[http://orgmode.org/worg/sources/exporters/beamer/presentation.org][该模板]] 略作修改. 
+
+(这部分内容边学习边补充)

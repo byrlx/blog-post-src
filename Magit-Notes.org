@@ -1,0 +1,88 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis404
+
+#+TITLE: Magit文档笔记
+项目官网: https://magit.vc/
+* version 2.6.1
+Elpa升级magit到2.x版本之后, 发现快捷键变化太大, 所以重新读了2.6.1版本的文档.
+在Emacs中使用"C-h i"之后选择 magit 即可打开文档.
+
+下面的内容基于该版本的文档:
+** sections
+ 所有的Magit buffer都是通过 sections 的形式组织的, 每个section还可以包含子section.在一个magit buffer中, 这些
+ sections可以独立的被显示和隐藏.当一个section被隐藏的时候,只会显示该section的
+ 第一行.
+
+ section操作的快捷键:
+ | Short Keys | Notes                                                                                               |
+ |------------+-----------------------------------------------------------------------------------------------------|
+ | p          | 移动到上一个section                                                                                 |
+ | n          | 移动到下一个section                                                                                 |
+ |            |                                                                                                     |
+ | C-TAB      | 循环隐藏/显示当前section的子section                                                                 |
+ | TAB        | 快速显示/隐藏当前 section                                                                           |
+ | S-TAB      | 快速显示/隐藏所有 section                                                                           |
+ | 1/2/3/4    | 显示 <=N 的section, 例如按2,会显示 *当前* level 1和 level 2的section,隐藏level 3, level 4 的section |
+ | M-1/2/3/4  | 同上, 但是显示所有相关section                                                                       |
+ | M-h        | 隐藏(有些buffer功能跟2相同, 有些不一定)                                                             |
+ | M-H        | 隐藏 *所有* (同上)                                                                                  |
+ | M-s        | 显示(有些buffer功能跟4相同, 有些不一定)                                                             |
+ | M-S        | 显示所有(同上)                                                                                      |
+
+**** 其他快捷键/配置
+
+  注: /当快捷键操作于section头部时, 会影响所有的文件./
+
+  | Buffer  | Short Keys      | Note                                                              |
+  |---------+-----------------+-------------------------------------------------------------------|
+  | Status  |                 |                                                                   |
+  |         | magit-repo-dirs | 可以在.emacs文件中配置此变量, 设置调用magit-status命令打开的git库 |
+  |         | g               | refresh buffer                                                    |
+  |         | s/S             | 把文件加入到stage area/只把所有changes加入到stage area            |
+  |         | C-u S           | 把所有文件加入到stage area                                        |
+  |         | i               | 添加该文件到 .gitignore                                           |
+  |         | C-u i           | 手写添加到 .gitignore的文件名                                     |
+  |         | k               | discard                                                           |
+  |         | u/U             | unstage file/all file                                             |
+  |         | c c + C-c C-c   | 提交                                                              |
+  |         | C-c C-k         | 放弃提交                                                          |
+  |         | l l             | show history                                                      |
+  |         | l r l           | 显示范围                                                          |
+  |         | t t             | create tag                                                        |
+  |         | x/X             | 重置head/重置head(清空working area和stage area)                   |
+  |         | z + z/a/A       | 创建/应用/弹出 stash                                              |
+  |         | z -k z          | 创建stash,但是保留working area和stage area                        |
+  |         | b               | branch related                                                    |
+  |         | w               | 显示所有branch和当前branch的关系                                  |
+  |         | m               | merge                                                             |
+  |         | R               | Rebase                                                            |
+  |         | P               | push                                                              |
+  |         | f               | fetch                                                             |
+  | history |                 |                                                                   |
+  |         | RET/SPC/DEL     | show commit detail in new buffer(commit buffer)                   |
+  |         | a               | 将当前提交应用到当前branch, 需手动提交                            |
+  |         | A               | ...自动提交                                                       |
+  |         | v               | revert commit                                                     |
+  |         | .               | mark a commit                                                     |
+  |         | =               | show diff from current commit to marked                           |
+  |         | l h             | reflog                                                            |
+  | commit  |                 |                                                                   |
+  |         | a               | 把当前section应用到当前branch                                     |
+  |         | v               | reverse the patch                                                 |
+  | diff    |                 |                                                                   |
+  |         | e               |                                                                   |
+  |         |                 |                                                                   |
+** status buffer
+通过"magit-status"创建会显示当前的status. 这是magit最主要的一个buffer.
+下面的操作都是在该buffer里的操作:
+** stage相关操作
+1. 使用快捷键z, 会弹出选项框, 再按一次z会保存创建一个新的stage保存内容.
+2. 使用快捷键z+p, 会弹出以stage内容.
+3. "z+Z", 会创建stage并将修改的内容仍然保持在工作区.
+4. stage多个文件, 使用 C-SPC 结合 n/p 快捷键选择多个文件, 然后按s.
+** 提交commit
+1. 使用 c-c 快捷键.
+2. P快捷键调出push buffer. 
+** 回滚提交
+1. 使用l-l快捷键显示提交记录. 通过 n 将光标移动到想回滚到的
+   提交上, 然后使用 'C-u x' 命令.

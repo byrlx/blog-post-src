@@ -1,0 +1,948 @@
+#+SEQ_TODO: TODO(t!) DONE(d@/!)
+#+OPTIONS: ^:nil
+
+#+BEGIN_HTML
+---
+layout: post
+title: Launcher Analyze
+tag: [Launcher]
+---
+#+END_HTML
+
+* Launcher 性能分析 						:performance:
+** heap 分析
+1. GC_CONCURRENT: heap is full
+2. HTC 测试一段时间, 观察 heap 变化. 
+进入 welcome 后为29.387MB, 点击 GC 后有191.450个 object.
+加载完 category 后为66.949MB, 有279,668个 object.
+由锁屏进入壁纸后变为92.906MB, 有244.759个 object.
+在锁屏里添加一张本地图片, 变为 101.445MB( 使用76.515MB), 245.087个 object.
+打开多个 category 并加载 image 后,变为168.125MB(使用 141.108MB), 319332个 object. 
+进入 wallpaper, 加载两张本地图片并退出 wallpaper,变为186.090MB(167.145MB), 355.245个 object. 
+打开搜索, 变为194.660MB(16+MB)
+3. 对5的测试进行内存分析
+加载玩 category 后 dump heap 的 hprof 文件, 用 hprof-conv 命令转换并用 MAT 将转换后的文件加载.
+MAT 的 leak suspects 报告 lockscreen 的一个 bitmap 占用的9MB 的 heap, 怀疑是内存泄露.
+
+** 用 traceview 进行性能分析
+1. welcome 阶段比较执行时间比较长的几个函数:
+   + InitDataThread()[1.6s]: 所有的时间都用于 scanApps()过程.
+     + scanApps()[1.6s]: 包括bulkInsertStatement(34%), queryAllAppsInfo(58%)
+       + queryAllAppInfo(933ms): include ResolveInfo.loadLabel(63%), queryIntentActivities(16%), trimIncludingNonbreakingSpace(13%).loadLabel(593ms): include ComponentInfo.loadLabel(99%)=>APM.getText(100%).
+       + bulkInsertStatement(546ms): include Intent.toUri(60%), executeInsert(21%), compileStatement(12%)
+2. 加载 category 阶段
+   + onCreate(933ms): setContentView(54%), onPackagesUpdated(40%)
+     + onPackagesUpdated(369ms): Collections.sort(42%), getSpanForWidget(22%), getMinSpanForWidget(22%).打开一个ap 较多的 category:
+     + handleCallback(1.5s): FrameDisplayEventReceiver.run(60%), Folder.run(18%), LauncherModel.run(8%), PerformClick(8%)
+       + Folder.run(): ObjectAnimator.start()
+     + parseResponse(433ms): JSONTokener.nextValue(99%)=>readObject()
+     + sortBasedHistory(253ms): updateItemLocationsInDatabase(48%), onItemsChanged(11%), queryByFolder(10%)
+       + updateLocationInDatabase(122ms): moveItemInDatabase(53%), getItemsInReadingOrder(25%), ShortcutInfo.toString(21%)
+	 + moveItemInDatabase(65ms): updateHotseat(49%), updateItemInDatabaseHelper(24%). 
+
+** View 渲染分析
+1. 准备条件: 打开开发者选项的"显示 GPU 过度绘制”.
+ Welcome 界面: 前三个 page 为绿色. 第四个 page 的 Button 的”ok, got it”为淡红色.
+进入 launcher: 每个 Icon 的 text 为淡红色. 
+打开每个 category, Label 为淡红色, 推荐为淡红色. 
+** TODO systrace
+用 systrace 跟踪, platform-tools/systrace.py. 参数: ./systrace.py -b 32768 -t 30 gfx view app res rs dalvik hal sync sched freq idle load -a com.eyespage.launcher2.app. 
+1.观看 category 加载结果. Systrace 结果会保存到 trace.html 文件. 用浏览器查看. 
+从 trace.html 可以观察到在 category 的加载过程中, 会有另外一个东西的执行过程, (在这之前有 prefragment 的执行).
+这个东西是系统发送了一个ACTION_PACKAGE_UPDATE 被 LauncherModel 捕获, 结果导致 LauncherModel 执行其他动作. (已解掉)
+接完之后继续 对整个安装过程做 systrace, 结论:启用的 thread 太多.
+2.Welcome 阶段: 
++ decodebitmap select.png 花费 25.267ms
++ decodebitmap 一个 welcome 图片需要72ms.
++ 在 decodebitmap 第二个 welcome 出现了 GC
++ Welcome 阶段出现了大约3次 GC 的行为.
++ Launcher 初始化 (onCreate())
+  + Inflate launcher UI 大约400+ms.
+    - Draglayer 大约11ms.
+    - selection_divider 1ms
+    - workspace 57ms
+    - 渲染 all_apps_button_icon.xml 需要13.7ms
+    - searchDropTargetBar 9m
+    - InfoDropTarget 36ms
+    - DeleteDropTarget 17ms
+    - CancelDropTarget 9ms
+    - AppsCustomizeTabHost 12ms (view类的初始化???)
+    - FocusOnlyTabWidget 20ms (view初始化?)
+    - TextView(markte_button) 5ms
+    - AppsCustomiszePagedView 31ms (view初始化)
+    - loadstatus 的 numberprogressbar 4.2ms
+    - laodstatus 的 progressbard 3.8ms
+    - loadstatus 的 textview 0.4ms
+  + *TODO* Inflate lockscreen 的 view 227.95ms (要等这部分完了才会显示 launcher 桌面)
+    + swiplayout 10ms
+    + lock_night.jpg 83.681ms
+    + ic_lock.png 55ms
+    + unlock animation 29ms
+  + 有一些 iniflate ic_launcher.png 的动作
+  + inflate user_folder.xml 72.084ms
+    + 初始化 Folder 类 2.7ms
+    + 初始化 FolderEditText 2.4ms
+    + Lock icon: 3ms
+    + FolderRecAppView: 3.6ms (类初始化)
+    + Icon ImageView: 2.4ms
+    + RationgBar(星星): 14ms
+      + *TODO* 为什么我们提供了替代图片,仍然会去加载系统默认的??? 10ms
+    + app description: 2.6ms
+    + add/image/video btns: 2ms*3 (自定义 bg layout)
+    + centerViewPager(推荐的容器): 8ms
+ 
+** Memory leak
+Jack 的 Samsung Note4长时间操作内存达到400+MB, 而 APUS 的峰值只有200多 MB.
+
+1. 用 dumpsys meminfo 命令发现进入 welcome 后有两个 activity,怀疑是 LauncherActivity
+   在 call 完 finish()之后仍然没有被释放.
+   + 原因:在 onCreate 界面,调用 finish()之前有将该 activity 注册到 hockeyapp 中.但是在
+      onDestroy 阶段没有释放.
+   + 解决: 将 finish()的代码提前,并在 onDestroy 中判断性的调用 unregister.
+   + 效果: 做 GC 之后,Activity 和 AppContext 的数量都减一.
+2. 从 welcome 进入 launcher 后发现有两个 activity, 怀疑 welcomeActivity 内存泄露,没有
+   被释放.
+   + 原因:1),将 Activity 作为 context 传给单例模式的类对象.例如 InitDataThread 和 mClient.
+     1) GPSTrack 也将 activity 作为 context 作为参数传入.
+   + 解决: 不要使用 activity 作为 context,使用全局的 ApplicationContext.
+   + 效果: 进入 Launcher 后,调用 GC,activity 数量变为1.
+3. InitDataThread. 现在是批处理, 生成很多对象, 可否改成一个个处理.
+4. 数据(step by step):
+   + 完成1的修改后, 注释掉 welcome 里 initDataThread 的代码后,用 dumpsys meminfo 获取到
+     进入 welcome 后的 private dirty memory(一次 GC)的 Dalvik heap:10032/10036/10032.
+   + 上一步的基础上,注释掉 LauncherApplication 中 crashlytics 的代码后数据:8668/8664/8684.
+   + 在2的基础上,把 initDataThread()的代码 comment/uncomment 掉,
+     测试数据:
+
+     |          | noInitData | scanApp | queryCat | catNorm | catNoSer |   |
+     |----------+------------+---------+----------+---------+----------+---|
+     | dvmHeap  |          9 |      15 |       23 |      73 |       71 |   |
+     | dvmOther |        2.6 |     3.4 |        4 |       6 |      5.7 |   |
+     | unknow   |          3 |       5 |       35 |      39 |       48 |   |
+     | Graphics |         31 |      31 |       31 |      65 |       65 |   |
+     | GL       |         16 |      16 |       16 |      65 |       66 |   |
+     
+5. 基于 Animation 和 layer 的实验
+   1. 去掉 Application 级别的 hardwareAccelerated=true.
+   2. 去掉添加 category 的动画效果,,没有影响.
+6. MAT 分析 LGG3.
+   1. welcome:
+      1. ChineseToPinyinResource: 2.4MB.
+      2. java.util.jar.JarFile占据1.1MB,其中看到有500+个 finalizerReference.
+7. other information
+   1. 在 LG 的手机上有这行 log:dalvikvm: Total arena pages for JIT: 14
+      表示将 java 代码转换为 native 代码花费内存数量.
+   2. LG手机上执行 welcome 阶段的 endTransaction()内存大增.而且减不掉.
+   3. 4.4.4 and 5.0 的手机上,在 AllAppsCategory 里执行一个 runnable
+   4. 代码中很多地方使用了 public static final 的 SQLiteTable 对象,
+      这些对象中 Cloumn 类的引用.
+   5. NOte4上开锁/关锁变化Graphics 变化30MB.
+** Normal Tests
++ 2015.03.06:
+  - Nexus5/有重影有重影
+  - HTC出现一次什么都没有
+  - 离线安装, 联网后卡死(other 中有109个应用).
+* Launcher 架构							       :arch:
+** <<Launcher.xml>> 分析
+1. 顶层的 Viewgroup 是 DragLayer
+2. 分页显示器 paged_view_indicator, layout 文件scroll_indicator, 组织
+     - image view, 默认是 GONE.
+3. workspace, workspace 的继承关系 workspace -> SmoothPagedView -> PagedView -> Viewgroup
+   + workspace 包含5个 workspace_screen, layout文件 workspace_screen.xml, 组织:
+     - CellLayout, 继承关系: CellLayout -> ViewGroup
+4. hotseat, hotseat.xml 的 layout 组织
+   + 顶层为 Hotseat, 继承自 FrameLayout.
+     - 包含一个 CellLayout.
+5. qsb_bar, layout qsb_bar.xml 及组织:
+   + SearchDropTargetBar, 该对象继承自 FrameLayout.
+     - qsb_search_bar, layout 文件 search_bar_2.xml 及组织:
+       + RelativeLayout.
+         - HolographicLinearLayout 该类继承自 LinearLayout
+           + Imageview, 显示 google 的 search.
+         - HolographicLinearLayout, 位于上面元素的右边
+           + ImageView, 显示语音 search 按钮.
+         - ImageView: 显示 eyespage search 按钮.
+       + DeleteDropTarget -> ButtonDropTarget -> TextView.
+     + FrameLayout:
+       + CancelDropTarget -> .. -> ..
+     + FrameLayout:
+       + ShareDropTarget -> .. -> ..
+6. DrawableStateProxyView, 该类继承自 Linearlayout, 默认是 GONE.
+7. <<apps_customize_pane>>(allapps 里的 tab 栏), layout 文件 apps_customize_pane.xml, 默认是 invisible.
+   + 顶层 viewgroup 是 AppsCustomizeTabHost -> TabHost -> FrameLayout.
+     - LinearLayout, 默认是 GONE
+       + FrameLayout
+         + FocusOnlyTabWidget -> TabWidget -> LinearLayout
+         + market_button, layout 文件market_button.xml
+           + Textview 
+       + FrameLayout
+         + AppsCustomizePagedView -> PagedViewWithDrawbleItems -> PagedView
+         + FrameLayout, 默认是 GONE.
+         + paged_view_indicator, layout 文件为 scroll_indicator.xml
+     +- include all_apps_cling.xml+
+      +- 顶层是 Cling(教程画面?), 该类继承自 FrameLayout, 组织:+
+         +- FrameLayout+
+          +- LinearLayout+
+             +- TextView+
+             +- TextView+
+         +- Button: clingButton.+
+8. LinearLayout,  加载进度条默认是 GONE
+   + NumberProgressBar, 该类继承自 View. GONE
+   + ProgressBar, 转圈的加载条. 
+   + TextView
++9. workspace_cling.xml workspace 的指导画面(/已删除/).+
++10. folder_cling.xml folder 的指导画面(/已删除/)+
++11. FrameLayout: 默认是 GONE.(/已删除/)+
+** PageView
+PageView 是 Android Launcher 中自定义的 viewGroup. 它实现在
+多个"页面"切换的效果.
+*** 滑动页面流程
+1. ACTION_DOWN:
+   + DragLayer 的 onInterceptTouchEvent() 收到 *ACTION_DOWN*.
+     + 调用 dragLayer 的 handleTouchDown(),返回 false.
+     + 调用 dragController 的 onInterceptTouchEvent()
+     + return false. event 传给 workspace.
+   + Workspace's onInterceptTouchEvent() get the event. 用 x/y 设置 mXDown 和
+       mYDown, 然后调用父类即 PagedView 的onInterceptTouchEvent(),该函数将 mTouchState
+       设为 TOUCH_STATE_REST.
+      该函数最后return  false. Event 继续向下传给 CellLayout;
+   + CellLayout的 onInterceptTouchEvent()返回 false.消息没有拦截, 往上传.
+   + 调用 Launcher 的 onDispatchEvent.
+2. ACTION_MOVE:
+   + Draglayer 层返回 false.
+   + Workspace 层调用pageview的 onInterceptTouchEvent().
+     + Pageview会调用determineScrollingStart()来计算当前这次移动的坐标是否达到了
+       移动的范围.
+       + 满足下面任意条件则认为达到要求.
+	 xDiff = curX - ACTION_DOWN_X
+	 yDiff = curY - ACTION_DOWN_Y
+	 #+BEGIN_SRC java
+          boolean xPaged = xDiff > mPagingTouchSlop;
+          boolean xMoved = xDiff > touchSlop;
+          boolean yMoved = yDiff > touchSlop;
+	 #+END_SRC
+       + 如果达到要求, 将 mTouchState 设为 TOUCH_STATE_SCROLLING, 然后调用 pageBeginMoving():
+	 + 如果当前页面没有 moving,将 mIsPageMoving 设为 true,然后调用 onPageEndMoving():
+	   函数为空, 子类可以重写这个方法.
+	 + workspace中重写这个方法,所以会调用到 workspace 的该方法.
+       + 如果不是,返回
+       + 最后返回 mTouchState=REST 的结果.
+	 + 如果为 true.则 *下次* 再来 ACTION_MOVE,会直接传给 PagedView 的 onTouchEvent()处理.
+   + 如上一步所讲,后续的 ACTION_MOVE 会直接传给PagedView 的 onTouchEvent 处理.
+     + 处理 MOVE 的代码先判断当前是否为 SCROLLING 状态(该状态在上一步被设置),如果是.
+       会计算当前坐标与上一坐标 mLastMotionX 的 x 坐标差值deltaX,如果该值绝对值大于1.0,
+       更新 当前坐标 mTouchX 和 mLastMotionX. 同时调用 scrollBy(deltaX,0)函数.
+       + scrollBy() 直接调用 scrollTo(mUnboundedScrollX + x, getScrollY() + Y).
+	 其中 mUnboundedScrollX 是指无边界坐标,例如第 N 个页面的坐标要远远超出当前屏幕宽度.
+	 + scrollTo()将 PageView 的内容(这里值 workspace 的内容即 cellLayout) 移动到指定
+	   坐标.同时更新 mUnboundedScrollX 和 mTouchX.
+     
+3. ACTION_UP直接传给 onTouchEvent 处理.
+   + 计算 UP 点与 Down 点的距离,并获取速度, 左划的速度小于<0, 右划大于0.计算是否要滑动到另一页面.
+     如果是调用 snapToPageWithVelocity()
+     + 调用 snapToPage()
+       + 调用 startScroll(). loadAssociatedPages(). notifyPageSwitchListener().
+** Workspace
+*** Members
+**** PagedView
+1. PageView 继承自 Viewgroup,可以实现类似 page 一页一页滑动的效果.workspace
+是 pageview 的子类.
+*** create
+在 launcher 的 onCreate 界面,调用 setContentView() 会触发 launcher.xml 中
+元素的创建, 因为 Launcher.xml 中包含 workspace,因此会创建 workspace,按照继承关系,
+对象的创建顺序为 PagedView->SmoothPagedView->Workspace.
+*** onMeasure
+每次桌面发生变化,都会调用到 PageView 的 onMeasure()/onLayout()方法(其实是 workspace 的?).
+
+** Drag & Drop
+*** workflow
+**** 长按屏幕图标
+1. When you long click the view on the homescreen,it will trigger the 
+   *onLongClick()* function. In this function, it first get the 
+   *CellInfo* of the clicked view by getTag(). (The *CellInfo* class 
+   contains all the cellinfos of the view, like cellX/cellY/spanXY/screen..).
+
+   At last, it will call workspace's *startDrag()*.接受的参数为 cellInfo.
+   + get view from cellInfo's member cell. The set the view to *invisible*.
+     get the cell layout of this view, it's view's parent's parent.
+   + call layout's prepareChildForDrag(), this function will set the layout's
+     *mOccupied* array, all the (x,y)s that this drag view occupied will be 
+     set to *false*.
+   + call view's clearFocus() and setPressed(false) functions.
+   + call createDragOutline() to create a outline bitmap.
+     目前轮廓 padding 为2, 颜色为 blue.
+     + 调用drawDragView(), 如果 view 是一个 TextView(shortcuts), 调用 getCompundDrawables()
+       获取 TextView 的 drawable.(屏幕上的 shortcut 的 drawable 在 text 的上面).
+       如果为Folder 或 BubbleTextView,则画图.
+     + 调用 mOutlineHelper 的 applyMediumExpensiveOutlineWithBlur().将大部分的内容设成透明,
+       实现轮廓效果.
+   + 调用 beginDragShared().
+     + 调用 createDragBitmap()创建 dragview,该函数基于 view 创建一个 drawable,然后调用
+        drawDragView()来生成一个 bitmap.
+     
+*** <<DragLayer>>
+DragLayer是一个 FrameLayout.
+*** <<DragController>>
+该类是 Drag 过程的"控制器", 负责 drag 过程的实际执行, 主要函数:
++ 构造函数: 接受 Launcher 变量, 初始化一个 handler, 并获取系统的
+   VelocityTracker 实例用于追踪 touch 过程的速度, 获取系统的震动
+  服务用于振动.
++ startDrag():定义了两个 startDrag()函数:
+  - 第一个: 调用 [[DragLayer]]的 getLocationInDragLayer()函数获取坐标.
+    计算 dragLayerX/dragLayerY,这个坐标是跟随 drag 移动的 bitmap 的坐标.
+    调用第二个 startDrag()函数.最后将被拖拽的 view 设为 GONE.
+  - 第二个: 主要的初始化动作都在该函数中实现:
+    - 隐藏键盘
+    - 对于所有的 [[DragListener]](储存在 arraylist 中), 调用其 onDragStart()函数.
+    - 设置 mDragging 为 true.
+    - 创建一个 DragObject 对象,用传入的参数初始化该对象的 dragSource,dragInfo.
+      并设 dragComplete 为 false.
+    - 开始震动指定的时间.
+    - 创建 DragView.被复制给 DragObject 的变量.
+    - 调用 DragView 的 show()函数显示创建的 dragView.
+    - 调用 handleMoveEvent()处理 move 过程.会将 view 移动到指定的点.(还会做一些
+      其他的工作, 待完成).
++ cancelDrag():取消 Drag 过程,没有 drop 动作.
+  + 如果当前正在 dragging, 调用 dropTarget 的 onDragExit()函数.
+    同时设置 DragObject 变量的 cancel/dragComplete 为 true,及回调 dragObject 中
+     dragSource 成员的 onDropCompleted()函数.
+  + 调用 endDrag(): 如果正在 dragging, 清空 runnable, 并移除 dragView.
+    如果 defer 为 false, 调用所有 dragListener 的 onDragEnd()函数.
+    最后释放 VelocityTracker.
+其定义的内部类/接口包括:
+**** <<DragListener>>
+接口, 定义当 drag 开始/结束的回调函数.
++ onDragStart()/onDragEnd().
+**** <<ScrollRunnable>>
+ 该类是一个 Runnable 类,在 run()函数中会执行 [[DragScroller]]的函数.
+*** DropTarget
+DropTarget描述了一个可以接受被 *拖拽* 的物体的 *物体*.
+
+该类定义了一些Drag 相关的成员函数, 这些函数都为空,需要子类去实现.
+1. isDropEnabled(): 是否开启 drop 功能.
+2. onDrop/onDragEnter/onDragOver/onDragExit: 处理不同的 drag 过程.
+3. onFlingToDelete: 判断 drag 动作是否会符合 *删除* 的条件.(在 launcher 桌面滑动速度过快会导致删除).
+4. acceptDrop: 在 onDrop 之前执行, 判断某个特定的 *点* 上(及附近)是否可以执行 onDrop.
+5. getHitRect/getLocationInDragLayer/getLeft/getTop.
+
+该类定义了以下内部类:
+**** <<DragObject>>
+该类具体只一个被拖拽的物体, 物体的属性包括:
++ 相对于左上角的 x/y 坐标.
++ 一个 [[DragView][DragView]] 对象, 该对象是在 drag 过程一直跟着手指的 view.
++ dragInfo, 记录被拖拽物体的信息.
++ 一个 [[DragSource][DragSource]] 对象, 记录最开始发生 drag 的 *信息*.
+**** <<DragEnforcer>>
+DragEnforcer 定义了 drag 过程 onDragStart/onDragEnter/onDragExit/onDragEnd 的一些
+判断条件, 目前没看到有实质性的动作.
+
+*** <<DragSource>> 
+DragSource 是一个接口,该接口定义了三个函数:
++ supportsFlingToDelete(): 是否支持滑动删除.
++ onFlingToDeleteCompleted(): 滑动删除的回调函数.
++ onDropComplete(): 拖拽完成的回调函数.
+*** <<DragView>>
+DragView is a view that describe the drag object during dragging.
+*** <<DragScroller>>
+是一个接口, 用来处理拖拽过程中的 *滚动* 事件.
+其定义的函数:
++ scrollLeft()/scrollRight()
++ onEnterScrollArea()
++ onExitScrollArea()
+** ContentObserver
+*** ContentResolver
+在 Launcher 的 onCreate 阶段, 会注册一些 contentObserver, 包括:
+1. LauncherProvider.CONTENT_APPWIDGET_RESET_URI.
+2. CallLog.Calls.CONTENT_URI.
+3. "content://mms-sms/".
+所以当有未接来电或未读短信, Launcher 就会收到相应的通知, 并 trigger 相应
+的 Observer 来处理通知.
+*** callContentObserver
+该类继承自 ContentObserver, 并重写了 onChange()方法, 当有通知到来时,
+会通过 contentResolver 去 query Calls.CONTENT_URI, 查询 miss 的 phone 数量.
+并将该值写入 launcher 的 handler的 message 中,然后发给 handler 处理.
+*** smsContentObserver
+实现与 callContentObserver 相同.
+*** AppWidgetResetObserver
+当有通知来临时, 会重新调用 appWidgetHost 的 startlistening() 函数.
+** PreFragment
+PreFrament 用于显示最常用的几个 App.该类继承自 EyespageFrament,后者继承自 Fragment.
+*** Arch && Code
++ Fragment lifecycle: onAttach->onCreate->onCreateView->onActivityCreated->onStart->onResume->onPause->onStop->onDestroyView->onDestroy->onDetach.
++ onAttach():将 mLauncher 设为 LauncherActivity.
++ onCreate():注册 NotificationService, 接受 Notification 相关 intent; 注册
+  PredicationService, 接受 siglocation 和 perWeekApp intent.
++ onCreateView()的主要工作
+  + 初始化 mContainer 为 SmartBarContainer,这是要返回的 view.
+  + 创建 ViewPager 对象 mViewPager/mAppsPager, 前者主要显示通知相关的内容. 后者主要显示 App 相关内容.
+  + 初始化 button,如果没有设置过Notification 权限,将 button 的 text 设置为 hint,listener 设为"打开 notification 设置界面".
+  + 创建 SimplePagerAdapter adapter 和 appAdapter, 将 mViewPage 和 mAppsPager 的 adapter 分别设为为这两个.
+  + 将 mViewPager 和 mAppsPager 添加到 mContainer 中.
+  + 基于 layout_smartbar 渲染两个 celllyout, mLeftCellLayout/mRightCellLayout,.
+  + 返回 mContainer
++ onActivityCreated()
+  该函数在 Activity 的 onCreate()完成后调用,主要调用 loadApps()获取要显示的 App,loadApp()过程:
+  + 从"content://com.eyespage.launcher.app.provider/app_sort" 中获取"MAX_INSTALLS"前三十个 app.
+    存入 TopApps 中.
+  + 从上一步中获取APP_MAX_COUNT(显示在 prefragment 的数量)个 APP.
+  + 如果 firstLoad 为 false, 发送 ACTION_NLS_LIST的 intent.
+  + 调用 buildApps(),参数为获取的 APP_MAX_COUNT 个 app.
+    + buildApps(): 清空 mLeft/RightCellLayout, 调用 bindAppsCell():
+      + 根据传入的 apps,创建 bubbleTextView,然后加入到 mLeft或 RightCellayout 上.生成 BubbleTextView 的函数
+	为 bindApp():
+	+ inflate 一个 application.xml 的 view.
+	+ 基于 sortModel 的 pkgName和 clsName 获取启动 intent,从全局变量 mIconCache中获取该 Intent 对应的
+	   title 和 icon.同时设置该 view 的 onClick 函数(打开对应的 app).
++ onStart(): 
+  + notificationListed 为 false(一般第一次启动为 false), 发送 ACTION_NLS_LIST intent.
+  + 调用 onUpdate(), 在这里可能会再调用一次 loadApps()
+*** ACTION_NLS_LIST flow
+1. 在 loadApp()中会发送该Intent, 该 Intent 会被 NLService 中的 NLServiceReceiver 捕获,
+  该 receiver 收到 intent 后,会首先调用 getStatusBarNotifications()获取 notifications,
+  然后将获得的 Notification 转换为 NotificationInfo 类型,最后调用 sendNotification()发送.
+   + getStatusBarNotifications(): 该函数调用父类NotificationListenerService 的
+     getActiveNotifications()函数,并将其转化为 ArrayList 后排序.
+   + getNotificationInfo():该函数将 android 提供的 StatusBarNotification 类型的 notif 转换为
+      NotificationInfo 类型.从 StatusBarNotification 中可以拿到的信息
+     + id/isClearable/isOnGoing/pkgName/postTime/notification
+     + notification中的信息:priority/iconId/largeIcon/contentIntent/deleteIntent/
+       contentView/bigContentView/extras
+     + extras中的信息:EXTRA_TITLE/EXTRA_TEXT/EXTRA_SUB_TEXT
+   + notification 被丢弃的几个条件:1)已有该 pkgName+Id+time; 2)推送时间超过24小时; 
+     1) contentIntent=null; 4)pkgName 在黑名单中; 5)isClear=false || isOnGoing=true;
+   + sendNotification():将所有的 转换+过滤后的 notifications 通过 intent 发出去,类型为 ACTION_NLS_ALL.
+2. 上一步最后发送的 intent 会被 PreFragment 的Notification捕获,主要做以下工作:
+   + 将 firstLoad 设为 false, notificationListed 设为 true.
+   + 从 Intent 中拿取 info 信息,存入 mInfo 中.
+   + 将 mInfo 复制并进行排序,返回结果.
+   + 遍历 notifies,调用 addNotificationView(), 该函数主要工作:
+     + 基于 item_smart_notification.xml 生成 notificationView,设置 view 的 ImageView,titleView
+       , contentView, postTimeView.
+   + filpTo(0), 更新 lastNotiTime.
+*** Fragment in Launcher
+1. 创建: Fragment 是在Launcher的 finishBindingItem() 函数中创立的, 后者在 LauncherModel 的 bindWorkspace() 函数中
+被创建.创建后对该 Fragment 执行setRetainInstance(true), 这样当 activity 重新创建时, fragment 的生命周期跟
+与之前会不同, 有些函数并不会 call 到. 同时还创建了 FragmentInfo,设置 Fragment 的矩阵位置和大小,然后将 fragment 假如到 workspace.
+2. Launcher中操作 preFragment 的地方:
+   + onStop()里调用 preFragment 的 onUpdate() 函数; 
+   + onScreenChange() 中调用 fragment 的 reset(); 
+   + 在 UITask 的 onPostExecute() 中调用 onUpdate().
+   + onAppOpen 中,调用 preFragment 的 removeNotification()删除打开 app 的 notification.
+     + removeNotification: 获取 mInfos 中 key 为 pkgName 的 notifications, 遍历 notification,
+       调用 removeAndChange():
+       + 从 adpater 中获取"pkgName+id"代表的 view,将其从 mViewPager 中删除, 更新 view.
+   + onAppUninstalled()调用 onUninstallUpdate
+** HandlerThread
+LauncherModel中用到的 sWorkThread 是一个 HandlerThread,该 Thread 会自动创建一个 looper 与其
+关联,所以可以创建 handler thread.
+
+#+BEGIN_QUOTE
+ Handy class for starting a new thread that has a looper. The looper can then be 
+ used to create handler classes. Note that start() must still be called.
+#+END_QUOTE
+
+** Launcher.Model
+*** Brife content
+1. LauncherModel是一个 BroadcastReceiver. 它会接受很多系统发出的跟 package 相关的 intent.
+   #+BEGIN_SRC java
+  private void registerReceivers() {
+    IntentFilter filter = new IntentFilter(Intent.ACTION_PACKAGE_ADDED);
+    filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+    filter.addAction(Intent.ACTION_PACKAGE_CHANGED);
+    filter.addDataScheme("package");
+    registerReceiver(mModel, filter);
+    filter = new IntentFilter();
+    filter.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
+    filter.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE);
+    filter.addAction(Intent.ACTION_LOCALE_CHANGED);
+    filter.addAction(Intent.ACTION_PACKAGE_DATA_CLEARED);
+    filter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
+    registerReceiver(mModel, filter);
+    filter = new IntentFilter();
+    filter.addAction(SearchManager.INTENT_GLOBAL_SEARCH_ACTIVITY_CHANGED);
+    registerReceiver(mModel, filter);
+    filter = new IntentFilter();
+    filter.addAction(SearchManager.INTENT_ACTION_SEARCHABLES_CHANGED);
+    registerReceiver(mModel, filter);
+  }
+   #+END_SRC
+2. 在 Launcher 中只有一个全局的 LauncherModel 的变量mModel, 这个变量在 LauncherApplication
+   中定义, 构造函数的参数为 LauncherApplication 和一个全局的 IconCache 变量 mIconCache.
+3. 在 LauncherActivity 的 onCreate 阶段,会调用 app.setLauncher()函数获取 LauncherModel 变量,
+   该函数中会调用 LauncherModel 的 initialize()函数, 该函数会将在 LauncherModel 中生成一个
+    weakReference 指向 Launcher(这样可以避免内存泄露).
+
+   #+BEGIN_SRC java 
+  //Launcherr实现了 Callbacks 接口.
+  public void initialize(Callbacks callbacks) {
+    synchronized (mLock) {
+      mCallbacks = new WeakReference<Callbacks>(callbacks);
+    }
+  }
+   #+END_SRC
+4. 在目前架构中,第一次进入 Launcher 会跳转到 WelcomeActivity,这样直接从 onCreate 走到 onUserLeaveHint
+   和 onDestroy,在 onUserLeaveHint 中就会把 sPausedFromUserAction 设为 true.这样在 onCreate 里
+   就会走到LauncherModel 的 *startLoader(true, -1)* 函数做加载工作.(上面的流程是在 *71a45*  之前适用,
+   后面的流程会改,这样会走到 *startLoader(true, curPage)* 流程.
+5. startLoader()主要流程:
+   + 清空 ArrayList mDeferredBindRunnable 中所有未处理的 runnable 对象.
+   + create a new LoaderTask object.
+   + put the LoaderTask to worker thread, set the thread priority to NORMAL.
+ 
+*** LoaderTask
+As LoaderTask is a runnable, it will execute *run()* at workthread.
+1. *run()* :
+   + check if loadWorkspace first, if the launcher is in AllApps/Widget state, 
+     it will loadAllApps first instead of loadWorkspace.
+   + set thread priority to default, then call loadAndBindWorkspace(if loadWorkspace)
+     or loadAndBindAllApps(if load all apps).
+     + *loadAndBindWorkspace()*: if workspace is not loaded, call loadworkspace(), then
+       call bindworkspace.
+       + *loadWorkspace()*:
+	 + call LauncherProvider's *loadDefaultFavoritesIfNecessary(0)* to load default ws.
+	   + This function will first get the workspaceResId of file R.xml.default_workspace.
+	   + Then it will call mOpenHelper's *loadFavorites()* to load, one parameter of this 
+	     function is an writable instance of "launcher.db".
+	     + First call *addHotseats()*,  main job of this function is to query the hotseat apps
+	       and save the values to table "FAVORITES", including "pkgName/clsName/startIntent/
+	       and location". ItemType of these are /*APPLICATION*/.
+	     + Call *addPredication()*, this function will create the "smart" FragmentInfo and save
+	       it's information to db. The *save* add is done by addItemToDatbase(), workflow is:
+	       + call item.onAddToDatabase() to convert item info to values.ItemType is PREFRAGMENT.
+	       + create a runnable task to insert values to *CONTENT_URI_NO_NOTIFICATION*. Put the
+		 task to workthread.
+	 + getContent data from /*CONTENT_URI*/, traverse the data, if it's itemType is 
+	   "APPLICATION", create a shortCurInfo based on the data. Put it in sBgItemsIdMap.
+           If it's container is "DESKTOP" or "HOTSEAT", put it both in 'HOTSEATPKGNAMES' and 'sBgWorkspaceItem'.
+       + *bindWorkspace()*:
+	 + check if callback(AKA launcherActivity) is still alive.
+	 + Create a runnable to run on MainThread and to unbind all the items and widgets.
+	 + call *filterCurrentWorkspaceItems/filterCurrentAppWidgets/filterCurrentFolders/" 
+	   sequentially, these three functions will filter items on current screen and other
+	   screens. Mainly check the *info.container* and *info.screen*.
+	 + sort the filtered results.
+	 + Create a runnable, and call *callback's* startBinding(), run this function on mainthread.
+	   + the *startBinding()* function will clear the occupy array and remove all views in layout.
+	 + call *bindWorkspaceItems()* to load items on the current page.
+	   + First traverse the workspaceItems and start runnables which call *bindItems* on mainThread.
+	     it may take serveral runnables to do the *bindItems* function.
+	     + every *bindItems* function will travers the items passed, if it's item type is "APPLICATION"
+	       or "SHORTCUT", create a shortcut view by calling *createShortcut*, then call workspace's *addInScreen* to 
+	       to add the view to screen.
+	   + Then add folders and widgets by calling *bindFolders* and *bindAppWidget*, same as items.
+	 + call *bindWorkspaceItems()* again to load items on the other pages.
+	 + create a new runnable to run on main thread, call *finishBindingItems*.
+	   + call updateAppMarketIcon to update market.
+	   + createPreFragment()
+	   + refreshMissCount()
+
+*** contentObservers
+LauncherModel will register two contentObservers: contact and calllog.
+They will be trigger when contact or call information changes.
+
+When contact observer triggered, it will post a runnable, which will call
+reLoadNewestContact() in it's run().
+*** Import variables
+/*The follow variables are only accessed by worker thread*/
+1. mWorkspacLoaded: set to "true" after loadWorkspace().only set to "false" 
+   in resetLoadedState().
+2. mAllAppsLoaded: set to "true" after loadAllAppsByBatch(). only set to 
+   "false" in resetLoadedState().
+3. mBgAllAppsList: only access in worker thread.
+4. sBgItemsIdMap: save all the itemInfos, shortcuts/folders/widgets.
+5. sBgWorkspaceItems: save items on the home screen.
+6. sBgAppWidgets: save widgets create by LauncherModel.
+7. sBgFolders: save FolderInfos create by LauncherModel.
+8. sBgDbIconCache: 
+/* by workerthread */
+*** startLoaderFromBackgound:
+This function will be called if:
+1. receive intent ACTION_LOCALE_CHANGED or ACTION_CONFIGURATION_CHANGED.
+   This will call forceReload(), which will call ...
+2. receive intent ACTION_EXTERNAL_APPLICATIONS_AVAILABLE.
+
+This function will call *startLoader(false, -1)* immediately if the launcher 
+is not on "PAUSEd" state. Otherwise it will set a flag of Launcher, when launcher
+come back (onResume), it will check the state and start loader.
+** LauncherActivity Conditionally call finish() 
+*** finish() after startWelcome in onCreate (Cur Arch).
+1. Android5.0: 在 welcome 中触发 home 选择,选择的 Launcher 不被系统认可.离开 Launcher
+    后再按 home 键会创建新的 Launcher.
+   #+BEGIN_QUOTE
+*After install*
+01-30 20:37:52.352   756  1020 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x13200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 10012 on display 0
+*Go to welcome*
+01-30 20:37:52.737   756  1369 I ActivityManager: START u0 {cmp=com.eyespage.launcher.app/.WelcomeActivity} from uid 12342 on display 0
+*start from welcome*
+01-30 20:38:52.593   756  4536 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x13408000 cmp=com.eyespage.launcher.app/.Launcher} from uid 12342 on display 0
+*put the home button*:
+01-30 20:39:09.070   756   839 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 1000 on display 0
+*start from icon*:
+01-30 20:39:35.078   756  1020 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 12342 on display 0
+*put the home button*
+01-30 20:39:40.862   756   839 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 1000 on display 0
+01-30 20:39:48.123   756  1020 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 12342 on display 0
+01-30 20:40:10.269   756   839 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 1000 on display 0
+   #+END_QUOTE
+2. Android4.+: 4.+系统不会有这个问题, 即使离开 Home, Launcher 依然存在.
+   #+BEGIN_QUOTE 
+*After install*
+01-30 20:29:08.501   770  1210 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x13200000 cmp=com.eyespage.launcher.app/.Launcher} from /*pid*/ 12593
+*Go to welcome*:
+01-30 20:29:08.861   770  1298 I ActivityManager: START u0 {cmp=com.eyespage.launcher.app/.WelcomeActivity} from /*pid*/ 13031
+*Start from welcome*:
+01-30 20:29:12.585   770   959 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x13408000 cmp=com.eyespage.launcher.app/.Launcher} from /*pid*/ 12593
+*put the home button*:
+01-30 20:29:37.041   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME]
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from /*pid*/ 770
+01-30 20:29:52.758   770  1154 I ActivityManager: START u0 {flg=0x10000000 cmp=com.eyespage.launcher.app/.LockBgActivity} from /*pid*/ 13031
+*Start from Icon*:
+01-30 20:33:34.154   770  1210 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from /*pid*/ 13031
+*Press Home Button*:
+01-30 20:34:14.037   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from /*pid*/ 770
+   #+END_QUOTE
+*** remove welcome
+1. Android5.0:
+   #+BEGIN_QUOTE
+*after install*
+01-30 21:35:23.870   756  1309 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x13200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 1000 on display 0
+01-30 21:35:46.007   756   839 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 1000 on display 0
+*From icon*
+01-30 21:35:54.896   756  1245 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 12345 on display 0
+01-30 21:36:00.639   756   839 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 1000 on display 0
+01-30 21:36:12.249   756  1524 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] 
+flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from uid 12345 on display 0
+   #+END_QUOTE 
+2. Android4.0:
+   #+BEGIN_QUOTE
+*after install*
+01-30 21:50:45.306   770  1209 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x13200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 25188
+*press home*
+01-30 21:51:50.435   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 770
+01-30 21:52:09.345   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 770
+*from icon*
+01-30 21:52:18.575   770  1210 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 25528
+01-30 21:52:32.530   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 770
+01-30 21:52:46.945   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 770
+01-30 21:53:04.194   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 770
+01-30 21:53:07.227   770   804 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.eyespage.launcher.app/.Launcher} from pid 770
+   #+END_QUOTE
+*** 判断性的 finish()和启动 Activity
+**** 两个 Activity 的交互流程:
+Launcher 在 onCreate 中启动 welcome,但是要等到 Launcher 
+的 onPause 之后才会进入 Welcome 的 onCreate 界面.同时在 welcome 界面,Launcher 
+*仍然执行onAttachedToWindow()和 onSaveInstance().会把 Folder 都加载到 Home 上*.
+**** 修改一:在 Welcome 中直接启动 LauncherActivity.
+2. Home 选择启动后离开 Launcher 再Home回来, Launcher 启动次数:
+   + Android4.0: 一次.
+   + Android5.0: 一次.
+3. Icon 启动后用 Home 回来.
+   + Android5.0: 2次,按 Home 键后会 create 新的 Activity.
+   + Android4.0: 同上.
+   + 与原来版本(即在 Welcome 中会启动 Home 选择界面)的比较:
+     1. 5.0的手机没有太大区别,即使在 Welcome 启动 Home 选择界面,离开 Launcher 后再按
+	 home 键仍然会 create 新的 Activity.
+     2. 影响4.0的手机,如果在 Welcome 中启动 Home 选择界面,则任何操作后再回到 Home 键都仍然
+	使用这一个 Launcher.
+**** #<<2>>修改二:在 Welcome 中判断当前 package 是否为 Launcher 做不同的启动.
+1. 第一次启动Launcher, 判断是否为第一次启动.如果是,启动 welcome,Launcher 的生命周期
+   继续走, 但是有些工作暂时不做. +Welcome的工作完成后, 点击 got it 按钮启动 startActivity()回到 Launcher.+ 
+   Welcome 中,重写 gotit 按钮的onClick 函数, 判断我们的 launcher 当前是否为 Launcher,
+   如果是,则直接启动 LauncherActivity,否则,启动 Home 选择对话框.
+   + 测试结果:
+     + 可以修正5.0 Launcher 被杀死的问题.
+     + 影响4.0手机的 Icon 启动过程, 之前用 Icon 启动会先把 Launcher 杀死,然后交给 Home
+       选择过程启动,但是改完之后 Launcher 没有被杀死,仍属于Icon 启动的 Activity,所以按 home
+       会启动一个新的 LauncherActivity.
+**** DONE 修改三:在 welcome 和 Launcher 中都判断当前 package 是否为 Launcher.
+在包含[[2][修改二]]的基础上,在 Launcher 的 onCreate() 里也进行判断当前 package 是否为
+Launcher, 如果是且需要启动 welcome,则 finish(). 否则不 finish(),即使需要启动Welcome.
+测试结果:
+1. Home 选择启动:
+   + Android4.0: Launcher 只启动一次, 一直存在.
+   + Android5.0: 只启动一次, 一直存在.
+2. Icon 启动:
+   + Android4.0: Launcher 启动两次.第一次什么都不干就 finish(), 与之前一样.
+   + Android5.0: Launcher 启动两次,第一次被杀死, 第二次重启. 与之前一样.
+** InitDataThread Flow
+** UITASK first init flow
+1. doInBackground() *Thread*
+   + call getItemsInLocalCoordinates() to get all items on desktop. 
+     call queryForAllKnown() to get all new installed appInfos.
+   + traverse all appInfos and make a hashMap by category of each appInfo.
+   + Traverse folderNames that need add.
+     + create a FolderInfo object. set it's spanX/spanY/title/itemType/container(DESKTOP).
+     + Hold a lock.
+     + traverse all the screens
+       + find an empty cell on this screen.
+       + if found
+	 + get all appInfos of this category and traverse.
+	   + From every appInfo, create a shortcutInfo and a appSortModel, ShortcutInfo is
+	     what show on the screen, appSortModel used for sorting. *If this app is saved*
+	     *in the recent task stack, it's sort factor is 2.0*.
+	 + insert the appSortModels to database.
+	 + bind the shortCutInfos to the folderInfo metioned above.
+	   *This action will trigger all the folderInfo listeners' onAdd() and onItemsChanged().
+	 + Add this folderInfo to items which save all the desktop items.
+	 + call addSingleFolder() to add folderInfo on the screen.
+	   This function will post a runnable to UI thread, so this thread will call *lock.wait()* 
+	   to let the UI thread can hold the same lock.
+	   + /*can optimize*/ *UITHREAD* call addFolderItem() to add folderInfo to database.
+	     + Call getFolders() to the cur folders in database.
+	     + if the added folder already exists, mark it, and the UI will show merge.
+	     + if not, add it to the database.
+	   + If need merge, show dialog, if click ok, call processMergeFolder().
+	   + If not
+	     + get the layout of the screen that need put folder on.
+	     + Call FolderIcon.fromXml() to create a folderIcon from xml *folder_icon*.
+	       + This function will inflate a folderIcon object. Set it's tag to folderInfo metioned
+		 above, and set click listener to launcher;
+	       + It will also inflate a Folder view(one one you see when click a folder), but not show
+		 to the screen, just assign it to icon.mFolder.
+	       + Create a FolderRingAnimtor, it shows when waiting recommendation.
+	       + Make the icon as the listener of the folderInfo.
+	     + Call addInScreen() to add the folderIcon to screen.
+	       + call getCellLayoutChildId() to get the childId at pos(x,y) with span(x,y).
+		 *every cell object has the only id in*: 0xFFFFFFFF = container<<24+screen<<16+x<<8+y.
+	       + call addViewToCellLayout() to add the View to the cellLayout. 
+
+2. 优化前后数据
+		 
+** open/close folder
+1. In Launcher's onClick fouction, get the tag of clicked view,
+   if it's FolderInfo and the view if FolderIcon, 
+   call handleFolderClick():
+   + call closeFolder() to close any opened folders
+     + call getOpenFolder() to get opened folders.
+       This function will traverse all the folders on the 
+       screens, and check if it's folderInfo's opened is true.
+     + If there is any opened, do these things:
+       + If is editing name, discard editing.
+       + show workspace/hotseat/searchBar
+       + call closeFolder(folder) to close.
+	 + call animateClosed()
+	   This function will create an animator to do animatinon close.
+
+** ContentProviders
+在 AndroidManifest.xml 中注册了3个 provider,分别是 IndexProvider,
+LauncherProvider, DataProvider.每个 provider 在注册时都提供了
+ authorities 值.
+
+*** LauncherProvider
+1. LauncherProvider继承自 ContentProvider,在 onCreate 里将本身赋值给 Application 
+   的变量 mLauncherProvider.
+   在 provider 中包含一个 SQLiteOpenHelper的子类 DatabaseHelper, 在 provider 的
+    onCreate 函数中会透过该类的 onCreate 函数创建数据库.
+2. 在 launcher 的 onCreate()里调用 registerContentObservers()来注册一个
+   LauncherProvider的 widget 相关的 Observer.该 observer 是一个 AppWidgetResetObserver 对象.
+   当 contentprovider 的内容发生变化时,该 resolver 会调用 AppWidgetHost 的 startListening()
+   函数.
+3. LauncherFavorites类定义了与 LauncherProvdier 相关的 Url("authority/table").
+   contentResolver 可以通过该类向 LauncherProvider 中做操作.
+   LauncherModel 中获取的数据都通过这种方式插入 LauncherProvider.
+4. 
+** AllApps/Widgets related
+*** view 及layout 位置
+1. launcher.xml.
+   该部分的 UI在[[launcher.xml][launcher.xml]]中 定义为 *apps_customize_pane*, 从该文件可以看出,
+   launcher.xml 的顶层 viewgroup 是 framelayout,而 workspace和 apps_customize_pane
+   处于同一层, 所以他们是累叠在一起,只不过 apps_customize_pane 显示为 invisible.
+2. 关于 apps_customize_pane 的 layout 定义看[[apps_customize_pane][这里]]. 该 layout 主要定义 tab 栏和 View 栏,
+   其中 view 栏继承自 pagedView.
+3. AppCustomizeTabHost是按下 AllApps 按钮后显示的画面,该类继承自 SDK 的 TabHost 类(
+   该类继承自 FrameLayout),并实现了 Launcher 的 LauncherTransitionable 接口.
+*** Launcher 页面点击 *allApp* 按钮或长按添加 widget
+在Launcher 界面点击"allApps"按钮或长按"添加"widgets, 会调用到 showAllApps/Widgets()函数.
++ 调用 showAppsCustomizeHelper()实现动画转换.
+  + 设置变量, fromView=workspace, toView=mAppsCustomizeTabHost.
+  + 调用 getChangeStateAnimation()获取 Animator.
+    + 该函数返回一个 Animator(在函数内部其实是创建了一个 animatorSet),
+      在返回这个 animator 之前,函数内部还做了一些其他的针对 workspace 的
+      操作:
+    + 调用 setCurrentPage()取消可能存在的 scrolling 动作, 将屏幕定位到
+      某一固定的页面.
+    + 如果要切换的状态为 *small* 状态,计算要缩小的比例(factor), 然后调用
+       setLayoutScale(). 该函数会基于 factor 重绘 pages.
+    + 遍历所有的 children pages.如果是当前页面,设置其 *初始/最终* alpha 为1, 否则为
+      1. 将这些值保存在私有变量数组中.如果要动画切换的话,将其他一些x/y 值同样保存到
+      数组中.
+      
+      然后开始进行动画切换, 对于当前页面, 首先创建一个 PropertyAnimator 进行 x/y/scale
+      的切换动画.
+
+      如果配置的切换前后的 alpha 值也不相同,创建一个 animator 进行 alpha 动画.
+      同理, 如果 backgroud alpha 也不同,创建切换动画.
+  + 设置 toView(即 AllApps 界面)的 scaleX 和 scaleY.
+    基于 toView创建一个 LauncherViewPropertyAnimator 对象 scaleAnim.
+    该 animator 通过缩放的形式显示 allApps 界面.
+  + 创建一个ofFloat 的 animator alphaAnim.该 animator 慢慢改变 alpha 值.
+    对该animator 设置 updateListener.每一次 update 都会调用 
+    dispatchOnLauncherTransitionStep().(目前该函数什么都没做).
+  + 创建一个 animatorSet 对象来播放上面创建的两个动画对象,
+    对象会在 delay 时间后依次启动 scaleAnim 和 alphaAnim.
+    + 设置该 animatorSet 的 listener:
+      + onAnimationStart(): 隐藏 workspace 的所有内容.(hotseat/page/ws/searchbar).
+	设置 toView 可见并 bringToFront().
+      + 调用 dispatchOnLauncherTransitionEnd(),并再次隐藏 ws 内容.
+  + 播放步骤二中获得的 animator.
+  + 调用 fromView/toView 的 onLauncherTransitionPrepare()函数.fromView即 launcher
+    没有实现该函数.toView 即 AppsCustomizeTabHost 对该函数的实现:
+    + 因为是从 workspace->allApps, 会先将该类 content 设成可见,然后 load 相关的 page.
++ 调用 mAppsCustomizeTabHost.selectAppsTab()(如果是 widget 则
+  调用 selectWidget()).
+  + 调用 setContentTypeImmediate(type).
+    + onTabChangedStart()
+      + mAppsCustomizePane.hideScrollingIndicator(false): 该函数在 pageview 基类中实现.
+	该函数会先获取 ScrollIndicator, 因为 scrollIndicator 与 PageView 一般在 Layout 文件的
+	同一级, 所以获取方法是 getParent.findViewById().该函数会隐藏 scrollingIndicator.
+    + onTabChangedEnd(type)该函数首先调用 pane.setContentType(type)完成主要的工作, 流程:
+      + setContentType()
+	+ 调用 invalidatePageData(), 传入要显示的 page 页码和是否立即显示.
+	  + 调用 syncPages(), 该函数由 PageView 的抽象函数, 由子类实现,这里子类是 Pane. 该函数会重新
+	    将所有的 Widget 和 Page 重新添加一遍.
+	  + 调用 setCurrentPage() 设置需要显示的 page(因为中间 page 数据可能变动,所以这里显示的不一定是
+	    参数中传入的 page 页码), 该函数会更新 pagescroll/indicator,并通知所有的 listeners.
+	  + 调用 loadAssociatedPages()将应该显示的 page 显示出来
+      + requestFocus()
+  + 调用 setCurrentTabByTag().该函数会触发 AppsCustomizeTabHost  重写的父类函数 onTabChange().
+    + 该函数会 post 一个 runnable.一般情况下,在该 runnable 被 UI 线程执行之前,launcherModel 已经
+      完成了 allApps 的 loading 动作.
+      AllApps的 loading 动作是第一次运行有 Launcher.Model 完成的,在 loadAllAppsByBatch()函数
+      中执行 Launcher 的 bindAllApplications()函数,该函数会创建一个 runnable 来调用 setApps()函数.
+      在该函数中会将 mApps 设置为 LauncherModel 加载的 Apps 列表.
+      +  执行 onTabChangeStart() 和 onTabChangeEnd()函数.
+
+*** AppsCustomizePagedView
+*** AppsCustomizeTabHost
+**** onFinishInflate()
+在该函数中,获取 layout 文件中各 Id 来初始化成员变量.
+然后添加 *APPS* 和 *WIGDETS* 两个 tab 项.设定 TabChange
+的 listener 为该类自身.最后将 tabbar 设成透明隐藏起来.
+
+该类是继承自 TabHost 类,后者包含一个 TabWidget 成员变量
+ mTabWidget,该变量是 tabs 的 parent容器.通过 inflate()
+函数可以生成一个表示 tab 的 textView.然后调用 TabHost 类的
+ addTab()函数将 tab 添加到 TabHost 中.
+*** Launcher onCreate对其影响 flow
+在 Launcher 的 onCreate()中,会调用 mAppsCustomizeContent 的
+onPackagesUpdated()函数.
++ 通过 AppWidgetManager 的 getInstalledProviders()函数获取
+  系统所有的 widgets.
++ 通过 PackageManager 查询所有的 shortcuts(intent:ACTION_CREATE_SHORTCUT).
++ 遍历 widgets,将合法的加入到 mWidgets 中.
++ 将所有 shortcuts 假如到 mWidget 中.
++ 调用 updatePageCounts()修改 mNumWidgetPages 和 mNumAppsPages.这时候 appsPage
+   还是0.
++ 调用 invalidateOnDataChange().
+  + 这时候 data 还没 ready,只调用 requestLayout().
+** Track/Location
+   Launcher 在 onCreate 中会启动 Coreservice,该 Service 会负责
+跟踪 location.这里主要用到了 GooglePlayService 的API.
+** Notes
+1. 只有在 onRestoreState() 中mRestoring 才被设为 true.
+*** GO over 2015.03.07
++ Tracking
+  - <50m+10min ==> < 150m. 
+  - 聚合到第一个, 不记录新点.更新 updatetime 和 activity.
+  - > 10min, sig 点.
+  - siglocs 定时删除, 去服务器拿.
+  - nonce.
++ 数据库多线程.
++ 第一次 query 所有 app.
+*** basic
+1. event.getX(), getY()获得触发点.
+*** VelocityTracker
+used to track velocity of touch events.
+1. fuctions:
+   + obtain() get an instance
+   + addMovement(event) add an event to it.
+   + computeCurrentVelocity() compute
+   + getXVelocity() as the name means
+   + getYVelocity()
+     
+* BUGs									:bug:
+** 5.0 Launcher Activity 被启动两次.
+*** 现象
+1. 第一次安装, 离开 launcher界面,回来后发现 launcher 重启.onCreate()重新走了一遍.
+   (但是没有 onDestroy), preFragment 被重新创建, receiver 重新创建, 巴拉巴拉...
+2. 手机重启, Launcher 会走一个onCreate->onDestroy->onCreate 流程.
+3. 在 Actvity 的 onDestroy 之后再调用 getActivity 返回 null?
+4. 由于 launcher 被启动两次: LauncherModel 中的 contactObserver 和 calllogObserver 被
+   注册两次.
+*** Fix
+1. (Fix 3)把 setRetainInstance(true) change to false.可以解掉第2个现象:在 onDestroy 中会调用
+   preFragment 的 onDestroy,在这里面去做 unregisterReceivers()行为,同时在 onDetach 中
+   将对 Launcher 的引用设为 null. *This can also 解决5.0 notification开锁后又出现的问题*.
+2. (Fix 1)在5.0上,看上去是从 WelcomeActivity 去启动 *选择Launcher 的 Dialog*, 会出现这个问题,
+   在选择了 Launcher 后,从其他的 App 返回, 会导致 Launcher 的 Activity 被重新启动一次,原来的
+    Activity 走到 onStop 后就不走了.在我们的应用中,该 Launcher 没有被删除(/*内存泄露?*/), 而且在
+   收到 BusEvent 之后还会进行 Api 的请求.
+
+   修改方法: 不从 WelcomeActivity 中选择 Launcher,而是从 LauncherActivity 中做选择,可以避免这个问题.
+
+   *side effect*: 即使改成这样, 如果先从 app 启动 launcher,离开 launcher,再按 home 键返回 launcher,
+   仍然会导致 launcher 被再次启动.
+3. 让第一次启动并且不再用到的 Activity 自杀, 需要注意的事情 [100%]
+   - [X] 写一个函数判断当前有两个 activity.
+   - [X] 处理好 category receiver 的注册/注销关系.
+   - [X] 自杀时不要注销全局的 listeners.
+
+** 安装第一次启动左上角没有 Folder
+*** Bug Reason
+安装一个新应用后, 没有回到 Launcher 界面就把我们的 Launcher 删除重新安装(或升级),
+当新应用在我们的 cache 文件中时,LauncherModel 会发送一个 StickyIntent,按照上面
+的步骤, 因为旧 Launcher 被卸载,这个 intent 一直在系统中保留, 当新的 Launcher 安装
+后,会接受并处理这个 intent,处理的动作就是占位左上角的坐标, 但是没有添加 folder,因为
+ folder 里的 applist 为空, 所以没有添加,但是把坐标占据了.
+
+所以当新 Launcher 第一次安装时, folders 无法安转到左上角的第一个"坐标"位置.
+** 5.0 press home button show bug
+*** description
+From logcat can see "performing stop of activity that is not resumed".
+*** code flow of this log
+->restoreState->loadAssociatedPages
+** Run monkey crash
+1. Rootcause: LinearLayout cast to Folder(FrameLayout).
+   This happens when test with monkey, it send
+   some keyboard events, and the bubbleTextView handle it
+   wrongly, because we change the layout of the folder from 
+   the orignal google code.
+
+** 锁屏状态点击通知打不开.
+测试环境: SonyXperia, 
+1. 第一次安装自动待机后点亮屏幕点通知.
+   + 点其他程序的通知会打开应用.
+     LockBgActivity的生命周期:onResume->onPause->onStop, 检查当前的 topActivity,根据
+     当前的 topActivity 判断需要解锁, 调用 finish()->onDestroy.
+   + 点击 Launcher 自己的通知.
+     *无法* 消除锁屏,LockBgActivity 的生命周期只走到 *onPause*.
+   + 锁屏状态点击 home 键,LockBgActivity 消失,这样点击任何 notification 都没反应.
+
+测试环境: Nexus5, 
+1. 主动锁屏.
+   + 点其他程序的通知 *不* 会打开应用.
+     LockBgActivity的生命周期:onResume->onPause->onStop, 在该阶段去获取 topActivity
+     拿到的还是 launcher 自身, 所以判断不解锁.->onDestroy.
+   + 点击 Launcher 自己的通知.
+     *无法* 消除锁屏,LockBgActivity 的生命周期只走到 *onPause*.
+   + 锁屏状态点击 home 键,LockBgActivity 消失,这样点击任何 notification 都没反应.
+* OMB
+It's a launcher, right? First, it should be a desktop, show informations to people, 
+like all the apps, weather, time and many other informations.
+
+So, it's a desktop, a container, you can put things on it, which is called *DropTarget*.

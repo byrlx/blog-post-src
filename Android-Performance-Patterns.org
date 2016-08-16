@@ -1,0 +1,117 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis404
+#+EMAIL: luisxu404@gmail.com
+
+#+TITLE: Android Performance Patterns 视频笔记
+(持续更新)
+
+视频地址为 [[https://www.youtube.com/playlist?list=PLWz5rJ2EKKc9CBxr3BVjPTPoDPLdPIFCE][https://www.youtube.com/playlist?list=PLWz5rJ2EKKc9CBxr3BVjPTPoDPLdPIFCE]].
+
+* [[https://www.youtube.com/watch?v=HXQhu6qfTVU&list=PLWz5rJ2EKKc9CBxr3BVjPTPoDPLdPIFCE][Rendering Performance]]
+该视频主要讨论 UI 的流畅度问题,如果用户在使用 App 发现有卡顿或不流畅的现象,这一般都是
+*渲染* 问题.
+
+Android 系统一般每16ms 重绘一下应用界面,所以一秒能画60帧. 这意味着你所有的 UI逻辑最好都在16ms
+ 内完成,如果你的应用需要更新 UI,但是新的界面的生成时间超过了16ms,那么当系统在下一次需要去
+重绘画面的时候, 就找不到新的界面,就不会做任何动作, 这就是 *掉帧* 现象. 对于用户来说,他看到当前
+界面的停留时间就是32ms,而不是16ms. 对于 *动画* 效果来说,用户很容易就可以看到这种延迟问题,
+尤其当用户需要用应用进行交互时(e.g 拖动画面或输入), 这是很不好的用户体验.
+
+** a) 产生这个问题的一些主要原因:
+1. 重绘 view 花费太多 CPU 周期,尤其是重绘一个结构复杂的 view.
+2. *OverDraw*. 对于重叠的 layout, 对用户来说, 被 *遮挡* 住的对象是不可见的. 所以如果将整个层次都
+   绘制完成后才呈现给用户, 会浪费很多的时间在用户看不到的像素上.
+
+   打开 *Show GPU Overdraw*, 就可以观察应用的 overdraw 现象, Android 系统透过不同的颜色表示 overdraw 程度,
+   一般某一像素被重绘的次数越多,该像素的颜色越重. 
+
+   一个常见的产生 overdraw 的情景就是大量使用 background,例如整个 activity 有一个 background,然后
+   里面的 view 控件也有自己的 background.
+3. 动画太多.使用大量的 CPU 和 GPU 资源.
+
+** b) 渲染性能分析的常用方法
+1. 使用 HIerarchy Viewer 分析 layout 结构,如果 layout 结构过于复杂,重绘时间会过长.
+2. 使用手机上的 *Developer Option* 中带的一些 debug 选项来查看应用是否有 *overdraw* 的问题.
+   包括: Profile GPU Rendering/Show GPU Overdraw/GPU View Updates.
+3. 使用 traceview 分析绘制过程的 cpu 使用情况.
+** c) 关于VSYNC
+刷新率: 屏幕每秒更新的次数, 用 HZ 表示; 帧率: GPU 每秒生成帧的数量, fps.
+
+显示一个画面的一般流程:
+GPU 获取数据,绘制,硬件将绘制好数据显示到屏幕上.如果这种协作不一致,会产生视觉上的问题.
+
+例如:显卡使用同一片内存来绘制帧,因此新的帧会覆盖旧帧.这种覆盖是 *一行一行* 覆盖的.
+所以, 可能出现这种情况, 当屏幕需要显示时, 它不知道当前的内存中的内容(有可能这时候覆盖
+正在进行中, 或者当前的帧还没画完).
+
+对这个问题的解法是使用 *双* 内存,当 GPU 画完一帧后,将其从当前 buffer(backbuffer)移动
+到 frame buffer.然后再使用 back buffer 画下一帧.当屏幕需要更新, 就从 frame buffer 中
+取数据, 这能保证不影响 GPU 的绘制过程. 
+
+VSYNC 就是协调这种 copy 过程的机制. 理想情况下,帧率一般大于刷新率,这样当一次屏幕更新完成
+后, 可以通过VSYNC 机制告诉 GPU 下一次刷新过程. 相反, 如果刷新率大于帧率, 当屏幕需要刷新时,
+有可能在 frame buffer 中取到的还是上一次的数据. 所以如果系统的帧率间歇性的出现问题(小于刷新率),
+用户就会感到 *卡顿* 现象发生.
+
+对于应用程序而言,出现这种间歇性问题的原因,有可能就是生成的数据过慢, 导致 GPU 饥饿.
+没有时间在下一次屏幕刷新前做完成绘制.
+** d) GPU 渲染分析
+打开 *开发者选项* 的 *GPU 呈现模式分析*, 选择在屏幕上显示. 选好后, 会在屏幕上显示一些颜色
+条.  这些颜色条显示了三部分的渲染效果:1, 最底层代表导航栏; 2, 最上层代表通知栏; 3, 中间
+代表当前活动的应用程序. 我们只关注第三部分.
+
+当这个功能开启后, 会从左到右的显示颜色条,每个竖条都代表一个被渲染的帧,竖条越高, 代表渲染时间
+越长.还可以看到屏幕上有一条绿线, 该线表示16ms.所以如果想要达到60帧/s 的效果,必须保证每个竖条
+都在绿线以下.
+
+每个竖条都有大约3种颜色组成:
++ 蓝色表示绘画时间; 在一个 view 被渲染之前,首先要被转化成 GPU 可以处理的格式,这种转换可能知识
+  简单的几个绘图命令,也可能是很复杂的Canvas 数据.一旦转换完成,结果就会被系统当成存储为
+  *display list*. 蓝色条即表示转换和 cache 该帧的所有 view 花费的时间. 时间长的原因可能是
+  需要绘制的 view 过多, 或者某个 view 的onDraw()逻辑太复杂.
++ 红条代表执行时间. 即 Android 的2D 渲染器执行上一步的 *display list* 的过程.Android 系统
+  通过与 OpenGL ES API 交互来将 display list绘制到屏幕,该过程首先将数据传给 GPU,然后在将
+  像素绘制到屏幕上. 当 view 约复杂(自定义 view),可能就需要更复杂的 OpenGL 绘图命令.重绘更多
+  的 view 同样会导致该问题.
++ 橙色代表处理时间.也可表示 CPU 的等待时间.如果该条过长,说明 GPU 的工作太多.
+  /About Execute: if Execute takes a long time, it means you are running ahead of the graphics pipeline. Android can have up to 3 buffers in flight and if you need another one the application will block until one of these bufferes is freed up. This can happen for two reasons. The first one is that your application is quick to draw on the Dalvik side but its display lists take a long time to execute on the GPU. The second reason is that your application took a long time to execute the first few frames; once the pipeline is full it will not catch up until the animation is done. This is something we'd like to improve in a future version of Android./
+** e) More about GPU
+将对程序所描述的内容转化为最后屏幕上的像素的过程用到了 *光栅化* 这项技术. 对该技术的解释为 
+"/把物体的数学描述以及与物体相关的颜色信息转换为屏幕上用于对应位置的像素及用于填充像素的颜色，
+这个过程称为光栅化，这是一个将离散信号转换为模拟信号的过程。/"
+
+光栅化是一项很耗时的技术,所以该项动作专门交给 GPU 处理. CPU 首先将这些数据(图形/纹理...)
+传输给 GPU(通过 displaylist 这个数据结构),然后GPU 将其绘制到屏幕上.
+这个过程是通过 OpenGL ES 完成的. 但是CPU 将组件转化为纹理的过程以及将转化后的数据传给
+GPU 的过程都是非常耗时的操作.
+
+为了优化这项操作, OpenGL ES 提供了 API 可以一次将数据传给 GPU,当需要重绘同一物体时,只需
+告诉 GPU 就好了.所以要尽可能的将最多的数据提供给 GPU 并尽量不去修改.
+** f) Invalidate/layout
+上节说过 CPU 通过 displaylist 将数据传给 GPU,如果一个 view 的位置发生改变,可能只需重新
+执行一次这个 displaylist 就可以.但是在另一种情况下,view 的改变会导致 displaylist 不合法,
+需要重新创建一个 displaylist.
+
+当一个 view 的 size 改变时,会触发 measure 流程,该流程会遍历 view 树,询问每个 view 的新 size. 
+当位置改变,会触发 layout 流程,对每个 view 生成新的位置.
+** g) Overdraw/Cliprect/Quickreject
+Android 目前在尽量避免 overdraw 现象.但是对于自定义 view,android 系统的优化程序通常无法触及
+(重写onDraw()函数). 但是可以通过下述方法给优化程序一些提示:
+
++ Canvas.cliprect(): 该函数可以让你定义 boundaries.所以只有 boundaries 区域内的内容会被绘制.
+  屏幕上的其他区域会被忽略.在底层实现上,也只有该区域内的数据会传输给 GPU.
++ quickreject: 规划不用 draw 的区域.
+* Battery Performance
+普渡大学对常用的应用/游戏做了一项耗电研究, 研究发现, 在这些应用消耗的电量中,
+只有大约25%~30%用于应用的核心功能.剩下的75%左右都被网络传输/广告等功能消耗掉.
+可以看到应用通过消耗大量的电池来实现利益.
+
+** a) PowerManager.Wakelock
+该函数可以保持 CPU 一直运行,并不会使屏幕进入休眠状态.但是要注释锁的时机, 不然可能
+导致屏幕一直不休眠.
+
+或者使用接受 timeout 参数的 wakelock.acquire API.这会强制释放 Wakelock.
+** b) JobScheduler API
+该 api 可以将工作安排到指定条件执行(WIFI/batching...)
+** c) Battery HIstorian tool
+L 版发布, 可以查看唤醒 CPU 的频率,"凶手"和持续时间.

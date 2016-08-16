@@ -1,0 +1,258 @@
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+OPTIONS: toc:t H:3
+
+#+TITLE: Orgmode手册7:运行代码
+在org文件中可以运行代码, 这里并不是指类似VBA那样的宏, 
+而是指各种各种的代码, 例如C/Python/Java/Lisp/Elisp/Ruby...等所有目前
+市面上的主流和非主流代码, 都可以在org mode中运行.
+还有比这更酷的事情吗? \\
+这个功能叫做org babel. Babel这个词取自圣经:
+
+#+BEGIN_VERSE
+据《圣经·旧约·创世记》第11章记载，当时人类联合起来希望兴建能通往天堂的高塔。
+为了阻止人类的计划，上帝让人类说不同的语言，使人类相互之间不能沟通，计划因此失败，人类自此各散东西。
+此故事试图为世上出现不同语言和种族提供解释。
+#+END_VERSE
+
+Org babel就是这个通天塔, 你可以同一个org文件中运行各种代码. \\
+下面就来具体看下org mode中运行代码这个"黑魔法"功能.
+
+* 添加代码
+下面是一个简单的在org文件中运行代码的例子. 在orgmode的任意位置添加
+下面这段python代码. 
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC python
+def x():
+     s = 1 + 1
+     return s
+
+return x()
+#+END_SRC
+#+END_EXAMPLE
+添加完成后, 在代码块上使用快捷键"C-c C-c", 会看到代码块下面会显示如下的
+内容, 即这段代码的运行结果. 这就是一个简单的在orgmode中使用代码的例子, 
+是不是觉得很酷?
+#+BEGIN_EXAMPLE
+#+RESULTS:
+: 2
+#+END_EXAMPLE
+
+上面的例子简单展示了在org mode中使用代码. 一般而言, 在org中插入的代码格式为
+1. 代码块.
+   可以使用 =#+NAME= 为当前代码块命名, 然后在其他地方引用. 
+  #+BEGIN_EXAMPLE
+#+NAME: <name>
+#+BEGIN_SRC <language> <switches> <header arguments>
+ <body>
+#+END_SRC
+#+END_EXAMPLE
+2. 在行内使用代码, 格式为 =src_<language>{body}= 的方式. 如下例
+   #+BEGIN_EXAMPLE
+   hi src_elisp{(print "jack")} 
+   #+END_EXAMPLE
+* 编辑代码
+可以直接在org文件中编辑代码, 也可以使用快捷键"C-c '"打开另一个buffer来
+编辑文件, 该buffer默认使用了该代码语言的emacs mode模式, 这样会更容易
+对代码进行缩进补全等编辑. 编辑完成后用"C-x C-s"保存. 然后再次使用"C-c '"
+退出. 放弃编辑使用快捷键"C-c C-k".
+* 运行代码
+前面示例讲过可以通过在代码块上使用 "C-c C-c" 或 "C-c C-v e"来运行代码.这样
+会在代码块后面显示运行结果, 以"#+RESULTS:"开头. 如果想修改
+"RESULTS"为其他字符串, 可以设置"org-babel-results-keyword"变量.
+
+org mode同样支持在一处定义代码块, 然后在文件的其他地方进行引用, 这需要对代码块
+设置名称, 例如下面定义了一个名称为"helowold"的代码块.
+#+BEGIN_EXAMPLE
+#+NAME: helowold
+#+BEGIN_SRC elisp
+(print "helowold")
+#+END_SRC
+#+END_EXAMPLE
+
+这样可以在文件的其他地方使用下面的方式调用该代码块:
+#+BEGIN_EXAMPLE
+#+CALL: helowold()
+或者在一行中间使用
+call_helowold()
+#+END_EXAMPLE
+
+* 给代码添加参数
+可以在 =#+BEGIN_SRC= 后面接 ":var name=value"的方式来向给代码块设置参数,
+如下例:
+#+BEGIN_EXAMPLE
+#+NAME: lxxxx
+#+BEGIN_SRC elisp :var n=5
+(+ 1 n)
+#+END_SRC
+#+END_EXAMPLE
+
+在其他地方使用 =#+CALL= 调用代码时, 可以想其中传入参数替代默认参数, 例如
+#+BEGIN_EXAMPLE
+#+CALL: lxxxx(9)
+#+END_EXAMPLE
+* 导出代码
+在将org文件导出为HTML/PDF等格式时, 可以有选择行的导出代码块或结果,
+orgmode支持以下方式的代码导出
+1. 只导出代码, 默认形式.
+2. 导出代码和结果.
+3. 只导出结果.
+4. 都不导出
+   
+可以通过设置header argument的":exports"属性来实现上述的特性, 该属性的
+值可以为:
+| code    | 代码 |                          |
+| results | 结果 | 结果需要已经在文件中显示 |
+| both    | 都   |                          |
+| none    | 都不 |                          |
+
+例如下面的代码:
+#+BEGIN_EXAMPLE
+#+NAME: lxxxx
+#+BEGIN_SRC elisp :var n=5 :exports results
+(+ 1 n)
+#+END_SRC
+#+END_EXAMPLE
+
+* 提取代码
+orgmode支持将org文件中的代码块提取到代码原文件中, 
+使用快捷键 "C-c C-v t" 或命令"org-babel-tangle"可以
+实现该功能, 该命令默认在当前目录创建一个源码文件, 文件
+名与org文件名相同, 后缀为该类型语言的后缀. 
+
+该功能默认是关闭的, 可以通过设置 header argument的":tangle"
+属性来打开, 将其设置为"yes"即可打开. 
+也可以将其设置为文件名,这样可以将代码导出到该文件,
+使用命令"org-babel-tangle-file"或"C-c C-v f"也可以.
+#+BEGIN_EXAMPLE
+  :PROPERTIES:
+  :header-args: :exports results :tangle yes
+  :END:
+或者
+#+BEGIN_SRC elisp :tangle yes/filename
+
+#+END_SRC
+#+END_EXAMPLE
+
+* Babel库
+orgmode的babel包含了一些可重用代码, 可以直接在当前org mode中使用.
+如果想将你的代码加入到babel库中,可以使用函数 "org-babel-lob-ingest".
+然后就可以调用里面的代码了.
+
+*注:* \\
+Emacs自带的org mode中默认并没有安装babel库, 如果想使用带babel库的orgmode,
+可以从orgmode的elpa中获取, 在配置文件中加入如下配置, 使用"eval-buffer"更新
+配置, 然后调用 "package-refresh-content", 接着安装 "org-plus-contrib"包.
+#+BEGIN_EXAMPLE
+(require 'package)
+(add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t)
+#+END_EXAMPLE
+
+安装完成后, 如果想使用那个包, 可以在配置文件中使用 *require* 引用:
+#+BEGIN_EXAMPLE
+(require 'org-mac-iCal)
+;;在 org 文件调用
+#+CALL: org-mac-iCal()
+#+END_EXAMPLE
+
+* header参数
+可以通过header参数来配置代码块的一些功能, 本节会介绍一下
+各种header参数.
+
+orgmode可以设置各种范围的header参数, 下面会逐一介绍, 一般来说, 范围
+越大, 优先级越小, 即最小范围的header参数总是会覆盖大范围的header参数.
+** 全局header参数
+可以通过设置"org-babel-default-header-args"变量来设置全局的header参数. 
+例如下面的例子将":noweb"设置为"yes". ":noweb"功能会在后面介绍.
+#+BEGIN_EXAMPLE
+    (setq org-babel-default-header-args
+           (cons '(:noweb . "yes")
+                 (assq-delete-all :noweb org-babel-default-header-args)))
+#+END_EXAMPLE
+也可以通过设置 `org-babel-default-header-args:<lang>'为某个语言设置header参数.
+可以参考[[支持的语言]]一节.
+** 文件级header参数
+可以通过设置 =#+PROPERTY= 来设置文件级的header参数, 这个变量可以设置多次.
+例如下面的例子设置"R"语言的seesion为"R", 并设置result为silent.
+#+BEGIN_EXAMPLE
+     #+PROPERTY: header-args:R  :session *R*
+     #+PROPERTY: header-args    :results silent
+#+END_EXAMPLE
+** 标题header参数
+可以为标题及所有子树设置header参数, 例如
+#+BEGIN_EXAMPLE
+     * outline header
+       :PROPERTIES:
+       :header-args:    :cache yes
+       :END:
+#+END_EXAMPLE
+也可以给具体语言设置header参数, 例如
+#+BEGIN_EXAMPLE
+     * Heading
+       :PROPERTIES:
+       :header-args:clojure:    :session *clojure-1*
+       :header-args:R:          :session *R*
+       :END:
+     ** Subheading
+       :PROPERTIES:
+       :header-args:clojure:    :session *clojure-2*
+       :END:
+
+#+END_EXAMPLE
+** 代码块设置header参数
+也可以给单独的代码块设置header参数.有两种方式:
+1. 在 =#+BEGIN_SRC= 后面.
+   #+BEGIN_EXAMPLE
+     #+NAME: factorial
+     #+BEGIN_SRC haskell :results silent :exports code :var n=0
+     fac 0 = 1
+     fac n = n * fac (n-1)
+     #+END_SRC
+   #+END_EXAMPLE
+2. 使用 =#+HEADERS= 关键字
+   #+BEGIN_EXAMPLE
+      #+HEADERS: :var data1=1
+      #+BEGIN_SRC emacs-lisp :var data2=2
+        (message "data1:%S, data2:%S" data1 data2)
+      #+END_SRC
+   或者使用多岗
+      #+NAME: named-block
+      #+HEADER: :var data=2
+      #+BEGIN_SRC emacs-lisp
+   #+END_EXAMPLE
+** 调用代码块时使用header参数
+有两种方式:
+1. =#+CALL: func() :exports results
+2. =#+CALL: func[:exports results]()
+** 支持的header参数
+未完成
+* 支持的语言
+下表是orgmode支持的语言和在org文件中的写法, 可以通过设置变量
+"org-babel-load-languages"设置默认支持的语言, 例如
+| Language   | 识别符    | Language        | 识别符     |
+|------------+-----------+-----------------+------------|
+| Asymptote  | asymptote | Awk             | awk        |
+| Emacs Calc | calc      | C               | C          |
+| C++        | C++       | Clojure         | clojure    |
+| CSS        | css       | ditaa           | ditaa      |
+| Graphviz   | dot       | Emacs Lisp      | emacs-lisp |
+| gnuplot    | gnuplot   | Haskell         | haskell    |
+| Java       | java      |                 |            |
+| Javascript | js        | LaTeX           | latex      |
+| Ledger     | ledger    | Lisp            | lisp       |
+| Lilypond   | lilypond  | MATLAB          | matlab     |
+| Mscgen     | mscgen    | Objective  Caml | ocaml      |
+| Octave     | octave    | Org mode        | org        |
+| Oz         | oz        | Perl            | perl       |
+| Plantuml   | plantuml  | Python          | python     |
+| R          | R         | Ruby            | ruby       |
+| Sass       | sass      | Scheme          | scheme     |
+| GNU Screen | screen    | shell           | sh         |
+| SQL        | sql       | SQLite          | sqlite     |
+
+#+BEGIN_EXAMPLE
+     (org-babel-do-load-languages
+      'org-babel-load-languages
+      '((emacs-lisp . nil)
+        (R . t)))
+#+END_EXAMPLE

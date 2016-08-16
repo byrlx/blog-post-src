@@ -1,0 +1,560 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: ArrayList, LinkedList源码笔记最近工作不忙, 抽空看了一下ArrayList和LinkedList的源码. 下面是一些主要知识点的笔记. 
+
+* Iterable
+实现了Iterable的接口类, 可以使用 "for-loop" 形式的语法. 
+例如这里实现一个 Foo 类实现了 Iterable 接口. 那么可以使用
+如下代码来操作 Foo 实例.
+
+#+BEGIN_EXAMPLE
+   Foo foo = new Foo();
+   for(T t : foo ) {//do  something}
+#+END_EXAMPLE
+
+该接口的几个主要API:
+| 名称            | 功能                                                                      |
+|-----------------+---------------------------------------------------------------------------|
+| interator()     | 返回一个[[Iterator][Iterator]] 实例, 用于实现对Interable接口的"遍历".                   |
+| forEach(action) | 接受一个Cousumer类型的参数action, 然后对"遍历"后的每个元素用action做处理. |
+
+* Iterator
+Iterator是集合的"迭代器", 提供了对集合进行遍历的方法. Iterator一般
+都是依附Iterable存在的. \\
+Iterator提供的API:
+
+| 名称                     | 功能                                                              |
+|--------------------------+-------------------------------------------------------------------|
+| hasNext()                | 判断集合是否还有元素.                                             |
+| next()                   | 返回下一个元素.                                                   |
+| remove()                 | 删除next()返回的元素.                                             |
+| forEachRemaining(action) | 对集合剩下的元素执行action动作. action的定义与[[Iterable]]介绍的相同. |
+
+* Collection
+Collection是Java"集合"家族的顶层接口, 继承自[[Iterable]].
+定义了集合的一些共同特性:
+| API名称                  | 描述               |
+|--------------------------+--------------------|
+| size()                   | 集合大小           |
+| isEmpty()                | 是否为空           |
+| contains()               | 是否包含元素       |
+| iterator()               | 返回该集合的迭代器 |
+| toArray()/toArray(T[] a) | 集合转化为数组     |
+| add(E e)                 | 添加元素           |
+| remove(E e)              | 删除元素           |
+| addAll(c)                | 添加一个Collection |
+| clear()                  | 清空整个集合             |
+* List
+List是"队列"家族的抽象类, 队列是一种"有先后顺序"的集合, 队列中的元素
+有添加的先后顺序, 新元素都会添加到队列尾部.
+该类继承自[[Collection]], 除了[[Collection]]的特性, 该类的其他主要特性包括:
+| API                  | 描述                                     |
+|----------------------+------------------------------------------|
+| add(e)               | 添加到队尾, 返回是否添加成功             |
+| remove(e)            | 删除第一次出现的元素                     |
+| addAll(index, c)     | 将集合c添加到index开始的位置             |
+| replaceAll(operator) | 使用operator来替换所有元素               |
+| sort(c)              | 使用Comparator c对队列进行排序           |
+| get(index)           | 获取index位置的元素                      |
+| set(index, e)        | 替换index位置的元素, 返回旧元素          |
+| add(index, e)        | index位置插入一个元素                    |
+| remove(index)        | 删除index位置的元素                      |
+| index(e)             | 获取元素在队列中第一次出现的位置, 或-1   |
+| lastIndexOf(e)       | 获取元素在队列中最后一次出现的位置, 或-1 |
+| subList(start, end)  | 获取[start, end) 位置的子列表            |
+| listIterator()       | 获取list的ListIterator                   |
+
+PS:
+1. replaceAll()实现: 首先获取队列的ListIterator, 然后过该iterator
+   来操作队列. 
+   #+BEGIN_EXAMPLE
+    default void replaceAll(UnaryOperator<E> operator) {
+        Objects.requireNonNull(operator);
+        final ListIterator<E> li = this.listIterator();
+        while (li.hasNext()) {
+            li.set(operator.apply(li.next()));
+        }
+    }
+   #+END_EXAMPLE
+2. sort(Comparator c)实现: 首先调用toArray()方法将队列转化为array,
+   然后调用 =Arrays.sort()= 函数来对array进行排序, 最后将排序后的
+   array通过ListIterator存入队列.
+   #+BEGIN_EXAMPLE
+    default void sort(Comparator<? super E> c) {
+        Object[] a = this.toArray();
+        Arrays.sort(a, (Comparator) c);
+        ListIterator<E> i = this.listIterator();
+        for (Object e : a) {
+            i.next();
+            i.set((E) e);
+        }
+    }
+   #+END_EXAMPLE
+3. subList(): 通过该函数返回的子队列, 其数据还是存储在其"父队列"的底层实现中, 
+   所以对该队列数据的修改都会影响付队列, 同样, 对父队列的修改也会影响子队列.
+* ListIterator
+该类是[[List]]类的一个Iterator实现, 继承自[[Iterator]]接口, 
+其提供了遍历[[List]]的接口, 同时对一些接口做了条件约束:
+即对[[List]]的遍历只能按照"从前向后"或"从后向前"的顺序.\\
+该类的主要API如下:
+| API             | 描述                           |
+|-----------------+--------------------------------|
+| hasNext()       | 从前向后遍历,判断是否还有元素  |
+| next()          | 从前向后遍历, 返回下一个元素   |
+| nextIndex()     | 从前向后遍历, 返回下一个位置   |
+| hasPrevious()   | 从后向前遍历, 判断是否还有元素 |
+| previous()      | 从后向前, 返回下一个元素       |
+| previousIndex() | 从后向前, 返回下一个元素位置   |
+| remove()        | 返回next()或previous()的返回值 |
+| set()           | 替换next()或previous()的返回值 |
+| add()           | 见注1 |
+
+PS:
+1. add(): 插入到next()返回值的"前面", 或previous()返回值的"后面".
+   另一个观点, 从"从前向后"的视角来看, 新插入的元素永远在当前元素的"前面".
+* AbstractCollection
+  AbstractCollection是[[Collection]]接口的一个实现, 对于
+  集合类型的一些"可能"的共同操作, 该类给出了一些API实现, 包括:
+1. isEmpty()
+    #+BEGIN_EXAMPLE
+    public boolean isEmpty() {
+        return size() == 0;
+    }
+#+END_EXAMPLE
+2. contains(o)
+   该函数实现分两种情况: 如果o为null, 则判断集合中是否包含null. 否则,遍历
+   集合并调用参数o的equals()方法来判断是否有相等元素. 元素遍历是通过iterator实现.
+   #+BEGIN_EXAMPLE
+    public boolean contains(Object o) {
+        Iterator<E> it = iterator();
+        if (o==null) {
+            while (it.hasNext())
+                if (it.next()==null)
+                    return true;
+        } else {
+            while (it.hasNext())
+                if (o.equals(it.next()))
+                    return true;
+        }
+        return false;
+    }   
+   #+END_EXAMPLE
+3. toArray()
+   该函数用于将集合转换为数组, 需要关注的是, 在转化过程中, 集合的
+   结构可能被修改(多线程), 即元素被添加或删除.\\
+   该函数的实现也cover了这种情况. 从下面代码可以看到, 
+   1. 在每次for循环开始都会调用hasNext()判断是已经到结尾(即期间有元素被删除). 
+      如果是, 则直接调用Array的copyOf()函数把返回临时数组的一个copy, 该临时数组
+      用于存储已经遍历过的元素.
+   2. 遍历完之后, 还会再次调用hasNext()判断是否有新元素, 如果有, 则调用finishToArray()
+      函数继续对集合进行变量, 并分配一个更大的数组, 知道集合变量完或者达到数组上限.
+   #+BEGIN_EXAMPLE
+    public Object[] toArray() {
+        // Estimate size of array; be prepared to see more or fewer elements
+        Object[] r = new Object[size()];
+        Iterator<E> it = iterator();
+        for (int i = 0; i < r.length; i++) {
+            if (! it.hasNext()) // fewer elements than expected
+                return Arrays.copyOf(r, i);
+            r[i] = it.next();
+        }
+        return it.hasNext() ? finishToArray(r, it) : r;
+    }   
+   #+END_EXAMPLE
+4. toArray(T[] a)
+   如果a的size足够能容下集合元素, 则存入a中并返回a, 否则存入一个新分配的数组并返回.
+5. remove(): 实现方式与contains()相同, 也是通过iterator进行操作.
+6. containsAll()/addAll()/removeAll()\\
+   实现方式基本相同, 都是遍历参数集合, 然后基于参数中的每个元素
+   对集合进行操作.
+7. retainAll(c). 只保留c和该集合的"交集"元素.
+8. clear(): 反复调用iterator的hasNext(), next(), remove()函数删除所有元素.
+   #+BEGIN_EXAMPLE
+    public void clear() {
+        Iterator<E> it = iterator();
+        while (it.hasNext()) {
+            it.next();
+            it.remove();
+        }
+    }   
+   #+END_EXAMPLE
+* AbstractList
+该类是[[AbstractCollection]]的一个子类并实现了[[List]]接口, 该类实现了
+List相关的一些共同操作. 包括:
+1. indexOf(o):寻找元素位置. 该函数的实现使用了previousIndex()函数, 因为
+   调用next()之后, iterator会移动到下一位, 所以需要调用这个函数才能获取
+   到"命中元素"的位置.
+   #+BEGIN_EXAMPLE
+    public int indexOf(Object o) {
+        ListIterator<E> it = listIterator();
+        if (o==null) {
+            while (it.hasNext())
+                if (it.next()==null)
+                    return it.previousIndex();
+        } else {
+            while (it.hasNext())
+                if (o.equals(it.next()))
+                    return it.previousIndex();
+        }
+        return -1;
+    }
+   #+END_EXAMPLE
+2. lastIndexOf(o): 实现方式与indexOf()相同, 只是遍历顺序相反.
+   
+** Itr
+该类是AbstractList的一个内部类, 在List的层级结构中, 是第一次具体实现
+一个Iterator. 可以看下该类是如何具体实现[[Iterator]]的API的.
+1. hasNext():判断当前的光标是否等于size()函数. 如果等于, 表示到达尾部, 返回false.
+   #+BEGIN_EXAMPLE
+        public boolean hasNext() {
+            return cursor != size();
+        }   
+   #+END_EXAMPLE
+2. next():返回下一个元素. 由于光标一开始是指向第一个元素(index=0), 
+   所以每次调用该函数, 返回的都是当前光标位置的元素, 然后再把光标
+   移动一个位置. 同时有一个成员变量 lastRet 用于记录这次返回值的位置.
+   #+BEGIN_EXAMPLE
+           public E next() {
+            checkForComodification();
+            try {
+                int i = cursor;
+                E next = get(i);
+                lastRet = i;
+                cursor = i + 1;
+                return next;
+            } catch (IndexOutOfBoundsException e) {
+                checkForComodification();
+                throw new NoSuchElementException();
+            }
+        }
+   #+END_EXAMPLE
+   
+   在函数的开始调用了 =checkForComodification()= 函数, 该函数用于
+   判断是否有其他线程操作了该iterator所属的集合.它的实现原理是:
+   Iterator有一个成员变量expectedModcount, 其值等于集合的变量modCount, 
+   每次集合被修改(添加/删除), modCount的值都会发生变化. 所以如果发现
+   expectedModcount的值与该值不相等了, 说明"集合"被其他线程修改了. 
+   在AbstractList中就会抛异常.
+   #+BEGIN_EXAMPLE
+       final void checkForComodification() {
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+        }
+   #+END_EXAMPLE
+3. remove():
+   如果当前光标没有指向list区间, 则抛异常. 否则调用 [[AbstractList]]的remove()函数.
+   然后将缓存光标 lastRet 置位-1. 并重新赋值 expectedModcount(因为AbstractList的
+   remove()函数可能会修改modCount的值).
+** ListItr
+该类是[[Itr]]的子类并实现了[[ListIterator]]接口. 主要是实现了ListIterator"从后向前"的遍历方法.
+1. 构造函数ListItr(index):
+   直接将光标至于index的位置.
+2. hasPrevious():判断当前光标是否为0, 如果是返回false.
+3. previous(): 返回当前光标的前一个元素. 这里与next()不同, 
+   next()是先返回当前光标的值, 移动光标. previous()是返回
+   当前光标前面的值, 并移动光标. 
+   #+BEGIN_EXAMPLE
+        public E previous() {
+            checkForComodification();
+            try {
+                int i = cursor - 1;
+                E previous = get(i);
+                lastRet = cursor = i;
+                return previous;
+            } catch (IndexOutOfBoundsException e) {
+                checkForComodification();
+                throw new NoSuchElementException();
+            }
+        }   
+   #+END_EXAMPLE
+4. nextIndex(): 返回当前光标.
+5. previousIndex(): 返回当前光标减1.
+** SubList
+该类是AbstractList的子类,是"子队列"概念的代码实现. 代表了某个
+队列的一部分. 在其实现中, 其内容存储在原列表的底层存储中. 该类
+只维护了一些"列表"状态, 来表示子对类. 任何对该类的队列的修改都会
+影响到原列表, 反之亦然. 通过下面的几个函数可以看出对该类的增删其实调用的
+都是原来队列的方法.
+#+BEGIN_EXAMPLE
+    SubList(AbstractList<E> list, int fromIndex, int toIndex) {
+        if (fromIndex < 0)
+            throw new IndexOutOfBoundsException("fromIndex = " + fromIndex);
+        if (toIndex > list.size())
+            throw new IndexOutOfBoundsException("toIndex = " + toIndex);
+        if (fromIndex > toIndex)
+            throw new IllegalArgumentException("fromIndex(" + fromIndex +
+                                               ") > toIndex(" + toIndex + ")");
+        l = list;
+        offset = fromIndex;
+        size = toIndex - fromIndex;
+        this.modCount = l.modCount;
+    }
+
+    public E set(int index, E element) {
+        rangeCheck(index);
+        checkForComodification();
+        return l.set(index+offset, element);
+    }
+
+    public E get(int index) {
+        rangeCheck(index);
+        checkForComodification();
+        return l.get(index+offset);
+    }
+    
+    public void add(int index, E element) {
+        rangeCheckForAdd(index);
+        checkForComodification();
+        l.add(index+offset, element);
+        this.modCount = l.modCount;
+        size++;
+    }
+
+    public E remove(int index) {
+        rangeCheck(index);
+        checkForComodification();
+        E result = l.remove(index+offset);
+        this.modCount = l.modCount;
+        size--;
+        return result;
+    }
+#+END_EXAMPLE
+** RandomAccessSubList
+该类是[[SubList]]的一个子类, 但是实现了RandomAccess接口(空接口),
+表明其具有RandomAccess的属性. 该类的所有操作几乎都是使用[[SubList]]的操作. 
+
+在AbstractList的subList()函数实现中, 会判断当前List是否为RandomAccess,
+如果是, 则会返回一个 RandomAccessSubList 实例, 否则返回一个 SubList 实例. 
+#+BEGIN_EXAMPLE
+    public List<E> subList(int fromIndex, int toIndex) {
+        return (this instanceof RandomAccess ?
+                new RandomAccessSubList<>(this, fromIndex, toIndex) :
+                new SubList<>(this, fromIndex, toIndex));
+    }
+#+END_EXAMPLE
+* ArrayList
+介绍了这么多之后, 终于来到了ArrayList的实现, 该类直接继承
+自[[AbstractList]], 并实现了 [[List]] 和 RandomAccess 接口.
+#+BEGIN_EXAMPLE
+public class ArrayList<E> extends AbstractList<E>
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
+{
+#+END_EXAMPLE
+
+这里主要介绍其底层数据存储的实现及与LinkedList不同的API:
+1. ArrayList的元素都存放在底层Object数组elementData中.
+2. int变量size存放元素数量.
+3. get(index): 获取元素, 直接访问数组对应位置, O(1).
+4. set(index, e): 更新元素, 同上, O(1).
+5. add(index, e): index位置插入元素, 这里会做两步:
+   + 如果数组已满, 分配新数组, *这样会做一次整个数组的copy*.
+   + 插入新元素, 此时会将index后的内容做整体移动.
+6. remove(index): 对index后的内容做整体前移动作.
+7. batchRemove(c, flag): 批量删除, flag是一个boolean变量, 
+   其含义是: 如果为true, 保留c和该list的交集, 而删除其他元素.
+   如果为false, 则删除交集.
+   #+BEGIN_EXAMPLE
+    private boolean batchRemove(Collection<?> c, boolean complement) {
+        final Object[] elementData = this.elementData;
+        int r = 0, w = 0;
+        boolean modified = false;
+        try {
+            for (; r < size; r++)
+                if (c.contains(elementData[r]) == complement)
+                    elementData[w++] = elementData[r];
+        } finally {
+            // Preserve behavioral compatibility with AbstractCollection,
+            // even if c.contains() throws.
+            if (r != size) {
+                System.arraycopy(elementData, r,
+                                 elementData, w,
+                                 size - r);
+                w += size - r;
+            }
+            if (w != size) {
+                // clear to let GC do its work
+                for (int i = w; i < size; i++)
+                    elementData[i] = null;
+                modCount += size - w;
+                size = w;
+                modified = true;
+            }
+        }
+        return modified;
+    }   
+   #+END_EXAMPLE
+
+所以对于ArrayList的所有的插入/删除动作, 都会涉及到底层数组的
+"移动", 这个移动最终是调用 =System.arraycopy()= 函数实现的.
+所以插入/删除的效率直接与该函数的实现有关. 
+
+ArryaList的其他实现, 例如 Iterator 和 ListIterator, 基本与
+[[AbstractList]]大同小异.
+* AbstractSequentialList
+在介绍LinkedList之前, 先看一下它的父类, 该类是[[AbstractList]]的
+子类, 但是它具有"顺序"的属性, 这是相对于ArrayList的RandomAccess属性而言. 
+官方文档中对该属性是这样解释的. 
+#+BEGIN_EXAMPLE
+ * This class is the opposite of the <tt>AbstractList</tt> class in the sense
+ * that it implements the "random access" methods (<tt>get(int index)</tt>,
+ * <tt>set(int index, E element)</tt>, <tt>add(int index, E element)</tt> and
+ * <tt>remove(int index)</tt>) on top of the list's list iterator, instead of
+ * the other way around.<p>
+#+END_EXAMPLE
+
+上面这段文字解释了在该类中通过index "插入/删除" 元素的实现方法.
+都是通过其ListIterator实现的. (想想在[[ArrayList]]中,这些方法都是直接
+操作数组). 可以看下几个相关的API代码.
+#+BEGIN_EXAMPLE
+    public void add(int index, E element) {
+        try {
+            listIterator(index).add(element);
+        } catch (NoSuchElementException exc) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+    public E remove(int index) {
+        try {
+            ListIterator<E> e = listIterator(index);
+            E outCast = e.next();
+            e.remove();
+            return outCast;
+        } catch (NoSuchElementException exc) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+#+END_EXAMPLE
+
+另外, 该类的 iterator() 和 listIterator() 函数返回的都是
+ListIterator实例.
+* Deque
+双端队列, 支持头部和尾部的插入和删除动作. 
+Deque接口提供了这些操作的相应API.
+* LinkedList
+继承自[[AbstractSequentialList]], 并实现了 [[List]] 和 [[Deque]] 接口.
+
+不过与[[AbstractSequentialList]]不同的是, LinkedList的插入删除并
+没有使用ListIterator, 而是直接操作链表. 下面是一些核心API:
+1. unlink(e): 删除元素, "几乎"所有删除API的底层实现. 
+   与[[ArrayList]]不同的是, 它没有设计到"一片内存"区域的移动, 所以
+   效率上要比ArrayList高.
+   #+BEGIN_EXAMPLE
+    E unlink(Node<E> x) {
+        // assert x != null;
+        final E element = x.item;
+        final Node<E> next = x.next;
+        final Node<E> prev = x.prev;
+
+        if (prev == null) {
+            first = next;
+        } else {
+            prev.next = next;
+            x.prev = null;
+        }
+
+        if (next == null) {
+            last = prev;
+        } else {
+            next.prev = prev;
+            x.next = null;
+        }
+
+        x.item = null;
+        size--;
+        modCount++;
+        return element;
+    }
+   #+END_EXAMPLE
+2. linkBefore(e, node): 插入元素,实现原理同unlink().
+3. node(index): 获取index位置的node, "几乎" 所有遍历类的底层实现.
+   这需要遍历链表, 不过因为LinkedList是双向列表, 
+   所以该函数的实现上也有点技巧: 即如果index > size/2, 则从队列
+   尾部向前寻找, 否则从队列头部向后寻找.
+   #+BEGIN_EXAMPLE
+    Node<E> node(int index) {
+        // assert isElementIndex(index);
+
+        if (index < (size >> 1)) {
+            Node<E> x = first;
+            for (int i = 0; i < index; i++)
+                x = x.next;
+            return x;
+        } else {
+            Node<E> x = last;
+            for (int i = size - 1; i > index; i--)
+                x = x.prev;
+            return x;
+        }
+    }   
+   #+END_EXAMPLE
+
+这三个函数基本就是LinkedList的核心原理. 
+** Node
+LinkedList是使用"链表"这种数据结构来存储数据, 所以其内部定义了一个
+Node类用来表示链表节点. Node类的实现很简单.
+#+BEGIN_EXAMPLE
+    private static class Node<E> {
+        E item;
+        Node<E> next;
+        Node<E> prev;
+
+        Node(Node<E> prev, E element, Node<E> next) {
+            this.item = element;
+            this.next = next;
+            this.prev = prev;
+        }
+    }
+#+END_EXAMPLE
+* SynchronizedList
+由于List类不是线程安全的. 多线程可以同时修改list的内容. 
+所以为了解决这个问题, Collections类提供了一个 
+=snchronizedList()= 函数用于将 [[List]] 转化为一个 "同步" list.
+其基本原理类似于adapter模式, 实现了一个新的list, 被提供了
+同步功能. 看下部分源码:
+#+BEGIN_EXAMPLE
+    public static <T> List<T> synchronizedList(List<T> list) {
+        return (list instanceof RandomAccess ?
+                new SynchronizedRandomAccessList<>(list) :
+                new SynchronizedList<>(list));
+    }
+
+    static class SynchronizedList<E>
+        extends SynchronizedCollection<E>
+        implements List<E> {
+        private static final long serialVersionUID = -7754090372962971524L;
+
+        final List<E> list;
+
+        SynchronizedList(List<E> list) {
+            super(list);
+            this.list = list;
+        }
+        SynchronizedList(List<E> list, Object mutex) {
+            super(list, mutex);
+            this.list = list;
+        }
+
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            synchronized (mutex) {return list.equals(o);}
+        }
+        public int hashCode() {
+            synchronized (mutex) {return list.hashCode();}
+        }
+
+        public E get(int index) {
+            synchronized (mutex) {return list.get(index);}
+        }
+        public E set(int index, E element) {
+            synchronized (mutex) {return list.set(index, element);}
+        }
+        public void add(int index, E element) {
+            synchronized (mutex) {list.add(index, element);}
+        }
+        public E remove(int index) {
+            synchronized (mutex) {return list.remove(index);}
+        }
+#+END_EXAMPLE

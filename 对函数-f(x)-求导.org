@@ -1,0 +1,107 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: 对函数 f(x) 求导
+本文是 [[http://book.douban.com/subject/1148282/][SICP]] 的一段阅读笔记. 记录如何
+一步步设计出一个可以对函数 f(x) 求导的程序.
+
+* 1. 定义求导规则
+导数是大学数学微积分中学过的内容, 关于导数的意义和重要性可以参考
+相关的文献, 这里主要讲述求导的基本规则:
+1. dc/dx = 0. 
+   此处c为常量或不为x的变量, 例如 f(x)=y 或 f(x)=2.
+2. dx/dx = 1.
+   即f(x) = x 的导数 f'(x) = 1. 
+3. d(u+v)/dx = du/dx + dv/dx.
+   对于和式的求导, 等于对和式的各项进行求导的结果之和.
+   例如对于函数 f(x) = 2x + 3x. 其导函数 f'(x) = d(2x)/dx + d(3x)/dx.
+4. d(uv)/dx = v*(du/dx) + u*(dv/dx). 
+   这是乘积式的导函数, 可以通过一个例子很好的说明.
+   f(x) = xy. 则 f'(x) = y*(dx/dx) + x*(dy/dx). 通过规则1和2, 可以
+   求得最终结果为 f'(x) = y + 0 = y.
+
+上述四条规则就是求导的基本规则. 最后两条规则具有递归的性质, 可以最终
+分解成规则1和2. 任何复杂的多项式都可以基于该规则推导出其导函数.
+
+* 2. 定义表达式基本操作函数
+在第一部分中已经定义了求导的基本规则, 这部分就开始涉及真正的代码实现, 
+从前面的规则可以看出, 求导涉及的两个要素主要为: 表达式和规则. 
+假设目前已经有了表达式的对象, 我们设为e. 下面则主要定义几个函数,
+来表达第一部分的几个规则:
+1. (variable? e). 判断e是否为变量.
+2. (same-variable? v1 v2). 判断v1和v2是否为同一变量.
+3. (sum? e). 表达式e是否为和式.
+4. (addend e). 返回e的加数.
+5. (augend e). 返回e的被加数.
+6. (make-sum a1 a2). 构造由a1和a2组成的表达式, 返回值为表达式.
+7. (product? e). 判断e是否为乘式.
+8. (multiplier e). 返回e的乘数.
+9. (multiplicand e). 返回e的被乘数.
+10. (make-product m1 m2). 返回由m1和m2组成的表达式. 
+* 3. 编写求导函数
+通过2中定义的基本函数, 我们可以实现求导函数. 其代码实现如下:
+#+BEGIN_EXAMPLE
+(defun deriv (exp var)
+  (cond ((numberp exp) 0)
+	((variable? exp)
+	 (if (same-variable? exp var)
+	     1
+	   0))
+	((sum? exp)
+	 (make-sum (deriv (addend exp) var)
+		   (deriv (augend exp) var)))
+	((product? exp)
+	 (make-product (deriv (multiplier exp) var)
+		       (deriv (multiplicand exp) var)))
+	(t (error "illegle expression %s" exp))))
+#+END_EXAMPLE
+
+该函数是一个递归函数, 通过对表达式层层递归解析, 
+直到触及到第一部分提及的规则1和2. 即可以求出导函数.
+* 4. 实现基本函数
+在对该求导函数 deriv 的实现步骤中,我们先在第二部分定义了一些基本的
+表达式操作函数, 但是并没有给出这些函数的具体实现, 但是这样并不会影响
+函数deriv的实现, 通过这种方式就可以把底层的抽象和上层的抽象隔离起来, 
+行程[[https://mitpress.mit.edu/sicp/full-text/sicp/book/node29.html][抽象屏障]]. 抽象屏障可以保证系统的各层次的修改只会影响到该层次, 而不会对更高或
+更低的其他层次产生影响.
+
+下面第2部分操作函数的具体实现.
+#+BEGIN_EXAMPLE
+(defun variable? (x)
+  (symbolp x))
+
+//如果x和y是同一个symbol, 则为相等
+(defun same-variable? (x y)
+  (and (variable? x)
+       (variable? y)
+       (eq x y)))
+
+//和式必须为一个consp, 并且第一个元素为+
+(defun sum? (e)
+  (and (consp e)
+       (eq (car e) '+)))
+
+//乘式与和式判断方式相同
+(defun product? (e)
+  (and (consp e)
+       (eq (car e) '*)))
+
+(defun addend (e)
+  (cadr e))
+
+(defun augend (e)
+  (car (last e)))
+
+(defun multiplier (e)
+  (cadr e))
+
+(defun multiplicand (e)
+  (car (last e)))
+
+(defun make-sum (a1 a2)
+  (list '+ a1 a2))
+
+(defun make-product (m1 m2)
+  (list '* m1 m2))
+#+END_EXAMPLE

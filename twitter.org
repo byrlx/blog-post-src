@@ -1,0 +1,31 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: twitter消息一览
+最近略忙, 好久没上twitter. 在上面关注了几个Android大咖, 便于及时了解最新的一些
+技术. 今晚把最近一段时间的推文略读了一下. 顺手做一个简单摘要, 博自己一乐.
+(标题前面展示TODO表示文章还需要阅读, 并阅读完成后补充相关内容)
+
+** TODO 3. 开源测试工具Test Butler
+   https://engineering.linkedin.com/blog/2016/08/introducing-and-open-sourcing-test-butler--reliable-android-test
+
+   这篇文章是linkin团队的文章, 介绍他们开源的一个测试工具Test Butler.
+** TODO 4. 3x3
+https://engineering.linkedin.com/blog/2016/02/3x3--speeding-up-mobile-releases
+同样是一篇linkin用来提升android发布流程的技术文章.
+** TODO 3. Droidcon NYC 2016
+时间 September 29-30
+要开始, 应该会有很多不错的presentation. 持续关注.
+** 4. IntelliJ plugin
+一个介绍IntelliJ插件的视频.
+** 5. AI和Java
+视频地址: http://nighthacking.com/artificial-intelligence-and-java/
+
+一个介绍人工智能和Java的视频.
+** TODO 6. StateListAnimator
+https://blog.stylingandroid.com/statelistanimator/
+一个开源控件.
+** TODO 7. 360AnDev
+https://github.com/AndroidStudyGroup/conferences/wiki/360AnDev2016
+一些不错的android资源列表

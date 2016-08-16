@@ -1,0 +1,150 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+
+#+TITLE: 【翻译】当我开始Android开发时，希望能早点认识的一些开源库
+原文地址 https://speakerdeck.com/chrisguzman/android-libraries-i-wish-i-knew-when-i-started
+
+There’s no sense in re-inventing the wheel when you’re working on Android apps,
+ especially if you’re just starting out.
+ This talk will cover a range of libraries you can include in your Android apps that will help you tackle the problems other people have already solved.
+ Whether you’re loading data from a web api,
+ showing & caching images,
+ or storing & syncing data there’s a library you can pull in to help you out!
+
+介绍：当从事App开发时，有时候没必要重复造轮子，尤其是对新手而言。 
+这个演讲涵盖了一些可以在App开发时使用的库，这些库可以解决你正在遇到的问题。
+无论是要从Web接口获取数据， 或者显示、缓存图片， 或者存储、同步数据，
+这些库都可以帮助你。 
+
+本文是翻译的Groupon工程师[[https://speakerdeck.com/chrisguzman][Chris Guzman]]的一个演讲PPT。作者以一个45分钟“hackathon”的方式，
+从零开始构造一个App "TAaSKY", 然后逐步介绍在开发过程中使用到的开源库。
+
+* 第一步：构造、使用view - Butter Knife
+** 基本使用
+下面的内容是activity的一个简略的layout文件，这是开发App过程中
+必不可少的东西，当写完layout之后，大部分情况下都需要在代码中
+引用相关的组件。这里就可以使用在Android领域举世闻名的开源库：
+Butter Knife。
+
+#+BEGIN_EXAMPLE
+ <LinearLayout ... android:orientation="vertical">
+ <ImageView android:id="@+id/taco_img" .../>
+ <TextView android:id="@+id/description" .../>
+ <LinearLayout android:orientation="horizontal" .../>
+ <Button android:id="@+id/reject" .../>
+ <Button android:id="@+id/info" .../>
+ <Button android:id="@+id/save" .../>
+ </LinearLayout>
+ <EditText android:id="@+id/tag" .../>
+ </LinearLayout>
+#+END_EXAMPLE
+
+Butter Knife通过注解的方式将代码和xml文件绑定到一起，无需在
+重复写大量的 =findViewById()= 这种代码。该库有以下几个优势：
+1. 没有拖慢程序速度。
+2. 改善view查找。
+3. 改善监听函数注册。
+4. 改善资源查找。
+#+BEGIN_EXAMPLE
+<TextView android:id="@+id/description"
+ ...
+ />
+public class MainActivity extends Activity {
+   @BindView(R.id.description) TextView description;
+
+   @Override
+   protected void onCreate(Bundle bundle) {
+      ...
+      ButterKnife.bind(this);
+      description.setText("Tofu with Cheese on a tortilla");
+   }
+}
+#+END_EXAMPLE
+下面是一个通常的Butter Knife用法, =ButterKnife.bind(this)= 函数
+会自动生成代码寻找相关的view、资源并把它们保存到activity代码中。
+类似这样：
+#+BEGIN_EXAMPLE
+public void bind(MainActivity activity) {
+   activity.description = (android.widget.TextView) activity.findViewById(2130968577);
+}
+#+END_EXAMPLE
+
+下面是一些更高级的用法：
+** 绑定、解绑fragment中的view
+#+BEGIN_EXAMPLE
+public class TacoFragment extends Fragment {
+ @BindView(R.id.tag) EditText tag;
+ private Unbinder unbinder;
+
+ @Override
+ public View onCreateView(LayoutInflater inflater, ViewGroup group, Bundle bundle) {
+      ...
+      //Important!
+      unbinder = ButterKnife.bind(this, parentView);
+      tag.setHint("Add tag. Eg: Tasty!, Want to try")
+      return view;
+ }
+
+ @Override
+ public void onDestroyView() {
+      super.onDestroyView();
+      //sets the views to null
+      unbinder.unbind();
+ }
+}
+#+END_EXAMPLE
+** 注册监听函数
+ButterKnife支持大部分常用的监听函数。
+#+BEGIN_EXAMPLE
+@OnClick(R.id.save)
+public void saveTaco(Button button) {
+ button.setText("Saved!");
+}
+#+END_EXAMPLE
+** 绑定资源
+#+BEGIN_EXAMPLE
+class MainActivity extends Activity {
+ @BindString(R.string.title) String title;
+ @BindDrawable(R.drawable.star) Drawable star;
+ // int or ColorStateList
+ @BindColor(R.color.guac_green) int guacGreen;
+ // int (in pixels) or float (for exact value)
+ @BindDimen(R.dimen.spacer) Float spacer;
+}
+#+END_EXAMPLE
+** 给多个组件设置同一个监听函数
+#+BEGIN_EXAMPLE
+@OnClick({ R.id.save, R.id.reject})
+public void actOnTaco(View view) {
+ if (view.getId() == R.reject) {
+    Toast.makeText(this, "Ew Gross!", LENGTH_SHORT).show();
+ }
+ else {
+    Toast.makeText(this, "Yummy :)", LENGTH_SHORT).show();
+ }
+ //TODO: implement
+ getNextTaco();
+}
+#+END_EXAMPLE
+** 操作view的属性
+#+BEGIN_EXAMPLE
+//下面的代码将两个button绑定到一个list中， 并通过操作这个list来
+//操作这些按钮的属性。
+@BindViews({R.id.save, R.id.reject})
+List<Button> actionButtons;
+ButterKnife.apply(actionButtons, View.ALPHA, 0.0f);
+
+ButterKnife.apply(actionButtons, DISABLE);
+ButterKnife.apply(actionButtons, ENABLED, false);
+static final ButterKnife.Action<View> DISABLE = new ButterKnife.Action<View>() {
+ @Override public void apply(View view, int index) {
+    view.setEnabled(false);
+ }
+};
+static final ButterKnife.Setter<View, Boolean> ENABLED = new ButterKnife.Setter<View, Boolean>() {
+ @Override public void set(View view, Boolean value, int index) {
+    view.setEnabled(value);
+ }
+};
+#+END_EXAMPLE
