@@ -8,6 +8,7 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 
 * ALOGX 系列
 以native层为例,如果我们要开发'.cpp'或'.c'程序,那么可以call下列API之以写出不同level的log
+#+BEGIN_EXAMPLE
 
 	#define LOG_TAG "HeloWorld"
 	ALOGV("hello world,level verbose");
@@ -16,7 +17,9 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	ALOGE("hello world,level error");
 	ALOGW("hello world,level warning");
 
+#+END_EXAMPLE
 这里通常都需要定义一个LOG_TAG, 作为一个完整log的一部分,可以唯一的定位一个module. ALOGX()系列API的实现通过宏定位到共同的一组函数.
+#+BEGIN_EXAMPLE
 
 	#ifndef ALOGE
 	#define ALOGE(...) ((void)ALOG(LOG_ERROR, LOG_TAG, __VA_ARGS__))
@@ -46,9 +49,11 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	
 	    return __android_log_write(prio, tag, buf);
 	}
-	
+
+#+END_EXAMPLE	
 __android_log_print()通过va_list变量把format形式字符串生成最终的字符串,然后调用__android_log_write(),这里的参数tag就是之前定义的 LOG_TAG. 而prio是一个整数值,中[logcat](../Android-logcat/)讲到过,最后通过logcat抓出来后,会将整形log level转换为字符型.
 	
+#+BEGIN_EXAMPLE
 	int __android_log_write(int prio, const char *tag, const char *msg)
 	{
 	    struct iovec vec[3];
@@ -79,17 +84,21 @@ __android_log_print()通过va_list变量把format形式字符串生成最终的�
 	    return write_to_log(log_id, vec, 3);
 	}
 
+#+END_EXAMPLE
 Android log 系统目前有四种类型的log:main,system,radio,events. 后三种一般都是系统的一些特殊的log,除此之外,自己开发的程序,log都默认写到main中. 所以程序最开始把 log_id 设为 LOG_ID_MAIN. 不过程序接下来会判断tag参数,如果tag符合radio log的规则的话,则将log_id改为 LOG_ID_RADIO. 接着把传入的三个参数放到一个iovec变量中. 并调用write_to_log()
 	
+#+BEGIN_EXAMPLE
 	struct iovec {
 	    const void*  iov_base;
 	    size_t       iov_len;
 	};
 	
 	static int (*write_to_log)(log_id_t, struct iovec *vec, size_t nr) = __write_to_log_init;
-	
+
+#+END_EXAMPLE	
 write_to_log()是一个指针函数,这里的实现用了一点小伎俩. 最开始这个指针就被赋值为__write_to_log_init, 所以,在第一次调用该函数的时候,调用的就是 __write_to_log_init()
 
+#+BEGIN_EXAMPLE
 	static int __write_to_log_init(log_id_t log_id, struct iovec *vec, size_t nr)
 	{
 	#ifdef HAVE_PTHREADS
@@ -126,9 +135,11 @@ write_to_log()是一个指针函数,这里的实现用了一点小伎俩. 最开
 	
 	    return write_to_log(log_id, vec, nr);
 	}
-	
+
+#+END_EXAMPLE	
 之所以要这样做,是因为在系统开启后第一次写通过ALOGX函数写log的时候,kernel 层的logger device还未被打开,所以要将这些device都打开,然后,将write_to_log改成__write_to_log_kernel. 在函数的最后,接着再调用一次write_to_log(),这次调用的就是__write_log_log_kernel 了.
 
+#+BEGIN_EXAMPLE
 	static int __write_to_log_kernel(log_id_t log_id, struct iovec *vec, size_t nr)
 	{
 	    ssize_t ret;
@@ -147,16 +158,20 @@ write_to_log()是一个指针函数,这里的实现用了一点小伎俩. 最开
 	    return ret;
 	}
 
+#+END_EXAMPLE
 函数将log_id转为log_fd后,就直接调用 log_writev()函数
 
+#+BEGIN_EXAMPLE
 	#define log_writev(filedes, vector, count) writev(filedes, vector, count)
 
+#+END_EXAMPLE
 log_writev()就被映射到具体的driver层的writev()函数.这样,一条log就被写入到了kernel层的device中.
 
 * SLOGX
 
 SLOGX()API族用于生成system log,log被写到system这个logger device中,SLOGX的实现跟main log基本相同,只是默认的log id是system而不是main
 	
+#+BEGIN_EXAMPLE
 	#define SLOGV(...) ((void)__android_log_buf_print(LOG_ID_SYSTEM, ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__))
 	
 	int __android_log_buf_print(int bufID, int prio, const char *tag, const char *fmt, ...)
@@ -200,19 +215,23 @@ SLOGX()API族用于生成system log,log被写到system这个logger device中,SLO
 	    return write_to_log(bufID, vec, 3);
 	}
 
+#+END_EXAMPLE
 * Events Log
 
 Events log是一种特殊的log,经常被用来记录系统的一些参数:例如电池的当前状态,剩余电量......等等
 
 Java层写event log的api为 writeEvent(),不过系统有四种该函数的实现.
 
+#+BEGIN_EXAMPLE
     public static native int writeEvent(int tag, int value);
     public static native int writeEvent(int tag, long value);
     public static native int writeEvent(int tag, String str);
     public static native int writeEvent(int tag, Object... list);
 
+#+END_EXAMPLE
 系统会根据模块中call api时传入的参数对应调用不同的writeEvent()函数.这些函数分别对应到不同的JNI实现.首先看下参数为int/long时的JNI实现.
 
+#+BEGIN_EXAMPLE
 	static jint android_util_EventLog_writeEvent_Integer(JNIEnv* env, jobject clazz,
 	                                                     jint tag, jint value)
 	{
@@ -224,9 +243,11 @@ Java层写event log的api为 writeEvent(),不过系统有四种该函数的实�
 	{
 	    return android_btWriteLog(tag, EVENT_TYPE_LONG, &value, sizeof(value));
 	}
-	
+
+#+END_EXAMPLE	
 这两个函数调用了一个共同的函数 android_btWriteLog()
 
+#+BEGIN_EXAMPLE
 	#define android_btWriteLog(tag, type, payload, len)  __android_log_btwrite(tag, type, payload, len)
 
 	int __android_log_btwrite(int32_t tag, char type, const void *payload,
@@ -244,8 +265,10 @@ Java层写event log的api为 writeEvent(),不过系统有四种该函数的实�
 	    return write_to_log(LOG_ID_EVENTS, vec, 3);
 	}
 
+#+END_EXAMPLE
 是不是很熟悉?没错,最后跟main log流程一样,都调用write_to_log(0函数. 下面是参数为string时的JNI实现:
 
+#+BEGIN_EXAMPLE
 	static jint android_util_EventLog_writeEvent_String(JNIEnv* env, jobject clazz,
 	                                                    jint tag, jstring value) {
 	    uint8_t buf[MAX_EVENT_PAYLOAD];
@@ -264,8 +287,10 @@ Java层写event log的api为 writeEvent(),不过系统有四种该函数的实�
 	    return android_bWriteLog(tag, buf, 2 + sizeof(len) + len);
 	}
 
+#+END_EXAMPLE
 该函数把type,string长度,string都放到了同一个buffer中,然后call android_bWriteLog()
 
+#+BEGIN_EXAMPLE
 	int __android_log_bwrite(int32_t tag, const void *payload, size_t len)
 	{
 	    struct iovec vec[2];
@@ -278,10 +303,12 @@ Java层写event log的api为 writeEvent(),不过系统有四种该函数的实�
 	    return write_to_log(LOG_ID_EVENTS, vec, 2);
 	}
 
+#+END_EXAMPLE
 该函数与__android_log_bwrite的不同是后者是把type(int/long)跟payload分开的,而该函数放到了一起.
 
 writeEvent的第四种形式:写入的是int/long/string的组合体,则会循环遍历该组合,转换成格式化字符串放到同一个buffer中.
 	
+#+BEGIN_EXAMPLE
 	static jint android_util_EventLog_writeEvent_Array(JNIEnv* env, jobject clazz,
 	                                                   jint tag, jobjectArray value) {
 	
@@ -329,6 +356,7 @@ writeEvent的第四种形式:写入的是int/long/string的组合体,则会循�
 	    return android_bWriteLog(tag, buf, pos);
 	}
 
+#+END_EXAMPLE
 最后同样是调用函数 android_bWriteLog()
 
 * Footnotes

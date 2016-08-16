@@ -2,10 +2,6 @@
 
    + android
      + [[file:android/gradle.org][Android Gradle Plugin User Guide 文档翻译]]
-     + [[file:android/liblog.org][Android liblog]]
-     + [[file:android/logcat.org][Android Logcat]]
-     + [[file:android/logger.org][Android Logger]]
-     + [[file:android/logwrapper.org][Android logwrapper]]
      + [[file:android/performace-patterns.org][Android Performance Patterns 视频笔记]]
      + [[file:android/view.org][Android View笔记]]
      + [[file:android/message.org][Android 消息机制源码笔记]]
@@ -28,6 +24,7 @@
      + [[file:java/bitmap-implementation.org][一个bitmap的实现代码]]
      + [[file:java/rbtree.org][红黑树]]
    + life
+     + [[file:life/2013-books.org][2013年读过的实体书]]
      + [[file:life/bookmarks.org][Favorite Links]]
      + [[file:life/wutaishan.org][五台山]]
      + [[file:life/second-marathon.org][第二次北京马拉松]]
@@ -53,13 +50,12 @@
      + [[file:orgmode/org-code.org][Orgmode手册7:运行代码]]
      + [[file:orgmode/orgmode-beamer-slide.org][使用 orgmode + beamer 写幻灯片]]
    + tech
-     + [[file:tech/feof.org][feof]]
-     + [[file:tech/first-orgmode.org][first-orgmode]]
+     + [[file:tech/liblog.org][Android liblog]]
+     + [[file:tech/logcat.org][Android Logcat]]
+     + [[file:tech/logger.org][Android Logger]]
+     + [[file:tech/logwrapper.org][Android logwrapper]]
      + [[file:tech/intro-to-Rx.org][Introduction To Rx读书笔记]]
      + [[file:tech/twitter.org][twitter消息一览]]
-     + [[file:tech/vim-plugin.org][vim-plugin]]
-     + [[file:tech/What-do-I-learn-from-the-project.org][What-do-I-learn-from-the-project]]
+     + [[file:tech/What-do-I-learn-from-the-project.org][项目总结]]
      + [[file:tech/ack.org][搜索利器 -- ack]]
-   + [[file:2013-books.org][2013年读过的实体书]]
-   + [[file:theindex.org][Index]]
    + [[file:index.org][关于这个博客,以及OrgMode]]
