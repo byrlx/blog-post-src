@@ -1,8 +1,8 @@
 #+OPTIONS: toc:t H:3
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
-
 #+TITLE: 自动创建文章并设置Header
+
 用org mode写Jekyll博客需要在文章开头设置一些HTML export的配置,
 每次写文章都写一遍, 很繁琐, 故写了一个elisp 程序自动实现
 这个步骤. 
@@ -12,11 +12,12 @@
 将模板插入到文章头部后, 要根据命令参数自动
 生成title和category.
 
-#+BEGIN_EXAMPLE 
+#+BEGIN_VERSE
+
  #+AUTHOR: Zhengchao Xu
  #+EMAIL: xuzhengchaojob@gmail.com
-
-#+TITLE: :#+END_EXAMPLE
+ #+TITLE: :
+#+END_VERSE
 
 
 * 编程实现

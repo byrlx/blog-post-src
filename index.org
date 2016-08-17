@@ -36,7 +36,7 @@
      + [[file:lisp/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
      + [[file:lisp/fx-devirative.org][对函数 f(x) 求导]]
      + [[file:lisp/resolve-fx.org][求解函数 f(x)=0]]
-     + [[file:lisp/create-post-and-input-header.org][自动创建文章并设置Header :#+END_EXAMPLE]]
+     + [[file:lisp/create-post-and-input-header.org][自动创建文章并设置Header]]
      + [[file:lisp/add-running-record.org][自动添加跑步记录]]
      + [[file:lisp/auto-github-post.org][自动生成github文章名]]
    + orgmode
