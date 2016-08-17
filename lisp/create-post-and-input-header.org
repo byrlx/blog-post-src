@@ -34,16 +34,16 @@ lx-create-post-today, lx-creat-post. 第一个函数需要
   (lx-create-post (format-time-string "%Y-%m-%d") title category))
 #+END_SRC
 
-执行"M-x", 输入命令 file:../../../public/img/cmd.png
+执行"M-x", 输入命令 [[/img/cmd.png]]
 
-提示输入title file:../../../public/img/title.png
+提示输入title [[/img/title.png]]
 
-提示输入category. file:../../../public/img/category.png
+提示输入category. [[/img/category.png]]
 
 输入完成后, 会基于当前的日期, 创建文件名为"date-title.org"的文件,
 并将参数插入到模板的title和category的对应位置.  
 
-file:../../../public/img/header.png
+[[/img/header.png]]
 
 ** lx-create-post (date title category)
 该函数的代码实现如下,
