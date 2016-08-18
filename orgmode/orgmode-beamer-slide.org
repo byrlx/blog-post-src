@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-04-25 Thu 23:25>
 
 #+TITLE: 使用 orgmode + beamer 写幻灯片
 (on-going)

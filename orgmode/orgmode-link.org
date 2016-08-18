@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-12-13 Thu 23:25>
 
 #+TITLE: Orgmode手册3:链接
 在Org mode里可以创建通过创建链接的方式引用其他的内容,

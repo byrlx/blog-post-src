@@ -1,11 +1,11 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+DATE: <2016-04-18 Thu 22:15>
 #+TITLE: Introduction To Rx读书笔记
 (on-going)
 
-file:../../../../public/img/zmantra.jpg
+file:../img/zmantra.jpg
 
 [[http://www.introtorx.com/][<<Introduction To Rx>>]] 是介绍[[http://reactivex.io/][Reactive编程思想]] 一本书, 本书有mobi格式, 适合在kindle上看.
 由于Rx编程是在 C# 领域发展起来的, 所以该书掺杂了很多的C#知识, 如果读者有 C# 的编程经验, 

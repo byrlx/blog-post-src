@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-03-19>
 
 #+TITLE: 红黑树
 最近上下班途中从网易云课堂了下了MIT的[[http://open.163.com/special/opencourse/algorithms.html][算法导论]] 课程打发时间, 

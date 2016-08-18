@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-11-11 Thu 23:25>
 
 #+TITLE: 使用开源项目Robolectric测试Android代码
 (持续更新) 

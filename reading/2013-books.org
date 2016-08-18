@@ -1,8 +1,9 @@
 #+OPTIONS: ^:nil
 #+OPTIONS: toc:t H:2
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: 2013年读过的实体书
+#+DATE: <2013-11-30 Thu 23:25>
 
 毕业之后，开始上班族的生活，公司-家两点一线，下班回去了，
 没了寝室集体聊天，也没了跟小刚刚去操场一圈圈跑步，

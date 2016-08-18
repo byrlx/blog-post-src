@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-01-31 Thu 23:25>
 
 #+TITLE: 使用OrgMode撰写博客
 本文的主要目的是介绍本博客的架构, 以及说明如何用[[http://xuzhengchao.com/orgmode/org-mode-outline.html][OrgMode]] 来体验纯粹写作的快乐, 

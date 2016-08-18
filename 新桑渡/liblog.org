@@ -1,9 +1,9 @@
 #+OPTIONS: ^:nil
 #+OPTIONS: toc:t H:2
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: Android liblog
-/(date:2013-07-13)/
+#+DATE: <2013-07-13 Thu 23:14>
 
 Androi系统提供了一套完整的API供其他程序调用输出log,这套API分为Java 层和 native 层,不过两个API最终都是通过file system将log写入kernel 层的logger device.
 

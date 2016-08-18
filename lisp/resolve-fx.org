@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-02-01 Thu 23:25>
 
 #+TITLE: 求解函数 f(x)=0
 本文是 [[http://book.douban.com/subject/1148282/][SICP]] 的第一章的一段阅读笔记, 旨在求解函数 *f(x)=0* 在一段

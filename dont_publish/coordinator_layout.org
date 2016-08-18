@@ -1,5 +1,5 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 
 #+TITLE: CoordinatorLayout及相关代码阅读笔记

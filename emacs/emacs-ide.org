@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-15 Thu 23:25>
 #+SETUPFILE: macros.setupfile
 
 #+TITLE: 打造Emacs编程环境

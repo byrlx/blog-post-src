@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-12-13 Thu 23:25>
 
 #+TITLE: Orgmode手册4:任务功能
 个人私以为, 任务功能是org mode最熠熠生辉的特性之一, 

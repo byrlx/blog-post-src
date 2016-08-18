@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-02-20 Thu 23:25>
 
 #+TITLE: AsyncTask 源码阅读
 AsyncTask是Android提供的一个封装类, 可以实现后台线程与UI线程的交互. \\

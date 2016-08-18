@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-02-15 Thu 23:25>
 
 #+TITLE: 对函数 f(x) 求导
 本文是 [[http://book.douban.com/subject/1148282/][SICP]] 的一段阅读笔记. 记录如何

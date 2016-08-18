@@ -1,7 +1,8 @@
 #+OPTIONS: ^:nil
 #+OPTIONS: toc:t H:2
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2013-11-05 Thu 23:25>
 #+TITLE: 五台山
 
 我常想，如果那一天，我有了很多的自由时间，比如两个月以上，我应该会来五台山一趟，

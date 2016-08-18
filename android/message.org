@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-06-11 Thu 23:25>
 
 #+TITLE: Android 消息机制源码笔记
 本笔记是Android中对Handler相关原理的代码阅读笔记.

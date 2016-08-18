@@ -1,9 +1,9 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-07-30 Thu 23:22>
 
 #+TITLE: Okio 源码学习
-(持续更新)
 
 该项目的github地址: [[https://github.com/square/okio]]
 

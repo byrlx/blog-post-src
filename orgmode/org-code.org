@@ -1,6 +1,7 @@
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+OPTIONS: toc:t H:3
+#+DATE: <2015-12-19 Thu 23:25>
 
 #+TITLE: Orgmode手册7:运行代码
 在org文件中可以运行代码, 这里并不是指类似VBA那样的宏, 

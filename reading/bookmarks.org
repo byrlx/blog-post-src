@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-21 Thu 23:25>
 
 #+TITLE: Favorite Links
 使用OrgMode的 [[http://xuzhengchao.com/orgmode/org-capture.html]["Capture"]] 功能随时记录喜欢的文章, 便于整理和搜索.

@@ -1,10 +1,9 @@
 #+OPTIONS: ^:nil
 #+OPTIONS: toc:t H:2
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: Android Logger
-
-(/date: 2013-07-17/)
+#+DATE: <2013-07-17 Thu 23:17>
 
 [[file:logcat.org]] 和 [[file:liblog.org]] 这两篇文章,讲到了android系统中如何读log和写log. 那么,log存放的位置在哪里? 本文就介绍一下android 系统中存放log的地方: logger device.
 

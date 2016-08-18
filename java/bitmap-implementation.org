@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-05-06>
 
 #+TITLE: 一个bitmap的实现代码
 是在阅读RecyclerView的源码时, 在里面发现了该部分代码, 觉得很有趣, 故记录一下. \\

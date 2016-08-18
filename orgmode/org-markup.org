@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-12-14 Thu 23:25>
 
 #+TITLE: Orgmode手册6:富文本标记(导出前准备)
 

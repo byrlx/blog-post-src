@@ -1,4 +1,7 @@
 #+OPTIONS: toc:t H:3
+#+DATE: <2016-08-18 Thu 23:25>
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
 
 #+TITLE: Android View笔记
 (持续更新)

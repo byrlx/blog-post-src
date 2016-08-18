@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-19 Thu 23:25>
 
 #+TITLE: Elisp 文本处理函数
 Emacs Lisp提供了一个文本的框架, 通过该框架可以实现对buffer内容的

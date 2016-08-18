@@ -1,5 +1,6 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Luis404
+#+AUTHOR: Luis Xu
+#+DATE: <2015-06-27 Thu 23:25>
 
 #+TITLE: Magit文档笔记
 项目官网: https://magit.vc/

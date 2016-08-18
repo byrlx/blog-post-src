@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-03-18 Thu 23:25>
 
 #+TITLE: OrgMode常用表格处理公式
 * 单一表项的使用

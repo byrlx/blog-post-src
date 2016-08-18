@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-21 Thu 23:25>
 
 #+TITLE: 自动添加跑步记录
 正在慢慢培养[[http://xuzhengchao.com/Running-Record.html][跑步]]的习惯, 每次跑完之后都会记录到一个org文件中. 

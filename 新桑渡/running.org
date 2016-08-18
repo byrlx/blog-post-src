@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Luis404
-#+EMAIL: luisxu404@gmail.com
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-01-01 Thu 23:25>
 
 #+TITLE: 跑步日志
 * 关于跑步

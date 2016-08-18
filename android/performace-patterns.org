@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
 #+AUTHOR: Luis404
 #+EMAIL: luisxu404@gmail.com
+#+DATE: <2015-03-01 Thu 23:25>
 
 #+TITLE: Android Performance Patterns 视频笔记
 (持续更新)

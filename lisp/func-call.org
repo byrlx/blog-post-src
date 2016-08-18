@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-23 Thu 23:25>
 
 #+TITLE: Elisp 中的特殊函数调用
 Emacs lisp中最常见的函数调用即为List方式调用, 其形式为(name arg1..argn)

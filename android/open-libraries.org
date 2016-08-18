@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-08-14 Thu 23:25>
 
 #+TITLE: 【翻译】当我开始Android开发时，希望能早点认识的一些开源库
 原文地址 https://speakerdeck.com/chrisguzman/android-libraries-i-wish-i-knew-when-i-started

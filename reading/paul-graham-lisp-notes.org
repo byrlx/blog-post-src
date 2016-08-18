@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-17 Thu 23:25>
 
 #+TITLE: The Roots of Lisp阅读笔记
 #+BEGIN_VERSE

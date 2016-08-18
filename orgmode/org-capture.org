@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-12-13 Thu 23:25>
 
 #+TITLE: Orgmode手册5:"捕获"
 想象一下到下面的场景: 你在敲着代码,听着歌,突然就来了一灵感, 或者突然QA就

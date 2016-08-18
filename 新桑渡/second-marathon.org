@@ -1,7 +1,8 @@
 #+OPTIONS: ^:nil
 #+OPTIONS: toc:t H:2
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2013-10-30 Thu 23:25>
 #+TITLE: 第二次北京马拉松
 
 上午培训，抽空看了下手机，10月30号，突然觉得这个日子有点特别，想了一会，想起是

@@ -1,6 +1,7 @@
 #+OPTIONS: toc:t H:3
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-22 Thu 23:25>
 
 #+TITLE: Elisp基本数据结构
 对Lisp而言, 所有不是cons cell的结构都成为atom.

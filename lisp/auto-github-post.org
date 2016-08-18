@@ -1,8 +1,9 @@
 #+OPTIONS: ^:nil
 #+OPTIONS: toc:t H:2
-#+AUTHOR: Zhengchao Xu
+#+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: 自动生成github文章名
+#+DATE: <2013-08-03 Thu 23:25>
 
 用github写文章有一个比较麻烦的事,就是文章名称必须是'Year-Month-Day-title.md'的格式,觉得有些麻烦,尤其是忘记日期的情况下.(我想不是我一个人常常忘记今天几号吧)
 

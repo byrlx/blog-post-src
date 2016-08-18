@@ -1,5 +1,8 @@
 #+SEQ_TODO: TODO(t!) DONE(d@/!)
 #+OPTIONS: toc:t H:3
+#+DATE: <2015-04-15 Thu 23:25>
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
 
 #+TITLE: Android Gradle Plugin User Guide 文档翻译
 (持续更新)
