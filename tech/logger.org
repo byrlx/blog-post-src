@@ -4,7 +4,9 @@
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: Android Logger
 
-[logcat](../Android-logcat/) 和 [liblog](../Android-liblog/) 这两篇文章,讲到了android系统中如何读log和写log. 那么,log存放的位置在哪里? 本文就介绍一下android 系统中存放log的地方: logger device.
+(/date: 2013-07-17/)
+
+[[file:logcat.org]] 和 [[file:liblog.org]] 这两篇文章,讲到了android系统中如何读log和写log. 那么,log存放的位置在哪里? 本文就介绍一下android 系统中存放log的地方: logger device.
 
 Android 在 kernel 层提供了四个虚拟的device 设备,用于存放log. 可以通过输入 `adb shell ls /dev/log/` 来查看系统的虚拟logger 设备. 这些设备是在系统启动的时候以内核模块的方式初始化.
 #+BEGIN_EXAMPLE
