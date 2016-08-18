@@ -3,11 +3,10 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: Android logwrapper
+/(date:2013-12-28)/
 
 严格来讲，logwrapper并不属于之前写的Android的Log体系（
-[logger](../Android-logger)、
-[liblog](../Android-liblog)、
-[logcat](../Android-logcat)
+[[file:logger.org]]、 [[file:liblog.org]]、 [[file:logcat.org]]
 ），但是呢，它多多少少又与这套体系有些关系，所以将其称之为“外传”。
 
 什么是logwrapper？如果你写了一个android程序，使用了一些标准输出函数（printf），
@@ -22,10 +21,12 @@
 如下图。
 
 使用logwrapper后，ls的结果没有输出到标准输出。
-![ls with logwrapper]({{root_url}}/public/img/ls.png "lslogwrapper")
+
+[[file:../img/ls.png]]
 
 在logcat抓的log中发现了上面ls命令的结果。
-![logcat with logwrapper]({{root_url}}/public/img/logwrapper.png "logwrapper")
+
+[[file:../img/logwrapper.png]]
 
 * clogwrapper 代码
 

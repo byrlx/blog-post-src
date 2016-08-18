@@ -3,6 +3,7 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: 项目总结
+/(date:2013-11-21)/
 
 今年做过的一个项目的总结，记下有用的经验。
 

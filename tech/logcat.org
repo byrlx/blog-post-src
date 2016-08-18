@@ -3,6 +3,7 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+TITLE: Android Logcat
+/(date:2013-07-10)/
 
 这篇文章介绍android系统中录log的工具 logcat.
 
