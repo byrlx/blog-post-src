@@ -58,4 +58,4 @@
      + [[file:新桑渡/second-marathon.org][第二次北京马拉松]]
      + [[file:新桑渡/running.org][跑步日志]]
      + [[file:新桑渡/What-do-I-learn-from-the-project.org][项目总结]]
-   + [[file:about.org][关于这个博客,以及OrgMode]]
+   + [[file:about.org][关于这个博客]]
