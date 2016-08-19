@@ -1,0 +1,15 @@
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-08-20 Sat 00:05>
+#+TITLE: 豆渣食谱
+
+* 清炒小白菜
+[[file:../img/xiaobaicai.jpg]]
+步骤：
+1. 小白菜切段， 洗净， 水沥干。
+2. 点火， 热油， 油不要太多（深度半指左右？）。
+3. 油热后放点花椒， 蒜。
+4. 倒入小白菜（水沥干），中大火翻炒， 放点蚝油，放盐。
+5。几分钟后出锅。
