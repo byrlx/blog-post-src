@@ -152,6 +152,16 @@ content: "*** "
 	color: #CA0000;
     }
 
+    
+.verse {
+    font-style: italic;
+    font-size: 80%;
+    background: #f3e2a9;
+    margin-left: 3em;
+    margin-right: 3em;
+    padding: 10px
+}
+
     .done {
 	color: #006666;
     }
