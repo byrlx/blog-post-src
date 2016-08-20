@@ -19,9 +19,11 @@ There’s no sense in re-inventing the wheel when you’re working on Android ap
 这些库都可以帮助你。 
 
 本文是翻译的Groupon工程师[[https://speakerdeck.com/chrisguzman][Chris Guzman]]的一个演讲PPT。作者以一个45分钟“hackathon”的方式，
-从零开始构造一个App "TAaSKY", 然后逐步介绍在开发过程中使用到的开源库。
+从零开始构造一个App "TAaSKY", 这个App用于展示做"土豆"的食谱.
+作者逐步介绍在开发这个app过程中使用到的开源库。
 
 * 第一步：构造、使用view - Butter Knife
+这一步是用来构造TAaSKY应用的UI界面.
 ** 基本使用
 下面的内容是activity的一个简略的layout文件，这是开发App过程中
 必不可少的东西，当写完layout之后，大部分情况下都需要在代码中
@@ -149,3 +151,209 @@ static final ButterKnife.Setter<View, Boolean> ENABLED = new ButterKnife.Setter<
  }
 };
 #+END_EXAMPLE
+* 第二步：加载网络图片 - Picasso
+  这一步用于在应用显示土豆的照片, 照片可能是网络或本地图片.
+
+通过[[第一步：构造、使用view - Butter Knife][第一步]]的代码，UI部分基本已经写完了。然后接下来要实现APP的一个功能,
+从网络下载图片并显示. 这里用到了一个同样有名的开源库: Picasso. \\
+** 基本介绍
+该库的一些特点包括:
+1. 进行HTTP请求.
+2. 缓存图片.
+3. 简单的"resize/裁剪/居中/放大"操作.
+4. 负责在主线程之外进行http请求.
+5. 对RecyclerView的view进行合理回收. 
+在介绍Picasso之前, 先看一下比较通用的"自己写"的下载图片代码:\\
+这段代码通过http请求获取图片的stream, 然后再调用Android的BitmapFactory
+类来将stream转化成bitmap. 其中 OpenHttpGETConnection()函数还要考虑在
+子线程中进行http请求操作.
+#+BEGIN_EXAMPLE
+private Bitmap DownloadImage(String url)
+{
+ Bitmap bitmap = null;
+ InputStream in = null;
+ try {
+    in = OpenHttpGETConnection(url);
+    bitmap = BitmapFactory.decodeStream(in); in.close();
+ } catch (Exception e) {
+    Log.d("DownloadImage", e.getLocalizedMessage());
+ }
+ return bitmap;
+}
+#+END_EXAMPLE
+
+如果使用Picasso,则上面的代码就变为:
+#+BEGIN_EXAMPLE
+Picasso.with(context)
+ .load("http://placekitten.com/200/300")
+ .into(imageView);
+#+END_EXAMPLE
+** 更多特性
+上面展示了Picasso的一个典型使用方式, 该库还包含其他的对图片的操作,
+例如:
+1. placeholder(R.mipmap.loading) 
+   占位图片, 可以是一个资源或者drawable
+2. error(R.drawable.sad_taco) 
+   如果加载失败显示的图片
+3. fit() //reduce the image size to the dimensions of imageView
+   将图片大小缩减到imageView的大小.
+4. resize(imgWidth, imgHeight) //resizes the image in pixels
+   缩减到指定图片大小. 单位是px
+5. centerCrop() //or .centerInside()
+   居中裁剪.
+6. rotate(90f) 
+   旋转图片. 或者也可以使用函数 rotate(degrees, pivotX, pivotY)
+   
+除了网络下载图片, Picasso也支持加载本地图片. 例如下面的代码:
+#+BEGIN_EXAMPLE
+Picasso.with(context).load(R.drawable.salsa).into(imageView1);
+Picasso.with(context).load("file:///asset/salsa.png").into(imageView2);
+Picasso.with(context).load(new File(...)).into(imageView3);
+#+END_EXAMPLE
+** 一个完整的代码片段
+下面是Picasso和ButterKnife一起用的场景, 在通过Picasso下载图片时, 使用
+ButterKnife的apply函数来使按钮不可用. 
+#+BEGIN_EXAMPLE
+//Butter Knife!
+@BindView(R.id.taco_img) ImageView tacoImg;
+private void setTacoImage() {
+ Picasso.with(context)
+ .load("http://tacoimages.com/random.jpg")
+ .into(tacoImg);
+}
+private void getNextTaco() {
+ ButterKnife.apply(actionButtons, DISABLE);
+ setTacoImage();
+ //TODO: implement
+ loadTacoDescription();
+}
+#+END_EXAMPLE
+
+* 第三步: json转换 - Gson
+ 这一步用于对服务器返回的json格式数据转化成类对象, 或者反过来.
+** 基本介绍
+Gson的一些特点:
+1. (可以)不需要在类中使用注解.
+2. 性能好.
+3. 使用广泛.
+4. 默认包含类(包括父类)的所有域.
+5. 支持多维数组.
+6. 当序列化时, 类的值为null的变量会被跳过.
+7. 反序列化时, json中没有的域会在对象中生成一个null值.
+
+例如下面的例子对类Taco使用Gson进行Json的序列化和反序列化.
+#+BEGIN_EXAMPLE
+class Taco {
+ private String description;
+ private String imageUrl;
+ private String tag;
+ //not included in JSON serialization or deserialization
+ private transient boolean favorite;
+ Taco(String description, String imageUrl, String tag, boolean favorite) {
+ ....
+ }
+}
+
+// Serialize to JSON
+Taco breakfastTaco = new Taco("Eggs with syrup on pancake", "imgur.com/123", "breakfast", true);
+Gson gson = new Gson();
+String json = gson.toJson(breakfastTaco);
+// ==> json is {description:"Eggs with syrup on pancake", imageUrl:"imgur.com/123", tag:"breakfast"}
+// Deserialize to POJO
+Taco yummyTaco = gson.fromJson(json, Taco.class);
+// ==> yummyTaco is just like breakfastTaco except for the favorite boolean
+#+END_EXAMPLE
+** 高级用法
+1. 如果变量名和json的域名不同, 可以使用 =@SerializeName()= 注解修饰.
+   #+BEGIN_SRC java
+   public class Taco {
+       @SerializedName("serialized_labels")
+       private String tag;
+   }
+   #+END_SRC
+2. 通过Gson的API客制化输出.
+   #+BEGIN_SRC java
+   //如果变量值为null,则输出中也输出null,而不是忽略.
+Gson gson = new GsonBuilder().serializeNulls().create();
+//保留空格
+Gson gson = new GsonBuilder().setPrettyPrinting().create();
+   #+END_SRC
+3. 设置日期格式
+   #+BEGIN_SRC java
+   public String DATE_FORMAT = "yyyy-MM-dd";
+   GsonBuilder gsonBuilder = new GsonBuilder();
+   gsonBuilder.setDateFormat(DATE_FORMAT);
+   Gson gson = gsonBuilder.create();
+   #+END_SRC
+* 第四步: 请求网络数据 - Retrofit (请不要再使用AsyncTask了, 真的, 停下来吧)
+这一步用于从服务器上获取数据.
+** 基本介绍
+Retrofit的一些特点:
+1. 类型安全.
+2. 支持认证.
+3. 支持json的序列化和反序列化.
+4. 支持RxJava
+5. 支持同步和异步请求.
+** 典型使用
+下面是Retrofit的一个典型应用, (更多介绍可以看[[file:../retrofit.org][这里]]):
+1. 定义API
+#+BEGIN_SRC java
+public interface TacoApi {
+ // Request method and URL specified in the annotation
+ // Callback for the parsed response is the last parameter
+ @GET("random/")
+ Call<Taco> randomTaco(@Query("full-taco") boolean full);
+ @GET("contributions/")
+ Call<List<Contributor>> getContributors();
+ @GET("contributions/{name}")
+ Call<Contributor> getContributors(@Path("name") String username));
+ @POST("recipe/new")
+ Call<Recipe> createRecipe(@Body Recipe recipe);
+}
+#+END_SRC
+2. 使用api进行请求
+   1. 同步请求:
+      #+BEGIN_SRC java
+      Retrofit retrofit = new Retrofit.Builder()
+          .baseUrl("http://taco-randomizer.herokuapp.com/")
+	  .addConverterFactory(GsonConverterFactory.create())
+	  .build();
+	  
+	  // 创建api实例
+	  TacoApi tacoApi = retrofit.create(TacoApi.class);
+	  // 创建请求
+	  Call<Taco> call = tacoApi.randomTaco(true);
+	  // 执行请求
+	  Taco taco = call.execute().body();
+      #+END_SRC
+
+   2. 异步请求
+      #+BEGIN_SRC java
+      Recipe recipe = new Recipe();
+      Call<Recipe> call = tacoApi.createRecipe(recipe);
+      call.enqueue(new Callback<Recipe>() {
+          @Override
+	  public void onResponse(Call<Recipe> call, Response<Recipe> response) {}
+	  @Override
+	  public void onFailure(Call<Recipe> call, Throwable t) {}
+      #+END_SRC
+
+** 小技巧
+1. 通过注解修改请求的url
+   #+BEGIN_SRC java
+   @POST("http://taco-randomizer.herokuapp.com/v2/taco")
+   private Call<Taco> getFromNewAPI();
+   #+END_SRC
+2. 添加请求头部
+   #+BEGIN_SRC java
+   @Headers({"User-Agent: tacobot"})
+   @GET("contributions/")
+   private Call<List<Contributor>> getContributors();
+   #+END_SRC
+* 第五步: 存储数据 - Realm (sqlite的替代品)
+这一步用于将服务器返回的数据(如食谱)存储起来.
+** 基本介绍
+Realm的一些特点:
+1. 为手机而生.
+2. 可以快到使用同步.
+3. 支持一个应用包含多个Realm数据库.(Sqlite只有一个).
