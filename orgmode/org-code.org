@@ -22,7 +22,7 @@ Org babel就是这个通天塔, 你可以同一个org文件中运行各种代码
 * 添加代码
 下面是一个简单的在org文件中运行代码的例子. 在orgmode的任意位置添加
 下面这段python代码. 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 #+BEGIN_SRC python
 def x():
      s = 1 + 1
@@ -30,28 +30,28 @@ def x():
 
 return x()
 #+END_SRC
-#+END_EXAMPLE
+#+END_SRC
 添加完成后, 在代码块上使用快捷键"C-c C-c", 会看到代码块下面会显示如下的
 内容, 即这段代码的运行结果. 这就是一个简单的在orgmode中使用代码的例子, 
 是不是觉得很酷?
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 #+RESULTS:
 : 2
-#+END_EXAMPLE
+#+END_SRC
 
 上面的例子简单展示了在org mode中使用代码. 一般而言, 在org中插入的代码格式为
 1. 代码块.
    可以使用 =#+NAME= 为当前代码块命名, 然后在其他地方引用. 
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC elisp
 #+NAME: <name>
 #+BEGIN_SRC <language> <switches> <header arguments>
  <body>
 #+END_SRC
-#+END_EXAMPLE
+#+END_SRC
 2. 在行内使用代码, 格式为 =src_<language>{body}= 的方式. 如下例
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
    hi src_elisp{(print "jack")} 
-   #+END_EXAMPLE
+   #+END_SRC
 * 编辑代码
 可以直接在org文件中编辑代码, 也可以使用快捷键"C-c '"打开另一个buffer来
 编辑文件, 该buffer默认使用了该代码语言的emacs mode模式, 这样会更容易
@@ -64,34 +64,34 @@ return x()
 
 org mode同样支持在一处定义代码块, 然后在文件的其他地方进行引用, 这需要对代码块
 设置名称, 例如下面定义了一个名称为"helowold"的代码块.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 #+NAME: helowold
 #+BEGIN_SRC elisp
 (print "helowold")
 #+END_SRC
-#+END_EXAMPLE
+#+END_SRC
 
 这样可以在文件的其他地方使用下面的方式调用该代码块:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 #+CALL: helowold()
 或者在一行中间使用
 call_helowold()
-#+END_EXAMPLE
+#+END_SRC
 
 * 给代码添加参数
 可以在 =#+BEGIN_SRC= 后面接 ":var name=value"的方式来向给代码块设置参数,
 如下例:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 #+NAME: lxxxx
 #+BEGIN_SRC elisp :var n=5
 (+ 1 n)
 #+END_SRC
-#+END_EXAMPLE
+#+END_SRC
 
 在其他地方使用 =#+CALL= 调用代码时, 可以想其中传入参数替代默认参数, 例如
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 #+CALL: lxxxx(9)
-#+END_EXAMPLE
+#+END_SRC
 * 导出代码
 在将org文件导出为HTML/PDF等格式时, 可以有选择行的导出代码块或结果,
 orgmode支持以下方式的代码导出
@@ -108,12 +108,12 @@ orgmode支持以下方式的代码导出
 | none    | 都不 |                          |
 
 例如下面的代码:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 #+NAME: lxxxx
 #+BEGIN_SRC elisp :var n=5 :exports results
 (+ 1 n)
 #+END_SRC
-#+END_EXAMPLE
+#+END_SRC
 
 * 提取代码
 orgmode支持将org文件中的代码块提取到代码原文件中, 
@@ -125,7 +125,7 @@ orgmode支持将org文件中的代码块提取到代码原文件中,
 属性来打开, 将其设置为"yes"即可打开. 
 也可以将其设置为文件名,这样可以将代码导出到该文件,
 使用命令"org-babel-tangle-file"或"C-c C-v f"也可以.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
   :PROPERTIES:
   :header-args: :exports results :tangle yes
   :END:
@@ -133,7 +133,7 @@ orgmode支持将org文件中的代码块提取到代码原文件中,
 #+BEGIN_SRC elisp :tangle yes/filename
 
 #+END_SRC
-#+END_EXAMPLE
+#+END_SRC
 
 * Babel库
 orgmode的babel包含了一些可重用代码, 可以直接在当前org mode中使用.
@@ -144,17 +144,17 @@ orgmode的babel包含了一些可重用代码, 可以直接在当前org mode中�
 Emacs自带的org mode中默认并没有安装babel库, 如果想使用带babel库的orgmode,
 可以从orgmode的elpa中获取, 在配置文件中加入如下配置, 使用"eval-buffer"更新
 配置, 然后调用 "package-refresh-content", 接着安装 "org-plus-contrib"包.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (require 'package)
 (add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t)
-#+END_EXAMPLE
+#+END_SRC
 
 安装完成后, 如果想使用那个包, 可以在配置文件中使用 *require* 引用:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (require 'org-mac-iCal)
 ;;在 org 文件调用
 #+CALL: org-mac-iCal()
-#+END_EXAMPLE
+#+END_SRC
 
 * header参数
 可以通过header参数来配置代码块的一些功能, 本节会介绍一下
@@ -165,30 +165,30 @@ orgmode可以设置各种范围的header参数, 下面会逐一介绍, 一般来
 ** 全局header参数
 可以通过设置"org-babel-default-header-args"变量来设置全局的header参数. 
 例如下面的例子将":noweb"设置为"yes". ":noweb"功能会在后面介绍.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
     (setq org-babel-default-header-args
            (cons '(:noweb . "yes")
                  (assq-delete-all :noweb org-babel-default-header-args)))
-#+END_EXAMPLE
+#+END_SRC
 也可以通过设置 `org-babel-default-header-args:<lang>'为某个语言设置header参数.
 可以参考[[支持的语言]]一节.
 ** 文件级header参数
 可以通过设置 =#+PROPERTY= 来设置文件级的header参数, 这个变量可以设置多次.
 例如下面的例子设置"R"语言的seesion为"R", 并设置result为silent.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      #+PROPERTY: header-args:R  :session *R*
      #+PROPERTY: header-args    :results silent
-#+END_EXAMPLE
+#+END_SRC
 ** 标题header参数
 可以为标题及所有子树设置header参数, 例如
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      * outline header
        :PROPERTIES:
        :header-args:    :cache yes
        :END:
-#+END_EXAMPLE
+#+END_SRC
 也可以给具体语言设置header参数, 例如
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      * Heading
        :PROPERTIES:
        :header-args:clojure:    :session *clojure-1*
@@ -199,19 +199,19 @@ orgmode可以设置各种范围的header参数, 下面会逐一介绍, 一般来
        :header-args:clojure:    :session *clojure-2*
        :END:
 
-#+END_EXAMPLE
+#+END_SRC
 ** 代码块设置header参数
 也可以给单独的代码块设置header参数.有两种方式:
 1. 在 =#+BEGIN_SRC= 后面.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
      #+NAME: factorial
      #+BEGIN_SRC haskell :results silent :exports code :var n=0
      fac 0 = 1
      fac n = n * fac (n-1)
      #+END_SRC
-   #+END_EXAMPLE
+   #+END_SRC
 2. 使用 =#+HEADERS= 关键字
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
       #+HEADERS: :var data1=1
       #+BEGIN_SRC emacs-lisp :var data2=2
         (message "data1:%S, data2:%S" data1 data2)
@@ -220,7 +220,7 @@ orgmode可以设置各种范围的header参数, 下面会逐一介绍, 一般来
       #+NAME: named-block
       #+HEADER: :var data=2
       #+BEGIN_SRC emacs-lisp
-   #+END_EXAMPLE
+   #+END_SRC
 ** 调用代码块时使用header参数
 有两种方式:
 1. =#+CALL: func() :exports results
@@ -251,9 +251,9 @@ orgmode可以设置各种范围的header参数, 下面会逐一介绍, 一般来
 | GNU Screen | screen    | shell           | sh         |
 | SQL        | sql       | SQLite          | sqlite     |
 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      (org-babel-do-load-languages
       'org-babel-load-languages
       '((emacs-lisp . nil)
         (R . t)))
-#+END_EXAMPLE
+#+END_SRC

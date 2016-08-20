@@ -18,10 +18,10 @@ So, 如果你凑巧用Emacs写代码, Emacs凑巧又装了Org mode, 那恭喜,
 
 ** 设置capture
 在emacs配置文件中加入如下代码, 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      (setq org-default-notes-file (concat org-directory "/notes.org"))
      (define-key global-map "\C-cc" 'org-capture)
-#+END_EXAMPLE
+#+END_SRC
 设置完成后, 你在emacs的任何地方, 按"C-c c"都会打开capture缓冲区, 里面会让你设置任务
 设置完成后, 按C-c C-c会自动保存到notes.org文件, 并回到之前的工作窗口.
 ** 客制化Capture模板
@@ -33,7 +33,7 @@ org capture默认会将所有任务都放到notes.org这个文件, 这可能不�
 在emacs配置中加入下面代码, 这样当使用快捷键(C-c c)进入到capture窗口时, 会显示"t"和"j"两个选项,
 + 按下t会打开buffer让你输入任务, C-c C-c则会将任务分配到gtd.org下的Tasks标题里.
 + 按下j会将任务分配到journal.org文件中.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 
      (setq org-capture-templates
       '(("t" "Todo" entry (file+headline "~/org/gtd.org" "Tasks")
@@ -41,7 +41,7 @@ org capture默认会将所有任务都放到notes.org这个文件, 这可能不�
         ("j" "Journal" entry (file+datetree "~/org/journal.org")
              "* %?\nEntered on %U\n  %i\n  %a")))
 
-#+END_EXAMPLE
+#+END_SRC
 
 caputre模板主要有下面几部分组成:
 1) KEYS. 
@@ -57,7 +57,7 @@ caputre模板主要有下面几部分组成:
    | table-line | 表行                                                                      |
    | plain      | 文本文字                                                                  |
 4) 条目格式.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
      %[FILE]     Insert the contents of the file given by FILE.
      %(SEXP)     Evaluate Elisp SEXP and replace with the result.
                        For convenience, %:keyword (see below) placeholders
@@ -95,5 +95,5 @@ caputre模板主要有下面几部分组成:
      %\\n        Insert the text entered at the nth %^{PROMPT}, where `n' is
                  a number, starting from 1.
      %?          After completing the template, position cursor here.(输入完后,光标定位到这里)
-   #+END_EXAMPLE
+   #+END_SRC
 5) 属性

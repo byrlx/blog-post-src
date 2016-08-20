@@ -26,13 +26,13 @@ Edebug是Emacs自带的代码级的调试器. 可以在想要调试的代码上�
 5. projectile
 ** emacs配置
 1. 在clojure mode下使用paredit.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
    (add-hook 'clojure-mode-hook 'paredit-mode)
-   #+END_EXAMPLE
+   #+END_SRC
 2. 配置lein, 使用cider, 在.lein/profiles.clj中加入如下
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
    {:repl {:plugins [[cider/cider-nrepl "0.10.1"]]}}
-   #+END_EXAMPLE
+   #+END_SRC
 ** 示例程序
 *** 使用lein new name命令创建一个名称为name的工程.
 *** 在emacs中运行 cider-jack-in进入nREPL

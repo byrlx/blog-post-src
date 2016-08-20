@@ -139,10 +139,10 @@ org mode可以显示列表, 以下列字符开头的文本都为列表" - + 1. 1
 ** 脚注
 org mode支持脚注功能, 脚注通常用 =[fn:数字]= 表示, 然后在其他地方写上
 脚注说明[fn:1]:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      The Org homepage[fn:1] now looks a lot better than it used to.
      ...
      [fn:1] The link is: http://orgmode.org
-#+END_EXAMPLE
+#+END_SRC
 [fn:1]脚注示例.
 

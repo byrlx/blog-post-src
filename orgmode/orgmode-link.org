@@ -9,9 +9,9 @@
 
 ** 链接格式
    Org的链接格式为:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 [[链接地址][描述]] 或 [[链接地址]]
-#+END_EXAMPLE
+#+END_SRC
 当最后一个"]"写完时, org会将该链接显示为(带下划线的"描述", 该显示格式对应face "org-link"),
 如果想要编辑链接, 可以在链接上使用快捷键 "C-c C-l", 在显示内容前后使用"delete"键
 会破坏链接的语法(也可以这样编辑链接). 
@@ -32,15 +32,15 @@
 如果一个链接不是一该URL, org会将其看做内部链接, org寻找内部链接的方式为:
 1) 跳转到被 "<<>>"定义的地方. 如下面的例子,在第一个链接上用C-c C-o 会
   跳转到test出现的地方. 
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC elisp
   loc1: [[test]] 
   loc2  this is a <<test>>
-  #+END_EXAMPLE
+  #+END_SRC
 2) 如果1)不存在, 会跳转到 "#+NAME" 命名和链接相同的地方.
 3) 前两步都失败, 会尝试寻找精确匹配的 *标题*.
 ** 外表链接
 org mode支持的外部链接包括:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 |                             | 描述                  |
 |-----------------------------+-----------------------|
 | http://web                  | 网站                  |
@@ -57,12 +57,12 @@ org mode支持的外部链接包括:
 | irc:/irc.com/#emacs         | irc链接               |
 | shell:cmd                   | shell 命令            |
 | elisp:cmd                   | elisp cmd             |
-#+END_EXAMPLE
+#+END_SRC
 
 ** 短链接
 如果链接太长且在文件中经常使用, 可以将其设置为"链接关键字",
 可以用 "#+LINK"关键字来实现这个功能, 或者设置"org-link-abbrev-alist"变量:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      #+LINK: bugzilla  http://10.1.2.9/bugzilla/show_bug.cgi?id=
      #+LINK: google    http://www.google.com/search?q=%s
      或者
@@ -73,10 +73,10 @@ org mode支持的外部链接包括:
          ("gmap"      . "http://maps.google.com/maps?q=%s")
          ("omap"      . "http://nominatim.openstreetmap.org/search?q=%s&polygon=1")
          ("ads"       . "http://adsabs.harvard.edu/cgi-bin/nph-abs_connect?author=%s&db_key=AST")))
-#+END_EXAMPLE
+#+END_SRC
 
 短链接的格式为, 如果链接中有"%s", 会被tag替代, "%h"则会将tag进行url编码.
 %(function)会调用函数并将结果添加. 什么都没有的话直接在尾部添加. 例如
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 [[bugzilla:129][description]] ;;  http://10.1.2.9/bugzilla/show_bug.cgi?id=129
-#+END_EXAMPLE
+#+END_SRC

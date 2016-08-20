@@ -25,7 +25,7 @@ List 的CDR槽位可以通过(cdr list)来获取, 以上面的l为例, 其CDR槽
 同样为一个list对象(称其为lcdr). 对于lcdr, 其CDR槽位为(maple), 仍然为一个list
 (称其为llcdr), llcdr的CAR槽位为maple, CDR槽位为nil.
 可以通过下图来展示上面的例子
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
       --------------       --------------       --------------
      | car   | cdr  |     | car   | cdr  |     | car   | cdr  |
      |   o   |   o------->| oak   |   o------->| maple |  nil |
@@ -38,15 +38,15 @@ List 的CDR槽位可以通过(cdr list)来获取, 以上面的l为例, 其CDR槽
           ------>| pine  |   o------->| needles |  nil |
                  |       |      |     |         |      |
                   --------------       ----------------
-#+END_EXAMPLE
+#+END_SRC
  
 一个cons cell可以用下面的方式表示 (A . B). 这里该cons cell的CAR槽位为A,
 CDR槽位为B, 对于上面的list l, 其完整的表示为. 不过在lisp编码中一般
 使用上面例子的形式, 除非需要明确指定CDR槽为一个既不为cons cell, 又不为nil的
 对象.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 ((pine . (needless . nil)) . (oak . (maple . nil))))
-#+END_EXAMPLE 
+#+END_SRC 
 
 * 数组
 在Emacs Lisp, 数组是指一个固定长度的对象, 里面的每一个元素都占据

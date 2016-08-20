@@ -24,7 +24,7 @@
 + 发布blog
 + 通过执行shell命令上传到github
 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (defun lx-add-running-record (day km loc)
   (let  ((record-file (concat LXBLOGORG "Other/2015-01-19-Running-Record.org")))
     (find-file record-file)
@@ -42,25 +42,25 @@
       (kill-this-buffer)))
   (org-publish "github-blog")
   (shell-command (concat "cd " LXBLOG " && git add -u && git ci -m 'update running record' && git push")))
-#+END_EXAMPLE
+#+END_SRC
 
 ** 命令
 基于[[核心函数]]写了两个emacs交互命令来让输入跑步记录.
 *** (lx-add-running day km loc)
 该函数会提示用户输入跑步的日期,距离和地点.然后调用(lx-add-running-record)
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (defun lx-add-running (day km loc)
   (interactive "sInput day: \nsInput distance: \nsInput location: ")
   (lx-add-running-record  day km loc))
-#+END_EXAMPLE
+#+END_SRC
 *** (lx-add-running-today km loc)
 该函数接受距离和地点两个参数, 并通过elisp的 (format-time-string)自动
 生成今天的日期.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (defun lx-add-running-today (km loc)
   (interactive "sInput distance: \nsInput location: ")
   (lx-add-running-record (format-time-string "%m.%d") km loc))
-#+END_EXAMPLE
+#+END_SRC
 
 存放跑步记录的org文件如下, 还不错, 可以通过[[http://xuzhengchao.com/orgmode/orgmode-table.html][这篇文章]] 来了解org mode的表格的更多知识.
 file:../../../../public/img/running.png

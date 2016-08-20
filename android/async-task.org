@@ -17,7 +17,7 @@ AsyncTask的源码中定义了如下与"thread"相关的变量或函数.
 newThread()函数, 该函数定义了创建线程的方法. 创建的线程
 接受一个Runnable对象. 这个线程就是doInBackground()函数
 所执行的线程. 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     private static final ThreadFactory sThreadFactory = new ThreadFactory() {
         private final AtomicInteger mCount = new AtomicInteger(1);
 
@@ -25,7 +25,7 @@ newThread()函数, 该函数定义了创建线程的方法. 创建的线程
             return new Thread(r, "AsyncTask #" + mCount.getAndIncrement());
         }
     };
-#+END_EXAMPLE
+#+END_SRC
 ** sPoolWorkQueue
    创建了一个"阻塞队列". 用于存放Runnable对象.
 ** THREAD_POOL_EXECUTOR
@@ -34,11 +34,11 @@ newThread()函数, 该函数定义了创建线程的方法. 创建的线程
 这个executor执行的thread会从sThreadFactory中创建, 并且
 提交给这个executor的runnable对象在执行前, 都会存放到
 sPoolWorkQueue中. 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
    public static final Executor THREAD_POOL_EXECUTOR
             = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
                     TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
-#+END_EXAMPLE
+#+END_SRC
 ** SERIAL_EXECUTOR
 该变量是一个SerialExecutor对象, 后者是一个自定义的
 Executor子类, 该类实现了"顺序"执行任务的功能, 即同一时刻
@@ -46,7 +46,7 @@ Executor子类, 该类实现了"顺序"执行任务的功能, 即同一时刻
 executor. 
 
 该类通过[[THREAD_POOL_EXECUTOR]] 来执行实际的"线程"功能.见代码:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
    private static class SerialExecutor implements Executor {
         final ArrayDeque<Runnable> mTasks = new ArrayDeque<Runnable>();
         Runnable mActive;
@@ -72,7 +72,7 @@ executor.
             }
         }
     }
-#+END_EXAMPLE
+#+END_SRC
 ** sWorker和mFuture
 这两个变量是在AsyncTask的构造函数中创建的. 
 
@@ -83,7 +83,7 @@ mFuture是一个FutureTask变量.它封装了mWorker, 这样可以支持任务�
 * handler相关
 AsyncTask内部定义了一个私有类 InternalHandler, 该类使用了
 UI线程的looper. 所以该Handler对Message的处理都是在UI线程中进行的.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     private static class InternalHandler extends Handler {
         public InternalHandler() {
             super(Looper.getMainLooper());
@@ -104,13 +104,13 @@ UI线程的looper. 所以该Handler对Message的处理都是在UI线程中进行
             }
         }
     }
-#+END_EXAMPLE
+#+END_SRC
 * 流程
 ** execute()函数过程
 使用AsyncTask时, 一般通过调用 execute(var) 函数执行任务, 该函数
 调用了executeOnExecutor()函数, 默认使用 sDefaultEExecutor即
 SERIAL_EXECUTOR来执行任务. 下面是后者的实现:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     @MainThread
     public final AsyncTask<Params, Progress, Result> executeOnExecutor(Executor exec,
             Params... params) {
@@ -135,14 +135,14 @@ SERIAL_EXECUTOR来执行任务. 下面是后者的实现:
 
         return this;
     }
-#+END_EXAMPLE 
+#+END_SRC 
 
 该函数首先判断任务状态. 然后调用 onPreExecute(), 这是在UI线程调用的.
 然后是调用exec.execute(mFuture). 从前面的内容可以知道, 这行代码就会
 在线程中调用doInBackground()函数. 等doInBackground执行完成后, 会调用postResult()
 提交结果. postResult()通过handler将结果传递给UI线程执行.  
 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     private Result postResult(Result result) {
         @SuppressWarnings("unchecked")
         Message message = getHandler().obtainMessage(MESSAGE_POST_RESULT,
@@ -150,11 +150,11 @@ SERIAL_EXECUTOR来执行任务. 下面是后者的实现:
         message.sendToTarget();
         return result;
     }
-#+END_EXAMPLE
+#+END_SRC
 
 前面handler的内容可知, handler最后会调用到finish()函数, 该函数会调用到
 onPostExecute().
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     private void finish(Result result) {
         if (isCancelled()) {
             onCancelled(result);
@@ -163,10 +163,10 @@ onPostExecute().
         }
         mStatus = Status.FINISHED;
     }
-#+END_EXAMPLE
+#+END_SRC
 ** 发布进度
 可以通过publishProgress函数发布当前进度.该函数会通过handler向UI线程推送消息.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     @WorkerThread
     protected final void publishProgress(Progress... values) {
         if (!isCancelled()) {
@@ -174,6 +174,6 @@ onPostExecute().
                     new AsyncTaskResult<Progress>(this, values)).sendToTarget();
         }
     }
-#+END_EXAMPLE
+#+END_SRC
 
 该消息的处理会调用到onProgressUpdate()函数.

@@ -24,7 +24,7 @@ obtain(...)函数族用于获取消息, 这些obtain()函数通过不同的接�
 参数来初始化获取到的消息. 核心函数是obtain(). 通过同步方式
 从消息池中取一个消息. 也可以调用obtain(Handler h)来设置获取到的消息的
 Handler.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     public static Message obtain() {
         synchronized (sPoolSync) {
             if (sPool != null) {
@@ -45,15 +45,15 @@ Handler.
 
         return m;
     }
-#+END_EXAMPLE
+#+END_SRC
 ** 发送消息
 调用sendToTarget()函数调用Message的target变量(一个Handler)的sendMessage()函数.
 如果没有设置target则会报错. sendMessage()函数的实现在Handler一节讲述.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     public void sendToTarget() {
         target.sendMessage(this);
     }
-#+END_EXAMPLE
+#+END_SRC
 * MessageQueue
 该类基于前面的[[Message]]类实现了一个消息队列, 用于"顺序"处理
 消息, 消息按照其产生时间先后排序.
@@ -61,7 +61,7 @@ Handler.
  该函数用于插入一个消息, 由于消息队列按照消息时间when升序排序,所以
  新插入消息会遍历列表, 并插入到相应位置. \\
  下面是该函数代码:
- #+BEGIN_EXAMPLE
+ #+BEGIN_SRC java
      boolean enqueueMessage(Message msg, long when) {
          if (msg.target == null) {
              throw new IllegalArgumentException("Message must have a target.");
@@ -116,7 +116,7 @@ Handler.
          return true;
      }
 
- #+END_EXAMPLE
+ #+END_SRC
  函数的流程如下:
  1. 首先判断该msg是否有target或正在被使用.
  2. 获取消息队列的锁, 进入同步操作.
@@ -138,7 +138,7 @@ Handler.
    1. 如果队列正在退出, 调用dispose()函数销毁native的消息队列.并返回null.
       (在Looper中, 这一步会导致looper退出).
 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
    Message next() {
         // Return here if the message loop has already quit and been disposed.
         // This can happen if the application tries to restart a looper after quit
@@ -200,7 +200,7 @@ Handler.
 		...
         }
     }
-#+END_EXAMPLE
+#+END_SRC
 * Looper
 Looper类用于在线程中实现一个"消息循环"行为. 
 Looper有一个[[MessageQueue]]类型的变量mQueue用于存储消息.
@@ -210,7 +210,7 @@ Looper类有一个静态变量sThreadLocal, 该变量是一个ThreadLocal
 类型的线程私有变量. 当调用prepare()函数进行初始化时,
 会在函数内部生成一个looper实例并赋值给该变量.
 调用 myLooper函数会返回这个变量.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     private static void prepare(boolean quitAllowed) {
         if (sThreadLocal.get() != null) {
             throw new RuntimeException("Only one Looper may be created per thread");
@@ -221,7 +221,7 @@ Looper类有一个静态变量sThreadLocal, 该变量是一个ThreadLocal
     public static @Nullable Looper myLooper() {
         return sThreadLocal.get();
     }
-#+END_EXAMPLE
+#+END_SRC
 
 PS: Looper还有一个静态变量sMainLooper, 这个变量是UI线程
 的Looper引用, 在应用启动时被初始化.
@@ -229,7 +229,7 @@ PS: Looper还有一个静态变量sMainLooper, 这个变量是UI线程
 函数的处理在loop()函数中, 该函数建立了一个"无限循环", 
 每次循环都从消息队列中获取一个消息, 若无消息则可能
 会阻塞或者退出循环(主要与[[MessageQueue]]有关. 下面是该函数主要代码:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     public static void loop() {
         final Looper me = myLooper();
         if (me == null) {
@@ -253,7 +253,7 @@ PS: Looper还有一个静态变量sMainLooper, 这个变量是UI线程
             msg.recycleUnchecked();
         }
     }
-#+END_EXAMPLE
+#+END_SRC
 代码流程:
 1. 调用queue.next()函数[[从队列获取消息]].
 2. 判断消息是否为空, 如果为空则退出循环(线程也可能退出). 
@@ -271,7 +271,7 @@ Handler的构造函数有多个, 基本最后都调到下面两个函数之一:
    (Handler的通常用法), 可以传入一个callback参数用于处理消息.
    第二个参数async标志消息是否要按时间排序.
    该函数会去拿去当前线程的[[Looper]], 如果没有则报错.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC java
        public Handler(Callback callback, boolean async) {
         if (FIND_POTENTIAL_LEAKS) {
             final Class<? extends Handler> klass = getClass();
@@ -291,7 +291,7 @@ Handler的构造函数有多个, 基本最后都调到下面两个函数之一:
         mCallback = callback;
         mAsynchronous = async;
     }
-   #+END_EXAMPLE
+   #+END_SRC
 
 2. Handler(looper, callback, async).
    第一个参数looper是显示的传入一个looper参数给handler的构造函数.
@@ -304,7 +304,7 @@ Handler的发送消息相关的函数也有多个, 基本都是先计算该messa
 的执行时间, 然后调用sendMessageAtTime()函数. 该函数内部调用了 
 enqueueMessage()函数, 最终调用到了[[MessageQueue]]的
 enqueueMessage()函数.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     public boolean sendMessageAtTime(Message msg, long uptimeMillis) {
         MessageQueue queue = mQueue;
         if (queue == null) {
@@ -322,12 +322,12 @@ enqueueMessage()函数.
         }
         return queue.enqueueMessage(msg, uptimeMillis);
     }
-#+END_EXAMPLE
+#+END_SRC
 ** 发送runnable
 post系列函数用于发送一个"Runnable"消息, 该runnable会被存入
 消息的callback变量. 在[[Looper]]做消息分发时, 会回调到Handler的
 dispatchMessage()函数来处理callback.代码如下:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     public final boolean post(Runnable r)
     {
        return  sendMessageDelayed(getPostMessage(r), 0);
@@ -357,4 +357,4 @@ dispatchMessage()函数来处理callback.代码如下:
     private static void handleCallback(Message message) {
         message.callback.run();
     }
-#+END_EXAMPLE
+#+END_SRC

@@ -35,32 +35,32 @@ file:../../../../public/img/orgmode-todo.png
 第一组关键字处于项目的"未完成"阶段, 第二组关键字处于项目的"完成"阶段, 
 通过 "|"来区分划分这两个阶段. 当使用"C-c C-t"时, 标题会轮番在这几个关键字
 之间修改.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
     (setq org-todo-keywords
        '((sequence "TODO" "FEEDBACK" "VERIFY" "|" "DONE" "DELEGATED")))
-   #+END_EXAMPLE
+   #+END_SRC
 ** 设置多组关键字
 有时候你想将任务划分的更细, 例如状态未"TODO"的任务只能将状态改为"DONE",
 状态未"BUG"的任务只能改为"FIXED"(不能设成DONE), 那么可以通过 *sequence*
 关键字来实现这个功能, 如下例, 该例创建了三组关键字, 状态修改只能在本组的
 关键字之间变化, 而不能跨组变化.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
     (setq org-todo-keywords
            '((sequence "TODO(t)" "|" "DONE(d)")
              (sequence "REPORT" "BUG" "KNOWNCAUSE" "|" "FIXED")
              (sequence "|" "CANCELED")))
 
-#+END_EXAMPLE
+#+END_SRC
 ** 使用type.
   该变量可以将TODO设置为不同的类型, 如下例, 这样可以实现将任务分配给不同的人,
   分配完成后, C-c C-t修改状态时不会在这三个type之间滚动.而是直接设为done
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC elisp
   (setq org-todo-keywords '((type "Fred" "Sara" "Lucy" "|" "DONE")))
-  #+END_EXAMPLE
+  #+END_SRC
 ** 在当前文件设置关键字
 上面几节讲到都是在全局配置文件中配置关键字, 
 如果想只把配置限制在当前文件, 可以在文件开头配置相关关键字, 如下例:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      #+TODO: TODO FEEDBACK VERIFY | DONE CANCELED ;; 拓展关键字
 
      #+TYP_TODO: Fred Sara Lucy Mike | DONE ;; 设置type
@@ -70,29 +70,29 @@ file:../../../../public/img/orgmode-todo.png
      #+TODO: REPORT BUG KNOWNCAUSE | FIXED
      #+TODO: | CANCELED
 
-#+END_EXAMPLE
+#+END_SRC
 ** 关键字主题
 如果嫌弃官方的关键字颜色不好看, 可以通过设置"org-todo-keyword-faces"变量可以设置不同关键字的表现形式,例如:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      (setq org-todo-keyword-faces
            '(("TODO" . org-warning) ("STARTED" . "yellow")
              ("CANCELED" . (:foreground "blue" :weight bold))))
 
 
-#+END_EXAMPLE
+#+END_SRC
 ** 设置依赖
 有时候一个TODO可能依赖其他的TODO, 例如一个系列项目, 可能前面的项目完成
 之前, 后面的项目都不能将状态改成DONE, 或者子项目完成之前, 父项目不能将
 状态改成DONE.
 1. org-enforce-todo-dependencies.
    通过设置该变量, 可以设置在所有的子标题都完成之前, 父标题不能将状态设置为DONE.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
    (setq org-enforce-todo-dependencies t)
-   #+END_EXAMPLE
+   #+END_SRC
 2. 按顺序修改状态.
    通过设置属性"ORDERED"来控制同级标题之前按顺序修改状态, 在前面的标题完成之前
    后面的标题不能将属性设为DONE.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
      * Parent
        :PROPERTIES:
        :ORDERED: t
@@ -100,7 +100,7 @@ file:../../../../public/img/orgmode-todo.png
      ** TODO a
      ** TODO b, needs to wait for (a)
      ** TODO c, needs to wait for (a) and (b)
-   #+END_EXAMPLE
+   #+END_SRC
 * 时间戳
 对于时间管理来说, 时间戳是必不可少的东西, 可以通过为项目设置
 "排期(SCHEDULED)"或"最后期限(DEADLINE)"来更合理的规划工程. 
@@ -108,68 +108,68 @@ file:../../../../public/img/orgmode-todo.png
 ** 设置完成时间
 可以加入设置下面两个配置之一来自动在状态改成DONE的时候加入当前时间戳:
 其中第二个配置还会要求你写一段完成的note.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (setq org-log-done 'time)
 (setq org-log-done 'note)
-#+END_EXAMPLE
+#+END_SRC
 ** 记录状态变化
 下面的配置用于记录状态之间的变化, 可以通过设置带"附加属性"的keywords来实现
 这一个. 在keyword后面的括号中与状态记录相关字符为:
 + "!" 表示记录时间
 + "@" 表示带时间的note
 + "/!" 当跳转到一个没有附加属性的状态时, 记录时间或note
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      (setq org-todo-keywords
        '((sequence "TODO(t)" "WAIT(w@/!)" "|" "DONE(d!)" "CANCELED(c@)")))
-#+END_EXAMPLE
+#+END_SRC
 
 也可以使用PROPERTIES属性 "LOGGING" 来修改某个标题的TODO附加属性, 
 如果LOGGING为nil,表示没有附加记录. 也可以使用 "logrepeat" 或 
 "lognotedone" 使用默认属性, 例如下例, 这个配置会修改TODO只添加时间戳,
 WAIT需要note, 其他的属性使用STARTUP的默认值.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      * TODO Log each state with only a time
        :PROPERTIES:
        :LOGGING: TODO(!) WAIT(@) logrepeat
        :END:
-#+END_EXAMPLE
+#+END_SRC
 ** 追踪行为
 使用属性STYLE habit来设置持久性行为, 如下例, 表示至少4天或至多2天
 *刮一次胡子*.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
   ** TODO Shave
    'S CHEDULEd: <2015-12-08 Tue .+2d/4d>
   :PROPERTIES:
   :STYLE:    habit
   :END:
-#+END_EXAMPLE
+#+END_SRC
 * 优先级
 Org支持TODO项目的优先级, 默认支持的优先级有三个:A, B, C. A最高.
 如下所示, 无优先级表示的项目优先级是B.
-#+BEGIN_EXAMPLE 
+#+BEGIN_SRC elisp 
   ** TODO [#A] 
-#+END_EXAMPLE
+#+END_SRC
 * 显示任务完成比
 可以在标题中加入 "[/]" 或 "[%]" 来显示子任务的完成数.
 默认只显示子标题, 如果要递归显示整个树, 需要设置
 "org-hierarchical-todo-statistics", 或者在PROPERTIES中设置
 "COOKIE_DATA", 如下所示;
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
      * Parent capturing statistics [2/20]
        :PROPERTIES:
        :COOKIE_DATA: todo recursive
        :END:
-#+END_EXAMPLE
+#+END_SRC
 
 如果当子任务都完成时, 父任务自动标记为DONE, 可以在.emacs中加入
 如下代码:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (defun org-summary-todo (n-done n-not-done)
   "Switch entry to DONE when all subentries are done, to TODO otherwise."
   (let (org-log-done org-log-states)   ; turn off logging
     (org-todo (if (= n-not-done 0) "DONE" "TODO"))))
 (add-hook 'org-after-todo-statistics-hook 'org-summary-todo)
-#+END_EXAMPLE
+#+END_SRC
 * 附录: "TODO"快捷键 						   :shortkey:
 |                     | 说明               |
 |---------------------+--------------------|

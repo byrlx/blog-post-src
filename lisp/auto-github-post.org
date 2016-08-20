@@ -10,7 +10,7 @@
 所以就想写一个程序,能够自动根据title名创建文件名,并加入标准的markdown开头语法内容,同时还能在编辑完成后自动上传到github中.
 
 代码如下:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 
 	#!/usr/bin/python
 	
@@ -71,4 +71,4 @@
 	
 	os.chdir(oldpath)
 
-#+END_EXAMPLE
+#+END_SRC

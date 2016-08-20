@@ -30,7 +30,7 @@ There’s no sense in re-inventing the wheel when you’re working on Android ap
 引用相关的组件。这里就可以使用在Android领域举世闻名的开源库：
 Butter Knife。
 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
  <LinearLayout ... android:orientation="vertical">
  <ImageView android:id="@+id/taco_img" .../>
  <TextView android:id="@+id/description" .../>
@@ -41,7 +41,7 @@ Butter Knife。
  </LinearLayout>
  <EditText android:id="@+id/tag" .../>
  </LinearLayout>
-#+END_EXAMPLE
+#+END_SRC
 
 Butter Knife通过注解的方式将代码和xml文件绑定到一起，无需在
 重复写大量的 =findViewById()= 这种代码。该库有以下几个优势：
@@ -49,7 +49,7 @@ Butter Knife通过注解的方式将代码和xml文件绑定到一起，无需�
 2. 改善view查找。
 3. 改善监听函数注册。
 4. 改善资源查找。
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 <TextView android:id="@+id/description"
  ...
  />
@@ -63,19 +63,19 @@ public class MainActivity extends Activity {
       description.setText("Tofu with Cheese on a tortilla");
    }
 }
-#+END_EXAMPLE
+#+END_SRC
 下面是一个通常的Butter Knife用法, =ButterKnife.bind(this)= 函数
 会自动生成代码寻找相关的view、资源并把它们保存到activity代码中。
 类似这样：
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 public void bind(MainActivity activity) {
    activity.description = (android.widget.TextView) activity.findViewById(2130968577);
 }
-#+END_EXAMPLE
+#+END_SRC
 
 下面是一些更高级的用法：
 ** 绑定、解绑fragment中的view
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 public class TacoFragment extends Fragment {
  @BindView(R.id.tag) EditText tag;
  private Unbinder unbinder;
@@ -96,17 +96,17 @@ public class TacoFragment extends Fragment {
       unbinder.unbind();
  }
 }
-#+END_EXAMPLE
+#+END_SRC
 ** 注册监听函数
 ButterKnife支持大部分常用的监听函数。
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 @OnClick(R.id.save)
 public void saveTaco(Button button) {
  button.setText("Saved!");
 }
-#+END_EXAMPLE
+#+END_SRC
 ** 绑定资源
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 class MainActivity extends Activity {
  @BindString(R.string.title) String title;
  @BindDrawable(R.drawable.star) Drawable star;
@@ -115,9 +115,9 @@ class MainActivity extends Activity {
  // int (in pixels) or float (for exact value)
  @BindDimen(R.dimen.spacer) Float spacer;
 }
-#+END_EXAMPLE
+#+END_SRC
 ** 给多个组件设置同一个监听函数
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 @OnClick({ R.id.save, R.id.reject})
 public void actOnTaco(View view) {
  if (view.getId() == R.reject) {
@@ -129,9 +129,9 @@ public void actOnTaco(View view) {
  //TODO: implement
  getNextTaco();
 }
-#+END_EXAMPLE
+#+END_SRC
 ** 操作view的属性
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 //下面的代码将两个button绑定到一个list中， 并通过操作这个list来
 //操作这些按钮的属性。
 @BindViews({R.id.save, R.id.reject})
@@ -150,7 +150,7 @@ static final ButterKnife.Setter<View, Boolean> ENABLED = new ButterKnife.Setter<
     view.setEnabled(value);
  }
 };
-#+END_EXAMPLE
+#+END_SRC
 * 第二步：加载网络图片 - Picasso
   这一步用于在应用显示土豆的照片, 照片可能是网络或本地图片.
 
@@ -167,7 +167,7 @@ static final ButterKnife.Setter<View, Boolean> ENABLED = new ButterKnife.Setter<
 这段代码通过http请求获取图片的stream, 然后再调用Android的BitmapFactory
 类来将stream转化成bitmap. 其中 OpenHttpGETConnection()函数还要考虑在
 子线程中进行http请求操作.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 private Bitmap DownloadImage(String url)
 {
  Bitmap bitmap = null;
@@ -180,14 +180,14 @@ private Bitmap DownloadImage(String url)
  }
  return bitmap;
 }
-#+END_EXAMPLE
+#+END_SRC
 
 如果使用Picasso,则上面的代码就变为:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 Picasso.with(context)
  .load("http://placekitten.com/200/300")
  .into(imageView);
-#+END_EXAMPLE
+#+END_SRC
 ** 更多特性
 上面展示了Picasso的一个典型使用方式, 该库还包含其他的对图片的操作,
 例如:
@@ -205,15 +205,15 @@ Picasso.with(context)
    旋转图片. 或者也可以使用函数 rotate(degrees, pivotX, pivotY)
    
 除了网络下载图片, Picasso也支持加载本地图片. 例如下面的代码:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 Picasso.with(context).load(R.drawable.salsa).into(imageView1);
 Picasso.with(context).load("file:///asset/salsa.png").into(imageView2);
 Picasso.with(context).load(new File(...)).into(imageView3);
-#+END_EXAMPLE
+#+END_SRC
 ** 一个完整的代码片段
 下面是Picasso和ButterKnife一起用的场景, 在通过Picasso下载图片时, 使用
 ButterKnife的apply函数来使按钮不可用. 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 //Butter Knife!
 @BindView(R.id.taco_img) ImageView tacoImg;
 private void setTacoImage() {
@@ -227,7 +227,7 @@ private void getNextTaco() {
  //TODO: implement
  loadTacoDescription();
 }
-#+END_EXAMPLE
+#+END_SRC
 
 * 第三步: json转换 - Gson
  这一步用于对服务器返回的json格式数据转化成类对象, 或者反过来.
@@ -242,7 +242,7 @@ Gson的一些特点:
 7. 反序列化时, json中没有的域会在对象中生成一个null值.
 
 例如下面的例子对类Taco使用Gson进行Json的序列化和反序列化.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 class Taco {
  private String description;
  private String imageUrl;
@@ -262,7 +262,7 @@ String json = gson.toJson(breakfastTaco);
 // Deserialize to POJO
 Taco yummyTaco = gson.fromJson(json, Taco.class);
 // ==> yummyTaco is just like breakfastTaco except for the favorite boolean
-#+END_EXAMPLE
+#+END_SRC
 ** 高级用法
 1. 如果变量名和json的域名不同, 可以使用 =@SerializeName()= 注解修饰.
    #+BEGIN_SRC java

@@ -11,38 +11,38 @@ Emacs lisp中最常见的函数调用即为List方式调用, 其形式为(name a
 如果你实现不知道需要调用那个函数, 而是在运行时通过计算得出要调用的函数
 名称(例如计算结果中包含函数名称). 那么可以通过funcall来调用函数.
 funcall的用法为:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 funcall function &rest arguments
-#+END_EXAMPLE
+#+END_SRC
 
 funcall的参数function必须为lisp函数或基本函数, 不能为特殊函数(例如and)或宏.
 funcall的所有参数都会在funcall被调用之前被处理. 所以如果要传函数,
 函数名前面要带"'", 例如
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (funcall 'list 'x 'y 'z)
-#+END_EXAMPLE
+#+END_SRC
 * apply
 apply跟[[funcall]]很相似, 主要的区别就是apply的最后一个参数必须为list, apply会
 将最后一个参数的元素拓展为其调用函数的参数. 例如下面的例子, 其调用的函数list的
 参数为 x/y/z/a/b/c:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (apply 'list 'x 'y 'z '(a b c))
-#+END_EXAMPLE
+#+END_SRC
 * apply-partially
 该函数的定义为:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 apply-partially func &rest args
-#+END_EXAMPLE
+#+END_SRC
 该函数的返回值是一个新的函数, 当调用新返回的函数时, 实际是调用func函数, 
 func函数的参数有args和新函数的参数组成. 通过下例可以说明apply-partially的用法,
 当调用lxpa时, 实际调用的是list函数, 其参数为x, y, z.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 ;;将lxpa设为返回的新函数
 (setq lxpa (apply-partially 'list 'x))
 
 ;;通过funcall调用lxpa, 传入参数 x, y
 (funcall lxpa 'y 'z)
-#+END_EXAMPLE
+#+END_SRC
 * mapping类函数
 mapping类函数的一个特点就是会把函数参数映射到后面的"集合"中的每个元素,
 这里的集合可以是list或其他集合类型. 下面是Elisp中常用的几个mapping函数.
@@ -52,12 +52,12 @@ mapcar会将func依次映射到后面的集合参数中, 然后将结果合并�
 并返回. 这里的集合可以是除了char-table之外的所有参数.
 例如下例, 将car函数作用于后面list的每个元素, 并将结果生成新的list,
 结果为(a 1).
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (mapcar 'car '((a b c) (1 2 3 4)) ==> (a 1)
-#+END_EXAMPLE
+#+END_SRC
 
 官方文档给出了一个更复杂一些的例子, 结合mapcar和apply定义了一个更高级的函数,
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
           (defun mapcar* (function &rest args)
             "Apply FUNCTION to successive cars of all ARGS.
           Return the list of results."
@@ -71,7 +71,7 @@ mapcar会将func依次映射到后面的集合参数中, 然后将结果合并�
 ;;函数效果
 (mapcar* 'cons '(a b c) '(1 2 3 4)) ==> ((a . 1) (b . 2) (c . 3))
 (mapcar* '+ '(1 3 5) '(2 4 6 8)) ==> (3 7 11)
-#+END_EXAMPLE
+#+END_SRC
 
 mapcar用来依次将func映射到后面list的每个参数里的元素, 直到某个参数遍历到
 尾部.如两个示例所示.
@@ -84,16 +84,16 @@ mapcar用来依次将func映射到后面list的每个参数里的元素, 直到�
 mapc的功能跟mapcar相同, 只是返回值不同, mapc的返回值为参数"集合".
 因为返回值还为原来的"集合", 所以mapc一般适合对参数本身所代表的文件/数据
 做处理. 例如可以将一个文件处理程序应用于多个文件.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (mapc 'file-proc 
    (list "file1" "file2" "file3"))
-#+END_EXAMPLE
+#+END_SRC
 ** mapconcat
 mapconcat的定义如下, 它的function参数必须要返回一个字符串, 然后
 会用separator将结果字符串拼接起来.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 mapconcat function sequence separator
 
 ;;example
 (mapconcat 'car '(("a" "b") ("c" "d")) "-") ==> "a-c"
-#+END_EXAMPLE
+#+END_SRC

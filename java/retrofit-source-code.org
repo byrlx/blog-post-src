@@ -15,7 +15,7 @@
   就可以完成我们想要的http功能, retrofit到底在后面做了什么?
 
   下面的示例代码是揭开retrofit面纱的入口代码, 通过该代码可以从服务器获取用户列表
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC java
 //自定义接口
 public interface Client {
     @GET("users")
@@ -39,7 +39,7 @@ public class MainActivity {
     ....
 }
 
-  #+END_EXAMPLE
+  #+END_SRC
  
 * 使用builder去创建一个retrofit实例
   Retrofit类的源码使用了Builder设计模式, 该类只有一个私有的构造函数, 并且"几乎"没有
@@ -63,7 +63,7 @@ public class MainActivity {
   ~Platform.get()~ 获取当前平台, 对于运行在那个平台的判断, 主要是基于
   该平台的一些独特性质, 例如如果系统存在 *android.os.Build* 类,
   则代表这是android平台.
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC java
   private static final Platform PLATFORM = findPlatform();
 
   static Platform get() {
@@ -90,12 +90,12 @@ public class MainActivity {
     }
     return new Platform();
   }
-  #+END_EXAMPLE
+  #+END_SRC
   下面是Android平台的实现代码,其重写了父类的两个函数. 另外, 该类还有个
   继承了Executor的子类 *MainThreadExecutor*, 该类包含了android的 UI
   线程的handler, 从而保证工作都会在UI线程完成. 至于其重写的函数的意义, 
   会在后面介绍.
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC java
   static class Android extends Platform {
     @Override public Executor defaultCallbackExecutor() {
       return new MainThreadExecutor();
@@ -113,19 +113,19 @@ public class MainActivity {
       }
     }
   }
-  #+END_EXAMPLE
+  #+END_SRC
 * 基于自定义interface创建实例
   前两部分主要介绍了一下retrofit的builder类, 通过builder的build()函数就可以构造
   一个retrofit实例. 接下来就是retrofit很神奇的一步:通过create()函数创建一个自定义
   接口的对象实例:
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC java
   Client client = retrofit.create(Client.class);
-  #+END_EXAMPLE
+  #+END_SRC
 
   在前面的示例代码中, Client是我们创建的一个接口, 并没有任何的"实体"代码(实现类),
   但是这里通过create()函数就可以生成一个"有血有肉"的对象实例. 通过create()函数的
   源码看一下这个过程是怎么实现的. 
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC java
     public <T> T create(final Class<T> service) {
     Utils.validateServiceInterface(service);
     if (validateEagerly) {
@@ -150,7 +150,7 @@ public class MainActivity {
 	  }
 	});
   }
-  #+END_EXAMPLE
+  #+END_SRC
 
   前面的"if"语句暂时先不管, 最后的 "return" 返回了一个 ~Proxy.newProxyInstance()~
   函数的结果, 这里使用到了java的 [[动态代理介绍][动态代理]] 的编程技巧. 通过该函数, 我们可以拿到一个
@@ -163,11 +163,11 @@ public class MainActivity {
   这就是我们可以通过retrofit实现一个interface实例的核心代码. 至于怎么通过调用
   具体的函数实现实际的http请求, 则需要看一下 invoke() 的具体实现. 在该函数的实现里,
   最重要的就是这几行. 
-  #+BEGIN_EXAMPLE
+  #+BEGIN_SRC java
   ServiceMethod serviceMethod = loadServiceMethod(method);
   OkHttpCall okHttpCall = new OkHttpCall<>(serviceMethod, args);
   return serviceMethod.callAdapter.adapt(okHttpCall);
-  #+END_EXAMPLE
+  #+END_SRC
 * 通过invoke()执行函数, 返回一个Call
 ** 函数的封装类:ServiceMethod
    在[[基于自定义interface创建实例][上一节]]的最后,提到了具体自定义service 的成员函数调用与invoke()函数
@@ -203,7 +203,7 @@ public class MainActivity {
 ** ServiceMethod的callAdapter变量
    CallAdapter是Call的适配器类, 在将一个自定义函数解析成ServiceMethod实例时, 
    会生成这个ServiceMethod的callAdapter变量. 下面的代码展示了创建过程.
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC java
    //SeviceMethod.java
     private CallAdapter<?> createCallAdapter() {
       Type returnType = method.getGenericReturnType();
@@ -234,7 +234,7 @@ public class MainActivity {
 	return adapter;
       }
     }
-   #+END_EXAMPLE
+   #+END_SRC
    
    上面的代码是callAdapter变量的创建过程, 第一个函数 ~createCallAdapter()~ 首先
    获取了函数的"返回类型"和"注解", 并基于这两个内容调用Retrofit的 ~callAdapter()~
@@ -254,19 +254,19 @@ builder提供了一个 ~addCallAdapterFactory()~
 
 对于Android 平台来说, 这个"默认"的CallAdapterFactory代码如下,
 该函数返回一个ExecutorCallAdapterFactory实例. 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 //Android platform
     @Override CallAdapter.Factory defaultCallAdapterFactory(Executor callbackExecutor) {
       return new ExecutorCallAdapterFactory(callbackExecutor);
     }
-#+END_EXAMPLE
+#+END_SRC
 根据[[ServiceMethod的callAdapter变量][前面]]的内容,当对该实例调用 ~get()~ 函数时, 如何返回一个
 可以适配"返回类型"和"函数注解"的CallAdapter实例, 这就要看下
 *ExecutorCallAdapterFactory* 的具体实现, 其代码如下. 
 从代码可以看出, 对于任何自定义函数, 只要其返回类型为"Call"类,
 那么都会生成一个匿名的"CallAdapter"实例.该实例实现了 ~adapter()~
 方法, 使其可以返回一个具体的Call的子类, 即 ExecutorCallbackCall(). 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
   @Override
   public CallAdapter<Call<?>> get(Type returnType, Annotation[] annotations, Retrofit retrofit) {
     if (getRawType(returnType) != Call.class) {
@@ -283,7 +283,7 @@ builder提供了一个 ~addCallAdapterFactory()~
       }
     };
   }
-#+END_EXAMPLE
+#+END_SRC
 
 以上就是调用自定义interface的具体某个函数的过程, 以Android平台为例, 通过调用函数,
 最终会获得一个ExecutorCallbackCall实例. 通过这个Call实例, 我们就可以实现具体的Http请求.
@@ -291,10 +291,10 @@ builder提供了一个 ~addCallAdapterFactory()~
 通过前面的内容, 已经知道调用函数可以获得一个ExecutorCallbackCall实例, 
 那么就可以通过执行该实例的execute()或enqueue()函数执行具体的http请求了.
 这一部分是OkHttp相关的内容, 会在后面文章陆续说明.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 //具体请求代码
 List<Users> result = call.execute().body();
-#+END_EXAMPLE
+#+END_SRC
 
 这里想补充一下ExecutorCallbackCall类的一个变量: callbackExecutor. 
 
@@ -304,7 +304,7 @@ List<Users> result = call.execute().body();
 变量 *callbackExecutor* 完成的. 因为ExecutorCallbackCall对应的是Android平台,
 所以我们来看一下这个 callbackExecutor 有什么特殊之处. 
 下面的代码追溯了这个变量的最终出处.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 //Android平台通过该函数创建factory
     @Override CallAdapter.Factory defaultCallAdapterFactory(Executor callbackExecutor) {
       return new ExecutorCallAdapterFactory(callbackExecutor);
@@ -327,7 +327,7 @@ callbackExecutor = platform.defaultCallbackExecutor();
         handler.post(r);
       }
     }
-#+END_EXAMPLE
+#+END_SRC
 通过上面代码可以看出, Android平台的这个executor其实是一个带有UI线程handler的
 executor, 所以最后执行execute时, 会将runnable传给UI线程执行. 即,当调用enqueue()
 函数时, 回调是在UI线程中执行的.

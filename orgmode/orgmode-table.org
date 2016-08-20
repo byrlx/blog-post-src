@@ -107,35 +107,35 @@ org支持公式后面添加任意数量的附加模式, 公式和
    | L           |                                   |   |
 
    下面是一些实例程序
-    #+BEGIN_EXAMPLE
+    #+BEGIN_SRC elisp
      $1+$2                Sum of first and second field
      $1+$2;%.2f           保留小数点两位
      exp($2)+exp($1)      数学公式
      tan($1);Dp3s1        计算度数, 精度为3, 展示为科学计数
-#+END_EXAMPLE
+#+END_SRC
 ** lisp代码处理表格.
    org支持用lisp代码处理表格. 以 '( 开头的表达式会被解析为lisp代码,
    默认情况下, 表格的内容会被引用为字符串, 如果需要将其处理为数字,
    需要将其转化为N模式(后面加";N"). 也可以用使用双引号将其表示为字符串.
    "范围(..)"会被解析为空格分开的域. 例如前面表格相加的公司用lisp表示为
    *$5='(+ $1 $2 $3 $4)*. 下面是一些例子:
-   #+BEGIN_EXAMPLE
+   #+BEGIN_SRC elisp
 '(concat (substring $1 1 2) (substring $1 0 1) (substring $1 2))
    交互第一列表格内容的前两个字符
 '(+ $1 $2);N   Add columns 1 and 2, equivalent to Calc's `$1+$2'.
 '(apply '+ '($1..$4));N   另外一种表格相加方法
-   #+END_EXAMPLE
+   #+END_SRC
 ** 时间计算.
  前面讲过表格支持时间计算.表格支持的时间格式为 HH:MM[:SS], 
  其中SS是可选, 如果公式后面接";T", 计算结果会展示为 HH:MM:SS.
  如果为";t", 计算结果为小时的小数表示. 下面的例子展示了这一点:
- #+BEGIN_EXAMPLE
+ #+BEGIN_SRC elisp
      |  Task 1 |   Task 2 |    Total |
      |---------+----------+----------|
      |    2:12 |     1:47 | 03:59:00 |
      | 3:02:20 | -2:07:00 |     0.92 |
      #+TBLFM: @2$3=$1+$2;T::@3$3=$1+$2;t
- #+END_EXAMPLE
+ #+END_SRC
 ** 直接在某一格中输入公式. 
  可以直接在域中输入公式. 在域中输入":="并后面接公式. 也可以
  在当前域中输入 "C-u C-c ="命令在提示框中输入公式.
@@ -150,7 +150,7 @@ orgmode提供了三个查找函数用于在表中进行查找:
   相似函数. 不过返回的是一个列表.
 
 下面是一个示例, 更多示例看这篇文章: http://orgmode.org/worg/org-tutorials/org-lookups.html
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
  #+TBLNAME: rates
 | currency        | abbreviation | euros |
 |-----------------+--------------+-------|
@@ -172,7 +172,7 @@ orgmode提供了三个查找函数用于在表中进行查找:
  #+TBLFM: $5='(org-lookup-first $4 '(remote(rates,@2$2..@>$2)) '(remote(rates,@2$3..@>$3)))::$6=$5*$3
 函数解释第一个函数查找cost表的第四列和rates表的第二列相同的值, 并将查找结果对应的
 rates表的第三列填充到cost表的第五列, 然后计算第六列的值.
-#+END_EXAMPLE
+#+END_SRC
 ** 调试公式
 org mode提供了下列用于调试公式的快捷键:
 | 快捷键            | 功能                   |

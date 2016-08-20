@@ -18,13 +18,13 @@
 该类只有四个变量, BITS_PER_WORD代笔每个Bucket对象可以存放的bit数量,
 这里使用了Long类型, 故可以存放64位. 
 mData是具体存放bit的数据, next指向下一个Bucket对象.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 static class Bucket {
   final static int BITS_PER_WORD = Long.SIZE;
   final static long LAST_BIT = 1L << (Long.SIZE - 1);
   long mData = 0;
   Bucket next;
-#+END_EXAMPLE
+#+END_SRC
 ** 设置bit: set(index)
 ~set(int index)~ 函数用于将index位置的bit设置为1. \\
 该函数首先检查要插入的位置, 是不是大于当前的Bucket的范围,
@@ -34,7 +34,7 @@ static class Bucket {
    为 index 减去当前Bucket的长度(64). 如果下个bucket还是不满足, 会一直
    顺着链表调用下去, 直到找到一个合适的位置. 
    
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 void set(int index) {
       if (index >= BITS_PER_WORD) {
            ensureNext();
@@ -43,19 +43,19 @@ void set(int index) {
            mData |= 1L << index;
       }
 }
-#+END_EXAMPLE
+#+END_SRC
 
 ensureNext()的代码如下:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 private void ensureNext() {
      if (next == null) {
           next = new Bucket();
      }
 }
-#+END_EXAMPLE
+#+END_SRC
 ** 清除操作: clear(index)
    其原理跟设置一样, 通过 "与" 操作将bit位清除.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
         void clear(int index) {
             if (index >= BITS_PER_WORD) {
                 if (next != null) {
@@ -65,10 +65,10 @@ private void ensureNext() {
                 mData &= ~(1L << index);
             }
         }
-#+END_EXAMPLE
+#+END_SRC
 ** 判断: get(index)
 递归查找链表, 判断指定位置是否设置了bit位.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
         boolean get(int index) {
             if (index >= BITS_PER_WORD) {
                 ensureNext();
@@ -77,7 +77,7 @@ private void ensureNext() {
                 return (mData & (1L << index)) != 0;
             }
         }
-#+END_EXAMPLE
+#+END_SRC
 ** 插入: insert(index, b)
 在指定的位置插入一个bit的设置, 该位置后面的内容后移. 
 这个操作是通过下述步骤实现:
@@ -89,7 +89,7 @@ private void ensureNext() {
 注: 如果插入之前, Bucket对象的最高位的bit被设置(为1), 那么在后移过程中,
 该位置会被移除该Bucket, 所以需要记录下来, 将其重新插入到下一个Bucket中.
 这个过程会一直持续下去, 直到碰到一个最高位没被设置的Bucket.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
         void insert(int index, boolean value) {
             if (index >= BITS_PER_WORD) {
                 ensureNext();
@@ -111,7 +111,7 @@ private void ensureNext() {
                 }
             }
         }
-#+END_EXAMPLE
+#+END_SRC
 ** 移除: remove(index)
 该函数用于将该位置的bit位移除, 并将其后面的bit前移一位. 
 该函数的步骤:
@@ -124,7 +124,7 @@ private void ensureNext() {
 5. 判断下一个Bucket的第一位是否为1. 如果是则将该bucket的最高位置1.
 6. 调用下一个bucket的remove(0). 遍历链表, 重复这个操作.
 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
         boolean remove(int index) {
             if (index >= BITS_PER_WORD) {
                 ensureNext();
@@ -147,11 +147,11 @@ private void ensureNext() {
                 return value;
             }
         }
-#+END_EXAMPLE
+#+END_SRC
 
 ** 统计: countOnesBefore(index)
 统计index之前的bit数量. 基于 Long 的 bitCount() 函数实现.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
         int countOnesBefore(int index) {
             if (next == null) {
                 if (index >= BITS_PER_WORD) {
@@ -165,4 +165,4 @@ private void ensureNext() {
                 return next.countOnesBefore(index - BITS_PER_WORD) + Long.bitCount(mData);
             }
         }
-#+END_EXAMPLE
+#+END_SRC

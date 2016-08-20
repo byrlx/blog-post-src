@@ -19,9 +19,9 @@
 升级原因[[https://tug.org/mactex/mactex-download.html][这里]] 提到了, 主要是EI Captian版本的兼容问题. 
 
 然后将 MacTex的命令目录加入到了PATH中. 就可以在OrgMode下使用beamer了.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 export PATH="/Library/TeX/texbin":$PATH
-#+END_EXAMPLE
+#+END_SRC
 * TODO 支持中文
 这个没时间查资料, 等有时间再配置. 
 * 语法

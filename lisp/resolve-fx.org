@@ -28,7 +28,7 @@
    1. 如果f(mid)>0, 递归调用lxsearch计算区间(a, mid)
    2. 否则, 如果f(mid)<0, 递归调用lxsearch计算区间(mid, b)
    3. 如果f(mid)=0, 直接返回mid.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (defun lxsearch (f a b)
   (let ((mid (lxaverage a b)))
     (if (lxclose-enough? a b)
@@ -37,7 +37,7 @@
 	(cond ((> test-value 0) (lxsearch f a mid)) 
 	      ((< test-value 0) (lxsearch f mid b))
 	      (t (lxformat-float mid)))))))
-#+END_EXAMPLE  
+#+END_SRC  
 
 这里需要说明的是lxsearch是一个很抽象的定义, 这里的f可以为我们在学校里
 学习过的任意函数, 只要它满足前面中提到的限制即可. 下面通过几个实例来
@@ -46,24 +46,24 @@
 * lxsearch使用实例
 ** 计算方程 x^2 - 52x + 100 = 0 在区间 (10, 100)上的解
 在计算之前, 我们先用代码写出该方程:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (defun f (x)
   (+ (- (* x x)
 	(* 52 x))
      100))
-#+END_EXAMPLE
+#+END_SRC
 
 然后将函数f作为参数传给lxsearch, 就可以得到解为50
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (lxsearch 'f 10 100)
-#+END_EXAMPLE
+#+END_SRC
 ** 方程 x^3 -100x = 0, 区间(1,11)
 前面可以讲过, lxsearch是一个高阶的抽象函数, 我们可以将满足条件的
 任意方程传给他来求解函数的解, 这里通过传入一个lambda表达式来
 展示lambda表达式如何作为函数参数.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 (lxsearch
  '(lambda (x) (- (lxcube x) (* 100 x)))
  1
  11)
-#+END_EXAMPLE
+#+END_SRC

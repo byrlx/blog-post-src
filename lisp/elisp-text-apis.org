@@ -27,10 +27,10 @@ Emacs Lisp提供了一个文本的框架, 通过该框架可以实现对buffer�
 接受正则表达式, 依次查找符合条件的结果.
 ** (skip-chars-forward) (skip-chars-backward)
    向前/向后跳到第一个非参数字符串的字符, 返回跳的距离.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 ;;跳到第一个非小写字符的字符.光标定位到该字符后面.
 (skip-chars-forward "a-z") 
-#+END_EXAMPLE
+#+END_SRC
 * 文本操作函数
 ** (delete-char)
 接受整数N, 删除当前光标开始的N个字符.

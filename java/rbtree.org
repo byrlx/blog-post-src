@@ -23,7 +23,7 @@
 用二叉树实现排序, 规则也很简单, 每个节点的左子树(上的数据)都小于该节点(的数据),
 右子树(上的数据)都大于该节点. 基于这个规则可以很容易的将一组数据转使用二叉树
 排序, 即二叉搜索树. 例如下面的代码就将一个新数据插入到一个现成的二叉搜索树中.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 class Node(){
     int data;
     Node left;
@@ -50,7 +50,7 @@ void insert(Node root, Node newNode) {
     }
 }
 
-#+END_EXAMPLE
+#+END_SRC
 
 上面的代码很简单, 首先定义了一个Node类, 代表树的节点, 然后定义了插入算法 insert,
 将一个新节点 newNode 插入到根节点为 root 的二叉搜索树中. 对树的遍历都是"折半"
@@ -59,7 +59,7 @@ void insert(Node root, Node newNode) {
 
 二叉树排序数据的展示可以通过"中序遍历"树的方式实现, 即先递归遍历左子树, 输出, 
 然后输出当前节点, 然后递归遍历右子树输出. 代码如下:
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 void preorderTraverse(Node root) {
     if(root == null) return;
 
@@ -67,7 +67,7 @@ void preorderTraverse(Node root) {
     print(root.data);
     preorderTraverse(root.right);
 }
-#+END_EXAMPLE
+#+END_SRC
 * 基本二叉树的缺陷
 上述的二叉搜索树有一个缺陷, 即会出现树"失衡"的情况. 失衡一般是指
 树的左右子树的高度差距太大. 以上面的算法举例来说, 对于组已经排好序的
@@ -191,7 +191,7 @@ right. 那这五者之间的关系为:
 
 下面代码是节点的实现, 每个节点被创建是都被设成了红色, 因为[[红黑树的规则维持]]
 需要上溯, 所以定义了一个变量parent指向其父节点.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
     private class Node {
         int data;           //存放的数据
         int color;          //该节点颜色(也可以理解为其父节点到该节点的链接的颜色)
@@ -207,12 +207,12 @@ right. 那这五者之间的关系为:
             blackHeight = 0;
         }
     }
-#+END_EXAMPLE
+#+END_SRC
 
 下面代码是[[左旋转]]和[[右旋转]]的代码, 注意这里要修改多个"指针", 尤其是parent.
 同时也要注意旋转后root是否也需要修改的问题.
 链表操作比较熟练的话应该没什么问题.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 private Node rotateLeft(Node node) {
         Node right = node.right;
         if (root == node) {
@@ -272,11 +272,11 @@ private Node rotateLeft(Node node) {
         return left;
     }
 
-#+END_EXAMPLE
+#+END_SRC
 
 下面是红黑树的主要代码, insert()和resetTree()函数用于完成新节点的插入和插入后
 [[红黑树的规则维持]], 这里使用了一个while循环来进行一次维持后的上溯.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC java
 /**
  * 红黑树(Red-Black Tree)
  */
@@ -398,5 +398,5 @@ public class RbTree {
             cur.color = BLACK;
         }
     }
-#+END_EXAMPLE
+#+END_SRC
 * 红黑树Elisp实现(待完成)

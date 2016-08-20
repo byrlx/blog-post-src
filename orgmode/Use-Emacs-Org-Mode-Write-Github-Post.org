@@ -43,7 +43,7 @@
 可以将生成的html存放到 _posts 目录下, 由于转化后的html文章没有使用博客的前端配置, 
 所以我写了一个 lisp 程序来自动创建文章, 并在创建过程中自动添加文章的配置 "header".
 这段程序在 [[http://xuzhengchao.com/lisp/create-post-and-input-header.html][这篇文章]] 做了介绍. 
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
  ;; =============== Org Publish =====================
  (setq org-publish-project-alist
        '(("github-blog"
@@ -60,13 +60,13 @@
 	  :body-only t
 	  )))
 
- #+END_EXAMPLE
+ #+END_SRC
 
 ** 自动提交发布
 前面的工作只是将org文章转成了html, 然而并没有提交到github服务器, 作为一个"有追求"
 的程序员, 怎么能够忍受每次写完文章都要输入一堆的 git 命令. 故写了个小程序并将其
 绑定到了Emacs的 *F9* 快捷键.
-#+BEGIN_EXAMPLE
+#+BEGIN_SRC elisp
 ;;自动更新blog
 (defun lx-update-blog ()
   (interactive)
@@ -74,7 +74,7 @@
   (shell-command (concat "cd " LXBLOG " && git add -A && git ci -m 'update blog' && git push")))
 (global-set-key (kbd "<f9>") 'lx-update-blog)
 
-#+END_EXAMPLE
+#+END_SRC
 
 OK, 现在每次写完文章, 只要按一下F9, 等几秒, 就可以在网站上看到了.
 #+BEGIN_VERSE
