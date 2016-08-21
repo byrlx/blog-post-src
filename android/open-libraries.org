@@ -6,13 +6,6 @@
 #+TITLE: 【翻译】当我开始Android开发时，希望能早点认识的一些开源库
 原文地址 https://speakerdeck.com/chrisguzman/android-libraries-i-wish-i-knew-when-i-started
 
-There’s no sense in re-inventing the wheel when you’re working on Android apps,
- especially if you’re just starting out.
- This talk will cover a range of libraries you can include in your Android apps that will help you tackle the problems other people have already solved.
- Whether you’re loading data from a web api,
- showing & caching images,
- or storing & syncing data there’s a library you can pull in to help you out!
-
 介绍：当从事App开发时，有时候没必要重复造轮子，尤其是对新手而言。 
 这个演讲涵盖了一些可以在App开发时使用的库，这些库可以解决你正在遇到的问题。
 无论是要从Web接口获取数据， 或者显示、缓存图片， 或者存储、同步数据，
@@ -357,3 +350,160 @@ Realm的一些特点:
 1. 为手机而生.
 2. 可以快到使用同步.
 3. 支持一个应用包含多个Realm数据库.(Sqlite只有一个).
+
+下面是Realm在App中的应用实例:
+1. 需要持久化的类需要继承RealmObject:
+   #+BEGIN_SRC  java
+public class Taco extends RealmObject {
+ private String description;
+ private String tag;
+ private String imageUrl;
+ private boolean favorite;
+ //getters and setters
+}
+   #+END_SRC
+2. 配置Realm, 一般是创建一个RealmConfiguration对象, 将Realm文件存储到
+   App的"file"目录下. 
+   #+BEGIN_SRC  java
+RealmConfiguration realmConfig =
+ new RealmConfiguration.Builder(context).build();
+Realm.setDefaultConfiguration(realmConfig);
+// Get a Realm instance for this thread
+Realm realm = Realm.getDefaultInstance();   
+   #+END_SRC
+3. 持久化. Realm支持存储一个已存在的类实例, 或者通过传入class文件直接存储一个
+   新的类实例.
+   #+BEGIN_SRC java
+realm.beginTransaction(); // Persist your data in a transaction
+final Taco managedTaco = realm.copyToRealm(unmanagedTaco); // Persist unmanaged objects
+Taco taco = realm.createObject(Taco.class); // Create managed objects directly
+realm.commitTransaction();
+   #+END_SRC
+4. 获取数据.
+   #+BEGIN_SRC java
+Realm realm = Realm.getDefaultInstance(); // Get a Realm instance for this thread
+final RealmResults<Taco> likedTacos =
+realm.where(Taco.class).equalTo("favorite", true).findAll(); //find all favorite tacos
+   #+END_SRC
+5. 删除操作:
+   #+BEGIN_SRC java
+// All changes to data must happen in a transaction
+realm.executeTransaction(new Realm.Transaction() {
+ @Override
+ public void execute(Realm realm) {
+ // remove single match
+ limeTacos.deleteFirstFromRealm();
+ //or limeTacos.deleteLastFromRealm();
+ // remove a single object
+ Taco fishTaco = limeTacos.get(1);
+ fishTaco.deleteFromRealm();
+ // Delete all matches
+ limeTacos.deleteAllFromRealm();
+ }
+});   
+   #+END_SRC
+** 一些特性
+1. Realm同样支持同步和异步的"写数据"操作, 通过调用不同的Api实现, 如下代码:
+   1. 同步写:
+      #+BEGIN_SRC java
+   //Transaction block
+   realm.executeTransaction(new Realm.Transaction() {
+    @Override
+    public void execute(Realm realm) {
+       Taco taco = realm.createObject(Taco.class);
+       taco.setDescription("Spaghetti Squash on Fresh Corn Tortillas");
+       user.setImageUrl("http://tacoimages.com/1.jpg");
+    }
+   });   
+      #+END_SRC
+   2. 异步写, 需要传入两个个回调类对象参数, 分别是成功和失败的回调.
+      #+BEGIN_SRC java
+   realm.executeTransactionAsync(new Realm.Transaction() {
+     @Override
+     public void execute(Realm bgRealm) {
+	Taco taco = bgRealm.createObject(Taco.class);
+	taco.setDescription("Spaghetti Squash on Fresh Corn Tortillas");
+	user.setImageUrl("http://tacoimages.com/1.jpg");
+     }}, new Realm.Transaction.OnSuccess() {
+            @Override
+	    public void onSuccess() {}}, 
+	 new Realm.Transaction.OnError() {
+            @Override
+	    public void onError(Throwable error) {}
+    });   
+      #+END_SRC
+2. 跟Gson一样, Realm也支持类成员变量的解析. 例如:
+   #+BEGIN_SRC java
+public class Taco extends RealmObject {
+ ...
+ private List<Ingredient>
+ ...
+}
+public class Ingredient extends RealmObject {
+ private String name;
+ private URL url;
+}
+
+RealmResults<Taco> limeTacos = realm.where(Taco.class)
+ .equalTo("ingredients.name", "Lime")
+ .findAll();
+   #+END_SRC
+3. 为RealmObject和RealmResults增加数据变化的listener.
+   #+BEGIN_SRC  java
+limeTacos.addChangeListener(
+ new RealmChangeListener<RealmResults<Taco>>() {
+ @Override
+ public void onChange(RealmResults<Taco> tacosConLimon) {
+ //tacosConLimon.size() == limeTacos.size()
+ // Query results are updated in real time
+     Log.d("LimeTacos", "Now we have" + limeTacos.size() + " tacos");
+ }
+});   
+   #+END_SRC
+4. 为防止内存泄漏, 需要在onDestroy中关闭Realm.
+   #+BEGIN_SRC java
+@Override
+protected void onDestroy() {
+ realm.removeChangeListener(realmListener); // Remove the listener.
+ realm.close(); //or realm.removeAllChangeListeners(); Close the Realm instance.
+}   
+   #+END_SRC
+* 番外篇: 简便启动activity - Dart + Henson
+  这两个类是受到ButterKnife启发实现的, 提供了一个更简便的启动Activity的方法, 
+作者说, 不要再浪费时间写这样的代码啦.
+#+BEGIN_SRC java
+intent.putExtra(EXTRA_TACO_DESCRIPTION, "Seasoned Lentils with Green Chile on Naan");
+tacoDescription = getIntent().getExtras().getString(EXTRA_TACO_DESCRIPTION);
+#+END_SRC
+** 基本用法
+1. Dart定义intent使用到的参数.
+   #+BEGIN_SRC java
+public class TacoDetailActivity extends Activity {
+ //Required. Exception thrown if missing
+ @InjectExtra boolean favorite;
+ @InjectExtra String description
+ //default value if left null
+ @Nullable @InjectExtra String tag = "taco";
+ //Ingredient implements Parcelable
+ @Nullable @InjectExtra Ingredient withIngredient;
+ @Override
+ public void onCreate(Bundle bundle) {
+ super.onCreate(bundle);
+ Dart.inject(this);
+ //TODO use member variables
+ ...
+ }
+}
+#+END_SRC
+2. 使用Henson生成intent. 
+   #+BEGIN_SRC java
+//Start intent for TacoDetailActivity
+Intent intent = Henson.with(context)
+ .gotoTacoDetailActivity()
+ .favorite(true)
+ .description("Seasoned Lentils with Green Chile on Naan")
+ .ingredient(new Ingredient())
+ .build();
+// tag is null or defaults to "taco"
+startActivity(intent);
+#+END_SRC
