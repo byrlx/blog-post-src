@@ -8,6 +8,8 @@
 
 * Links
 ** 1. Android
+*** [[http://blog.stablekernel.com/the-10-step-guide-to-annotation-processing-in-android-studio?success=true][Android Annotation]]
+作者很详细的讲解了如何在Android中写注解.
 *** [[https://github.com/lucasr/twoway-view][twoway-view]]
     一个Android开源库, 该库可以是实现类似"瀑布流"的多行多列效果.
 *** [[https://github.com/google/material-design-icons][Material Design Icons]]
