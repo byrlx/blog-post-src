@@ -3,7 +3,7 @@
 #+AUTHOR: Zhengchao Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+DATE: <2016-08-22 Mon 22:23>
-#+TITLE: [翻译] 10步教你在Android中写"注解"处理程序
+#+TITLE: 【翻译】 10步教你在Android中写"注解"处理程序
 
 前言: 之前一直很好奇怎么在Android中写"注解"处理程序. 因为毕竟跟Java程序还有些
 区别, 后来在学习[[file:retrofit-source-code][Retrofit]] 的过程中, 也抱着这个疑问看Retrofit的代码, 
