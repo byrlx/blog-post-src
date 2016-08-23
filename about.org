@@ -20,3 +20,5 @@ markdown也不用了, 博客工具也编程了 "orgmode + jeklly", 用orgmode写
 jekyll抛弃了, 这样可以更自在的畅游org的世界.
 
 * 关于作者
+
+[[mailto:xuzhengchaojob@gmail.com][有事情欢迎给我发邮件讨论]]
