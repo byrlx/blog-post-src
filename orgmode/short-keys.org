@@ -1,0 +1,29 @@
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+TITLE: Orgmode 快捷键大全
+#+DATE: <2016-08-25 Thu 13:34>
+
+|           |          |
+|-----------+----------|
+| C-c C-x f | footnote |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+|           |          |
+

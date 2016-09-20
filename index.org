@@ -33,6 +33,7 @@
      + [[file:lisp/add-running-record.org][自动添加跑步记录]]
      + [[file:lisp/auto-github-post.org][自动生成github文章名]]
    + orgmode
+     + [[file:orgmode/short-keys.org][Orgmode 快捷键大全]]
      + [[file:orgmode/orgmode-table-formulas.org][OrgMode常用表格处理公式]]
      + [[file:orgmode/org-mode-outline.org][Orgmode手册1:文档结构]]
      + [[file:orgmode/orgmode-table.org][Orgmode手册2:表格]]
