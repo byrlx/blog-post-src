@@ -1,0 +1,1198 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2015-12-12 Thu 23:25>
+
+[[http://orgmode.org/manual/][Org Manual]]的 阅读笔记, 及一些积累的使用技巧
+
+#+BEGIN_VERSE
+[BG]: We’ve got a lot more books coming out in the pipeline. The one which is my favourite is the Emacs Org-Mode Reference Manual. Honestly, it’s the greatest Emacs mode in 20 years. 
+
+[CW]: Would you say Org-Mode is one of the more exciting projects in the Free Software world at the moment? 
+
+[BG]: Definitely. Maybe it’s even the most exciting. Certainly it’s transformed the way that I organise my work, and I think it has for a lot of other people as well, so it’s software that can revolutionise your life, not just perform a function.
+
+                                                                                                      -- Brian Gough vs Chris Woolfrey
+#+END_VERSE
+
+* Orgmode手册1:文档结构
+对内容做了一些注解, 方便查阅. 
+
+** 大纲模式(outline mode)
+ Org mode是建立在大纲视图(outline mode)之上的. 
+ 大纲将笔记按照层级结构进行组织, 这种结构有两个好处:
+ 1. 实现对文档的概括性浏览(只看大纲).
+ 2. 只显示当前正在工作的部分,非工作部分可以隐藏. 
+
+ 大纲模式在Org mode中具体实现方式为标题, 标题的写法很简单, 
+ 在这一行的最开始加上1到多个星号即表示标题. 
+ "*"的数量表示这是个N级标题, N级标题为N-1级标题的子标题.
+ 下图为一个标题的示例:
+
+ file:../../../../public/img/org-outline.png
+
+** 创建标题
+ 前面介绍过, 创建标题很简单, 一行的最前面写N个"*"即可,
+ 同时org mode提供了一些快捷键来实现标题操作. 
+ 标题中"树(tree"即为该标题和其所有子标题. 
+ 表格中"割断"的意思是如果你在当前标题上使用快捷键来创建新标题,
+ 有些快捷键可能会将该标题一分为二, 后半部分即为新标题的内容.
+ | 快捷键         | 功能                       | Note                     |
+ |----------------+----------------------------+--------------------------|
+ | M-RET          | 创建同级标题               | 可能会"割断"当前标题内容 |
+ | C-u C-u M-RET  | 在当前树的最后创建同级标题 |                          |
+ | C-RET          | 当前标题后面创建同级标题   | 不会"割断"               |
+ | M-S-RET        | 创建TODO标题               | 同M-RET                  |
+ | C-S-RET        | 创建TODO标题               | C-RET                    |
+** 标题显示
+ 前面说过, 大纲模式的一个好处就是可以折叠/显示标题, 这样可以方便你整体浏览大纲内容, 
+ 或关注于当前的工作内容, 例如前面的例子折叠后变为下图, 这样就可以只关注
+ 打开标题的内容.
+
+ file:../../../../public/img/org-outline2.png
+
+ 这里是标题显示标题操作的一些快捷键
+ | 快捷键            | 功能                              | 对应命令                    |
+ |-------------------+-----------------------------------+-----------------------------|
+ | TAB               | 循环打开关闭当前标题              | org-cycle                   |
+ | S-TAB/C-u TAB     | 循环打开关闭所有标题              | org-global-cycle            |
+ | C-u C-u TAB       | 恢复到最初视图                    | org-set-startup-visibility  |
+ | C-u C-u C-u TAB   | 显示所有                          | show-all                    |
+ | C-c C-r           |                                   | org-reveal                  |
+ | C-c C-k           | 显示当前标题的所有子树标题        | show-branches               |
+ | (C-u N) C-c TAB   | 显示当前标题的(N层)子树           | show-children               |
+ | (C-u N) C-c C-x b | 在新buffer显示(从第N层开始的)子树 | org-tree-to-indirect-buffer |
+ | C-c C-x v         | 复制当前区域内容                  | org-copy-visible            |
+
+** 标题间移动
+ org mode也提供了很多快捷键用来进行标题间的移动, 这样可以很方便的实现
+ 章节的跳动.
+ | 快捷键         | 功能                   | Note           |
+ |----------------+------------------------+----------------|
+ | C-c C-n        | 移动到下个可见标题        |                |
+ | C-c C-p        | 移动到上个可见标题        |                |
+ | C-c C-f        | 移动到上个同级标题        |                |
+ | C-c C-b        | 移动到下个同级标题        |                |
+ | C-c C-u        | 移动到上级标题            |                |
+ | C-c C-j        | 跳到指定位置           |                |
+ | C-c &          | 跳回之前位置           |                |
+
+** 改变标题级别
+ 万能快捷键, 减少打字.
+ | 快捷键         | 功能                   | Note           |
+ |----------------+------------------------+----------------|
+ | TAB            | 改变空标题的level      |                |
+ | M-left/M-right | 升级/降级              |                |
+ | M-S-left/right | 所有子树升级/降级      |                |
+ | M-S-up/down    | 上移/下移              |                |
+** 操作标题内容
+ 下面的快捷键可以很方便的对标题下的内容进行操作, 勤加练习.
+ | 快捷键         | 功能                   | Note           |
+ |----------------+------------------------+----------------|
+ | M-h            | 标记当前内容           | 连击会标记更多 |
+ | C-c @          | 标记当前标题及内容     |                |
+ | C-c C-x C-w    | 剪切当前子树           |                |
+ | C-c C-x M-w    | 复制当前子树           |                |
+ | C-y            | 粘贴                   |                |
+ | C-c C-x c      | 复制多次               |                |
+ | C-c ^          | 排序标题               |                |
+ | C-x n s        | 让buffer只显示当前子树 |                |
+ | C-x n w        | 恢复buffer显示         |                |
+ | C-c *          | 添加/去掉星星          |                |
+
+** 其他高级操作
+*** 初始化"可见性"
+ Emacs打开org文件默认只显示顶层标题, 可以通过 "#+STARTUP" 选项来配置
+ 第一次打开要显示的内容. #+STARTUP的参数包括
+ | overview       | 只显示顶层标题 |
+ | content        | 显示所有标题   |
+ | showall        | 显示所有内容   |
+ | showeverything |                |
+***** 编辑"不可见区域"报错
+ 有时候会不小心编辑到"不可见区域", 编辑器默认不会报错, 所以如果想组织这个
+ 行为, 可以在配置文件中设置org-catch-invisible-edits的值为非nil.例如下面
+ 的代码, 这样就可以阻止编辑非可见区域.
+ #+BEGIN_SRC elisp
+ (setq-default org-catch-invisible-edits 'error)
+ #+END_SRC
+
+ org-catch-invisible-edits的更多参数可以参考 C-h v org-catch-invisible-edits 
+*** 稀疏树显示
+ Org mode的另一个功能就可以只展现你想要的内容, 称之为"稀疏树"展示.
+ 使用快捷键"C-c /"可以调出稀疏树功能, 它会询问你想要显示的内容, 
+ 如下图所示.
+
+ file:../../../../public/img/org-outline3.png
+
+ 选择 '/' 或 "r" 会显示正则表达式搜索, 输入搜索内容即可以稀疏树方式展示结果, 如果
+ 结果只在标题, 则显示标题, 如果在内容则显示内容, 搜索关键字会高亮. 按 "C-c C-c"会
+ 取消高亮. 如果 C-u N之后输入C-c / r, 之前的N此搜索都会显示.
+ 快捷键 "M-g n/p"用于在搜索结果之间跳转. 命令 "ps-print-buffer-with-faces"用于
+ 打印机打印搜索结果.
+
+ 稀疏树是org mode的很强大的搜索展示功能.后面的文章还会有更多介绍.
+*** 列表
+ org mode可以显示列表, 以下列字符开头的文本都为列表" - + 1. 1) *",
+ *标题的大部分快捷键都可以用于列表*, 其他的快捷键包括:
+ | C-c -        | 改变列表展示方式 |
+ | S-left/right | 同上             |
+*** 脚注
+ org mode支持脚注功能, 脚注通常用 =[fn:数字]= 表示, 然后在其他地方写上
+ 脚注说明[fn:1]:
+ #+BEGIN_SRC elisp
+      The Org homepage[fn:1] now looks a lot better than it used to.
+      ...
+      [fn:1] The link is: http://orgmode.org
+ #+END_SRC
+[fn:1]脚注示例.
+
+* Orgmode手册2:表格
+Org mode提供了强大到"令人发指"的表格处理功能, 与excel不同, 
+纯文本下编辑表格是另外一种美好的体验.
+
+** 创建表格
+ 在org中任何以"|"字符开头的内容都会认为是
+ 表格的一部分. 在表格当前行按TAB或C-c C-c会格式化表格.
+ 按RET键会自动创建 下一行. 
+ 同时任何以"|-"开头的行都被认为是表格分隔符.
+
+ 快捷键 *C-c |* 可以创建表格或将选中区域转化为表格, 会询问你创建的表格大小.
+ 如果要转化的区域都含有TAB字符, 会将TAB作为分隔符. 如果为逗号, 会认为是逗号.
+ 否则为空白字符.可以通过前缀强制选择"分隔符":
+ + C-u 强制认为是CSV格式(逗号分割), 对于经常处理csv格式的人很有用. 
+ + C-u C-u 强制TAB
+
+ 下表是另外一些操作表格的快捷键. 
+ | 快捷键               | 功能                   |
+ |----------------------+------------------------|
+ | C-c C-c              | 对齐表格               |
+ | TAB                  | 对齐表格, 移到下一格   |
+ | S-TAB                | 对齐表格, 移到上一格   |
+ | RET                  | 对齐表格, 移到下一行   |
+ | M-a/e                | 移到这一格开始/结尾    |
+ | M-left/right/up/down | 左/右/上/下移动该行    |
+ | M-S-left/up/         | 删除当前列/行          |
+ | M-S-right/down       | 添加新列/行            |
+ | C-c -/C-c RET        | 添加新分割行           |
+ | C-c ^                | 排序                   |
+ | C-c C-x M-w/C-w/C-y  | 粘贴/剪切/复制当前区域 |
+ | C-c +                | 计算当前列的和         |
+ | S-RET                | 复制                   |
+ | C-c `                | 新窗口编辑当前区域.    |
+ | M-x org-table-import | 导入文件作为表格       |
+ | C-c                  | 将选中区域表示为表格   |
+ | M-x org-table-export | 到处表格               |
+
+** 表格宽度和对齐
+*** 设置列宽度
+ 如果某一列的内容太长, 看上去会比较不美观, 可以通过设置列的宽度来隐藏
+ 一部分内容. 
+
+ 要设置列宽度, 在这一列的任何的一个空白单元格(没有的话可以创建一个空白行)内
+ 加入 *<N>*, N就是你要设置的宽度.然后按"C-c C-c"即可改变宽度. 
+ 如果该列某一行的宽度大于N, 那么该区域内容会被"压缩", 如果还想查看完整内容, 把
+ 鼠标放到上面即可, 如果要编辑该内容, 在该表格框内按 *C-c `*. 
+ 下图是一个示例:
+
+ file:../../../../public/img/org-table2.jpg
+
+ 当第一次打开文件时, 即使该文件的表格设置了"压缩", 也会看到"压缩"并未发生, 超过宽度的内容
+ 仍然会在表格中显示, 如果想要打开即显示压缩, 可以在文档中加入 *#+STARTUP:align* 来打开这个功能. 
+*** 设置左右对齐
+ 跟设置宽度一样, 在某一空白区域添加 <r> 或 <l>. 宽度和对齐也可以结合使用:<r10>.
+** 引用表中数据
+ 如果要在公式或其他地方使用表格中的数据, 必须要有一种方法可以表示表格中的
+ 一个或一块区域. Org中区域可以通过名称/坐标/相对地址等方式引用. 可以在
+ 单元格上面使用快捷键"C-c ?"来查看该单元格的坐标. 或使用 "C-c }"来显示一块区域.
+ 1. 引用表格的几种方法
+  | 格式          | 含义             | 补充                     |
+  |---------------+------------------+--------------------------|
+  | letter/number | 某一格           | B3表示第三行第二列       |
+  | @N            | 某一行           |                          |
+  | $N            | 某一列           |                          |
+  | @M$N          | 某一格           | @3$2 第三行第二列             |
+  | $+/-N         | 当前列的相对列   | 同样适用于行             |
+  | $< $>         | 第一列和最后一列 | $<<<倒数第三列, 适用于行 |
+  | @I            | high line        | 例如本例第二行           |
+  | @0 $0         | 当前行/列        |                          |
+ 2. 使用".."来表示一个区域, 例如 $1..$3表示第一列到第三列
+ 3. 使用 @# $# 来表示当前行/列的值.
+ 4. 命名. org table支持命名方式, 可以通过 "org-table-formula-constants"来设置一个
+    全局的名字, 或通过 "#+CONSTANTS"单独为一个文件设置名称变量. 也可以在表格中
+    使用emacs的properties功能来使用property变量.
+ 5. 远程引用. 可以通过远程引用的方式引用其他文件或该文件其他表格的内容.
+    远程引用的语法为: remote(NAME-OR-ID, REF). 第一个参数可以是本文件中
+    用 #+NAME 来命名的表格, 或其他文件中的一个entry ID. REF是当前表格的一个区域.
+** 表格处理计算
+ 文章开始说过, org mode提供了各种表格计算功能, 下面就看一下具体的操作,
+
+ 表格计算可以在表格底部用"#+TBLFM:"关键字, 后面接计算公式, 目前
+ 表格支持 "Calc" 和 lisp计算公式. 如下图表格, 公式
+ "#+TBLFM: $5=$1+$2+$3+$4" 用于计算前四列的和, 并将结果写入第五列.
+
+ file:../../../../public/img/org-table.png
+
+ 注: Calc中"/"的优先级低于"*". 所以公式 *$4=$1/$2*$3* 实际为 
+ *$4=$1/($2*$3)*.
+*** 附加模式. 
+ 附件模式可以用于计算特定格式的内容, 或者格式化数据.
+ org支持公式后面添加任意数量的附加模式, 公式和
+ 附加模式之间用";"隔开. 目前支持的附加模式包括:
+    | 表示        | 意义                              |   |
+    |-------------+-----------------------------------+---|
+    | pN          | 计算精度                          |   |
+    | nN,sN,eN,fN | 普通/科学/工程/固定表示           |   |
+    | D/R         | 度/弧度模式                       |   |
+    | F/S         | 小数模式                          |   |
+    | T/t         | 时间计算模式                      |   |
+    | E           | 控制怎样表示空白格                |   |
+    | N           | 把所有表格表示为数字, 非数字0代替 |   |
+    | L           |                                   |   |
+
+    下面是一些实例程序
+     #+BEGIN_SRC elisp
+      $1+$2                Sum of first and second field
+      $1+$2;%.2f           保留小数点两位
+      exp($2)+exp($1)      数学公式
+      tan($1);Dp3s1        计算度数, 精度为3, 展示为科学计数
+ #+END_SRC
+*** lisp代码处理表格.
+    org支持用lisp代码处理表格. 以 '( 开头的表达式会被解析为lisp代码,
+    默认情况下, 表格的内容会被引用为字符串, 如果需要将其处理为数字,
+    需要将其转化为N模式(后面加";N"). 也可以用使用双引号将其表示为字符串.
+    "范围(..)"会被解析为空格分开的域. 例如前面表格相加的公司用lisp表示为
+    *$5='(+ $1 $2 $3 $4)*. 下面是一些例子:
+    #+BEGIN_SRC elisp
+ '(concat (substring $1 1 2) (substring $1 0 1) (substring $1 2))
+    交互第一列表格内容的前两个字符
+ '(+ $1 $2);N   Add columns 1 and 2, equivalent to Calc's `$1+$2'.
+ '(apply '+ '($1..$4));N   另外一种表格相加方法
+    #+END_SRC
+*** 时间计算.
+  前面讲过表格支持时间计算.表格支持的时间格式为 HH:MM[:SS], 
+  其中SS是可选, 如果公式后面接";T", 计算结果会展示为 HH:MM:SS.
+  如果为";t", 计算结果为小时的小数表示. 下面的例子展示了这一点:
+  #+BEGIN_SRC elisp
+      |  Task 1 |   Task 2 |    Total |
+      |---------+----------+----------|
+      |    2:12 |     1:47 | 03:59:00 |
+      | 3:02:20 | -2:07:00 |     0.92 |
+      #+TBLFM: @2$3=$1+$2;T::@3$3=$1+$2;t
+  #+END_SRC
+*** 直接在某一格中输入公式. 
+  可以直接在域中输入公式. 在域中输入":="并后面接公式. 也可以
+  在当前域中输入 "C-u C-c ="命令在提示框中输入公式.
+*** 查找功能
+ orgmode提供了三个查找函数用于在表中进行查找:
+ + (org-lookup-first VAL S-LIST R-LIST &optional PREDICATE)
+   在S-LIST中查找第一个 (PREDICATE VAL S)值为t的S. 并返回R-LIST与S位置相同的
+   值. PREDICATE的默认值为 equal, 如果R-LIST为nil, 则返回S.
+ + (org-lookup-first VAL S-LIST R-LIST &optional PREDICATE)
+   与上一个函数意义相同, 不过是先查找最后一个.
+ + (org-lookup-first VAL S-LIST R-LIST &optional PREDICATE)
+   相似函数. 不过返回的是一个列表.
+
+ 下面是一个示例, 更多示例看这篇文章: http://orgmode.org/worg/org-tutorials/org-lookups.html
+ #+BEGIN_SRC elisp
+  #+TBLNAME: rates
+ | currency        | abbreviation | euros |
+ |-----------------+--------------+-------|
+ | euro            | eur          |     1 |
+ | Norwegian krone | nok          |  0.14 |
+ | Swedish krona   | sek          |  0.12 |
+ | US dollar       | usd          |  0.77 |
+
+ #+TBLNAME: cost
+ |  date | expense          |  sum | currency |   rate |  euros |   |
+ |-------+------------------+------+----------+--------+--------+---|
+ |  1.3. | flights          |  324 | eur      |      1 |    324 |   |
+ |  4.6. | books and maps   |  243 | usd      |   0.77 | 187.11 |   |
+ | 30.7. | rental car       | 8300 | sek      |   0.12 |   996. |   |
+ |  2.7. | hotel            | 1150 | sek      |   0.12 |   138. |   |
+ |  2.7. | lunch            |  190 | sek      |   0.12 |   22.8 |   |
+ |  3.7. | fishing licenses | 1400 | nok      |   0.14 |   196. |   |
+ |  3.7. | gasoline         |  340 |          | #ERROR | #ERROR |   |
+  #+TBLFM: $5='(org-lookup-first $4 '(remote(rates,@2$2..@>$2)) '(remote(rates,@2$3..@>$3)))::$6=$5*$3
+ 函数解释第一个函数查找cost表的第四列和rates表的第二列相同的值, 并将查找结果对应的
+ rates表的第三列填充到cost表的第五列, 然后计算第六列的值.
+ #+END_SRC
+*** 调试公式
+ org mode提供了下列用于调试公式的快捷键:
+ | 快捷键            | 功能                   |
+ |-------------------+------------------------|
+ | C-c = / C-u C-c = | 在当前格写入公式       |
+ | C-u C-u C-c =     | 重新插入公式           |
+ | C-c ?             | 当前格信息             |
+ | C-c }             | 表信息                 |
+ | C-c {             | 打开/关闭调试          |
+ | C-c '             | 在buffer中编辑所有公式 |
+ |                   |                        |
+** 其他特性
+*** 列组
+ Org导出表格时, 默认是以行为单位, 也可以按列为单位来处理数据.
+ 这需要添加一个特殊行: 该行的第一个区域只包含"/", 其他以"<"表示的区域
+ 表示是一个组的开始, 以">"结束表示组的结束.
+*** Orgtbl 模式
+ 如果想在其他的mode下使用org mode的table功能, 可以输入命令 "orgtbl-mode".
+* Orgmode手册3:链接
+在Org mode里可以创建通过创建链接的方式引用其他的内容,
+目前Org 支持如下链接方式: 文件内部, 外部文件, Usenet文章, 邮件及其他.
+
+** 链接格式
+   Org的链接格式为:
+#+BEGIN_SRC elisp
+[[链接地址][描述]] 或 [[链接地址]]
+#+END_SRC
+当最后一个"]"写完时, org会将该链接显示为(带下划线的"描述", 该显示格式对应face "org-link"),
+如果想要编辑链接, 可以在链接上使用快捷键 "C-c C-l", 在显示内容前后使用"delete"键
+会破坏链接的语法(也可以这样编辑链接). 
+
+下面是一些链接的快捷键
+|             | 功能                    |
+|-------------+-------------------------|
+| C-c l       | 将当前位置存为一个link  |
+| C-c C-l     | 编辑/插入链接           |
+| C-c C-o     | 打开(跳转)              |
+| C-u C-c C-l | 插入文件                |
+| C-c C-x C-v | 开关图片显示            |
+| C-c %       | 将当前位置放入mark ring |
+| C-c &       | 返回mark ring           |
+| C-c C-x C-n | next link               |
+| C-c C-x C-p | 上一个link              |
+** 内部链接
+如果一个链接不是一该URL, org会将其看做内部链接, org寻找内部链接的方式为:
+1) 跳转到被 "<<>>"定义的地方. 如下面的例子,在第一个链接上用C-c C-o 会
+  跳转到test出现的地方. 
+  #+BEGIN_SRC elisp
+  loc1: [[test]] 
+  loc2  this is a <<test>>
+  #+END_SRC
+2) 如果1)不存在, 会跳转到 "#+NAME" 命名和链接相同的地方.
+3) 前两步都失败, 会尝试寻找精确匹配的 *标题*.
+** 外表链接
+org mode支持的外部链接包括:
+#+BEGIN_SRC elisp
+|                             | 描述                  |
+|-----------------------------+-----------------------|
+| http://web                  | 网站                  |
+| doi:10.1000/182             | doi链接               |
+| file://path                 | 文件相对/绝对地址     |
+| file:/a@b:x/y.pdf           | 远程文件地址          |
+| file:orgmode-learn.org::111 | 跳转到文件NNN行       |
+| file:org-file::key/*title   | 支持org文件的标题搜索 |
+| file+sys:/path              | 使用系统打开          |
+| docview:path::NNN           | 使用docview模式打开   |
+| news:comp.emacs             | Usenet 链接           |
+| mailto:a@b                  | mail                  |
+| gnus:group                  | gnus链接              |
+| irc:/irc.com/#emacs         | irc链接               |
+| shell:cmd                   | shell 命令            |
+| elisp:cmd                   | elisp cmd             |
+#+END_SRC
+
+** 短链接
+如果链接太长且在文件中经常使用, 可以将其设置为"链接关键字",
+可以用 "#+LINK"关键字来实现这个功能, 或者设置"org-link-abbrev-alist"变量:
+#+BEGIN_SRC elisp
+     #+LINK: bugzilla  http://10.1.2.9/bugzilla/show_bug.cgi?id=
+     #+LINK: google    http://www.google.com/search?q=%s
+     或者
+     (setq org-link-abbrev-alist
+       '(("bugzilla"  . "http://10.1.2.9/bugzilla/show_bug.cgi?id=")
+         ("url-to-ja" . "http://translate.google.fr/translate?sl=en&tl=ja&u=%h")
+         ("google"    . "http://www.google.com/search?q=")
+         ("gmap"      . "http://maps.google.com/maps?q=%s")
+         ("omap"      . "http://nominatim.openstreetmap.org/search?q=%s&polygon=1")
+         ("ads"       . "http://adsabs.harvard.edu/cgi-bin/nph-abs_connect?author=%s&db_key=AST")))
+#+END_SRC
+
+短链接的格式为, 如果链接中有"%s", 会被tag替代, "%h"则会将tag进行url编码.
+%(function)会调用函数并将结果添加. 什么都没有的话直接在尾部添加. 例如
+#+BEGIN_SRC elisp
+[[bugzilla:129][description]] ;;  http://10.1.2.9/bugzilla/show_bug.cgi?id=129
+#+END_SRC
+* Orgmode手册4:任务功能
+个人私以为, 任务功能是org mode最熠熠生辉的特性之一, 
+它完美的诠释了[[https://zh.wikipedia.org/wiki/GTD][GTD]] 的理念, 如果你是一个需要时间管理, 工作离不开
+"任务清单"的人, org mode绝对是一个满足你需求的绝佳工具. 
+
+下面这张图可以很直观的展示org mode的TODO特性:
+
+file:../../../../public/img/orgmode-todo.png
+
+该图展示了一个工程的各个阶段, 通过这张图可以很直观的查看
+当前工程的运行情况和完成比, 当项目为完成时, 其状态为 *TODO*, 
+当其完成后, 将状态该为 *DONE*, 同时会自动修改父项目的状态, 如果
+所有的子项目都完成, 父项目会自动设为 *DONE*, 否则会展示一个完成比率.
+
+通过该图相信你已经了解了org mode的TODO的概念, 下面是具体的实现文档.
+
+** 创建TODO项目
+ 在标题的星号后面加上 *TODO* 即可将该标题设置为一个TODO任务, 也可以使用
+ 快捷键来创建, 快捷键可以参考这篇文章 [[http://xuzhengchao.com/2015/12/12/org-mode-outline.html][org mode手册(1): 文档结构]]
+
+ 如果任务完成后, 可以使用 "C-c C-t" 快捷键将其设为DONE.
+
+** 拓展关键字
+ 在真实的使用场景中, 一个任务可能不仅仅只有TODO和DONE两个状态, 可能会有一些
+ 中间状态, 或者你觉得TODO和DONE不是符合你风格的两个关键字, 针对这种情况, org mode
+ 提供了一些功能来对TODO关键字进行扩展.
+*** 设置关键字
+ 通过在emacs配置文件中设置 *org-mode-keywords* 来自定义TODO关键字, 如下例, 
+ 这里设置了TODO/FEEDBACK/VERIFY和DONE/DELEGATED两组关键字,
+ 第一组关键字处于项目的"未完成"阶段, 第二组关键字处于项目的"完成"阶段, 
+ 通过 "|"来区分划分这两个阶段. 当使用"C-c C-t"时, 标题会轮番在这几个关键字
+ 之间修改.
+    #+BEGIN_SRC elisp
+     (setq org-todo-keywords
+	'((sequence "TODO" "FEEDBACK" "VERIFY" "|" "DONE" "DELEGATED")))
+    #+END_SRC
+*** 设置多组关键字
+ 有时候你想将任务划分的更细, 例如状态未"TODO"的任务只能将状态改为"DONE",
+ 状态未"BUG"的任务只能改为"FIXED"(不能设成DONE), 那么可以通过 *sequence*
+ 关键字来实现这个功能, 如下例, 该例创建了三组关键字, 状态修改只能在本组的
+ 关键字之间变化, 而不能跨组变化.
+ #+BEGIN_SRC elisp
+     (setq org-todo-keywords
+            '((sequence "TODO(t)" "|" "DONE(d)")
+              (sequence "REPORT" "BUG" "KNOWNCAUSE" "|" "FIXED")
+              (sequence "|" "CANCELED")))
+
+ #+END_SRC
+*** 使用type.
+   该变量可以将TODO设置为不同的类型, 如下例, 这样可以实现将任务分配给不同的人,
+   分配完成后, C-c C-t修改状态时不会在这三个type之间滚动.而是直接设为done
+   #+BEGIN_SRC elisp
+   (setq org-todo-keywords '((type "Fred" "Sara" "Lucy" "|" "DONE")))
+   #+END_SRC
+*** 在当前文件设置关键字
+ 上面几节讲到都是在全局配置文件中配置关键字, 
+ 如果想只把配置限制在当前文件, 可以在文件开头配置相关关键字, 如下例:
+ #+BEGIN_SRC elisp
+      #+TODO: TODO FEEDBACK VERIFY | DONE CANCELED ;; 拓展关键字
+
+      #+TYP_TODO: Fred Sara Lucy Mike | DONE ;; 设置type
+
+      ;;设置多组
+      #+TODO: TODO | DONE
+      #+TODO: REPORT BUG KNOWNCAUSE | FIXED
+      #+TODO: | CANCELED
+
+ #+END_SRC
+*** 关键字主题
+ 如果嫌弃官方的关键字颜色不好看, 可以通过设置"org-todo-keyword-faces"变量可以设置不同关键字的表现形式,例如:
+ #+BEGIN_SRC elisp
+      (setq org-todo-keyword-faces
+            '(("TODO" . org-warning) ("STARTED" . "yellow")
+              ("CANCELED" . (:foreground "blue" :weight bold))))
+
+
+ #+END_SRC
+*** 设置依赖
+ 有时候一个TODO可能依赖其他的TODO, 例如一个系列项目, 可能前面的项目完成
+ 之前, 后面的项目都不能将状态改成DONE, 或者子项目完成之前, 父项目不能将
+ 状态改成DONE.
+ 1. org-enforce-todo-dependencies.
+    通过设置该变量, 可以设置在所有的子标题都完成之前, 父标题不能将状态设置为DONE.
+    #+BEGIN_SRC elisp
+    (setq org-enforce-todo-dependencies t)
+    #+END_SRC
+ 2. 按顺序修改状态.
+    通过设置属性"ORDERED"来控制同级标题之前按顺序修改状态, 在前面的标题完成之前
+    后面的标题不能将属性设为DONE.
+    #+BEGIN_SRC elisp
+      * Parent
+	:PROPERTIES:
+	:ORDERED: t
+	:END:
+      ** TODO a
+      ** TODO b, needs to wait for (a)
+      ** TODO c, needs to wait for (a) and (b)
+    #+END_SRC
+** 时间戳
+ 对于时间管理来说, 时间戳是必不可少的东西, 可以通过为项目设置
+ "排期(SCHEDULED)"或"最后期限(DEADLINE)"来更合理的规划工程. 
+ 更详细的日期功能会在下一篇文章讲述.
+*** 设置完成时间
+ 可以加入设置下面两个配置之一来自动在状态改成DONE的时候加入当前时间戳:
+ 其中第二个配置还会要求你写一段完成的note.
+ #+BEGIN_SRC elisp
+ (setq org-log-done 'time)
+ (setq org-log-done 'note)
+ #+END_SRC
+*** 记录状态变化
+ 下面的配置用于记录状态之间的变化, 可以通过设置带"附加属性"的keywords来实现
+ 这一个. 在keyword后面的括号中与状态记录相关字符为:
+ + "!" 表示记录时间
+ + "@" 表示带时间的note
+ + "/!" 当跳转到一个没有附加属性的状态时, 记录时间或note
+ #+BEGIN_SRC elisp
+      (setq org-todo-keywords
+	'((sequence "TODO(t)" "WAIT(w@/!)" "|" "DONE(d!)" "CANCELED(c@)")))
+ #+END_SRC
+
+ 也可以使用PROPERTIES属性 "LOGGING" 来修改某个标题的TODO附加属性, 
+ 如果LOGGING为nil,表示没有附加记录. 也可以使用 "logrepeat" 或 
+ "lognotedone" 使用默认属性, 例如下例, 这个配置会修改TODO只添加时间戳,
+ WAIT需要note, 其他的属性使用STARTUP的默认值.
+ #+BEGIN_SRC elisp
+      * TODO Log each state with only a time
+	:PROPERTIES:
+	:LOGGING: TODO(!) WAIT(@) logrepeat
+	:END:
+ #+END_SRC
+*** 追踪行为
+ 使用属性STYLE habit来设置持久性行为, 如下例, 表示至少4天或至多2天
+ *刮一次胡子*.
+ #+BEGIN_SRC elisp
+   ** TODO Shave
+    'S CHEDULEd: <2015-12-08 Tue .+2d/4d>
+   :PROPERTIES:
+   :STYLE:    habit
+   :END:
+ #+END_SRC
+** 优先级
+ Org支持TODO项目的优先级, 默认支持的优先级有三个:A, B, C. A最高.
+ 如下所示, 无优先级表示的项目优先级是B.
+ #+BEGIN_SRC elisp 
+   ** TODO [#A] 
+ #+END_SRC
+** 显示任务完成比
+ 可以在标题中加入 "[/]" 或 "[%]" 来显示子任务的完成数.
+ 默认只显示子标题, 如果要递归显示整个树, 需要设置
+ "org-hierarchical-todo-statistics", 或者在PROPERTIES中设置
+ "COOKIE_DATA", 如下所示;
+ #+BEGIN_SRC elisp
+      * Parent capturing statistics [2/20]
+	:PROPERTIES:
+	:COOKIE_DATA: todo recursive
+	:END:
+ #+END_SRC
+
+ 如果当子任务都完成时, 父任务自动标记为DONE, 可以在.emacs中加入
+ 如下代码:
+ #+BEGIN_SRC elisp
+ (defun org-summary-todo (n-done n-not-done)
+   "Switch entry to DONE when all subentries are done, to TODO otherwise."
+   (let (org-log-done org-log-states)   ; turn off logging
+     (org-todo (if (= n-not-done 0) "DONE" "TODO"))))
+ (add-hook 'org-after-todo-statistics-hook 'org-summary-todo)
+ #+END_SRC
+ 
+* Orgmode手册5:"捕获"
+想象一下到下面的场景: 你在敲着代码,听着歌,突然就来了一灵感, 或者突然QA就
+扔给你一个BUG, 你不想打断写代码的思路, 所以只能先把它记下了以后处理. 
+
+"先把它记下来"是个很好的议题, 怎么才能以最快的速度记下来? 
++ 随手记到纸上? 纸张没有提醒功能, 很可能一会就忘记了.
++ 记到提醒软件上. 可能要先离开IDE, 打开提醒软件, 写完再回来.  
+  有时候提醒软件的归类功能还不好. 
+
+So, 如果你凑巧用Emacs写代码, Emacs凑巧又装了Org mode, 那恭喜, 
+你天然就有了一个"快速且强大"的"捕获"软件: org capture. 
+这个功能最大的特性就是在尽量不打搅你现有工作的情况下记录其他的事情.
+
+** 设置capture
+在emacs配置文件中加入如下代码, 
+#+BEGIN_SRC elisp
+     (setq org-default-notes-file (concat org-directory "/notes.org"))
+     (define-key global-map "\C-cc" 'org-capture)
+#+END_SRC
+设置完成后, 你在emacs的任何地方, 按"C-c c"都会打开capture缓冲区, 里面会让你设置任务
+设置完成后, 按C-c C-c会自动保存到notes.org文件, 并回到之前的工作窗口.
+** 客制化Capture模板
+org capture默认会将所有任务都放到notes.org这个文件, 这可能不满足你的
+需求, 比如你可能希望将工作和生活的笔记分开, 或者不同的工作笔记放到
+同一文件的不同标题下面, 可以通过配置capture模板的方法来完成这个功能.
+
+下面是一个capture模板的例子, 会基于这个例子介绍Capture模板的组成,
+在emacs配置中加入下面代码, 这样当使用快捷键(C-c c)进入到capture窗口时, 会显示"t"和"j"两个选项,
++ 按下t会打开buffer让你输入任务, C-c C-c则会将任务分配到gtd.org下的Tasks标题里.
++ 按下j会将任务分配到journal.org文件中.
+#+BEGIN_SRC elisp
+
+     (setq org-capture-templates
+      '(("t" "Todo" entry (file+headline "~/org/gtd.org" "Tasks")
+             "* TODO %?\n  %i\n  %a")
+        ("j" "Journal" entry (file+datetree "~/org/journal.org")
+             "* %?\nEntered on %U\n  %i\n  %a")))
+
+#+END_SRC
+
+caputre模板主要有下面几部分组成:
+1) KEYS. 
+   选择模板的快捷键. 如"t"和"j". 只能为字符, 也可以为多个字符.
+   实现二级目录.
+2) DESCRIPTION. 模板描述.
+3) 目录类型. 目前支持的目录类型包括:
+   |            | 功能                                                                      |
+   |------------+---------------------------------------------------------------------------|
+   | entry      | 一个org mode节点, 会被放在指定标题下面(或成为一级标题), 目标文件是org文件 |
+   | item       | 同上, 但是为list节点                                                      |
+   | checkbox   | checkbox节点                                                              |
+   | table-line | 表行                                                                      |
+   | plain      | 文本文字                                                                  |
+4) 条目格式.
+   #+BEGIN_SRC elisp
+     %[FILE]     Insert the contents of the file given by FILE.
+     %(SEXP)     Evaluate Elisp SEXP and replace with the result.
+                       For convenience, %:keyword (see below) placeholders
+                       within the expression will be expanded prior to this.
+                       The sexp must return a string.
+     %<...>      The result of format-time-string on the ... format specification.
+     %t          Timestamp, date only. (插入日期)
+     %T          Timestamp, with date and time.(插入日期和时间)
+     %u, %U      Like the above, but inactive timestamps.
+     %i          Initial content, the region when capture is called while the
+                 region is active. The entire text will be indented like `%i' itself.
+                 (插入调用capture的点, 一般值你当前的工作文件)
+     %a          Annotation, normally the link created with `org-store-link'.
+     %A          Like `%a', but prompt for the description part.
+     %l          Like %a, but only insert the literal link.
+     %c          Current kill ring head.
+     %x          Content of the X clipboard.
+     %k          Title of the currently clocked task.
+     %K          Link to the currently clocked task.
+     %n          User name (taken from `user-full-name').
+     %f          File visited by current buffer when org-capture was called.
+     %F          Full path of the file or directory visited by current buffer.
+     %:keyword   Specific information for certain link types, see below.
+     %^g         Prompt for tags, with completion on tags in target file.
+     %^G         Prompt for tags, with completion all tags in all agenda files.
+     %^t         Like `%t', but prompt for date.  Similarly `%^T', `%^u', `%^U'.
+                 You may define a prompt like `%^{Birthday}t'.
+     %^C         Interactive selection of which kill or clip to use.
+     %^L         Like `%^C', but insert as link.
+     %^{PROP}p   Prompt the user for a value for property PROP.
+     %^{PROMPT}  prompt the user for a string and replace this sequence with it.
+                 You may specify a default value and a completion table with
+                 %^{prompt|default|completion2|completion3...}.
+                 The arrow keys access a prompt-specific history.
+     %\\n        Insert the text entered at the nth %^{PROMPT}, where `n' is
+                 a number, starting from 1.
+     %?          After completing the template, position cursor here.(输入完后,光标定位到这里)
+   #+END_SRC
+5) 属性
+
+* Orgmode手册6:富文本标记(导出前准备)
+
+org mode另一个牛X闪闪的功能就是导出功能, 
+可以将org文件导出为计算机领域主流的文件格式, 例如HTML/PDF/LaTex/Markdown等等, 
+为了支持这些文本丰富的格式要求, org mode定义了一系列的标记, \\
+这篇文章就先来看一下这些标记规则.
+** 结构化标记元素
+*** 标题.
+   使用关键字 *#+TITLE* 来设置导出文本的标题, 如果没有设置, 会以文件名
+   作为标题. 如果只是到处一个子树, 则使用子树的标题作为导出文本的标题.
+   或者也可以在子树中设置属性 *EXPORT_TITLE*.
+*** 修改导出层级.
+   org mode默认只导出三层标题, 举例来说, 导出为HTML时, 只会导出到H3, 而
+   四层及以下的标题都生成为列表. 如果想要修改导出的层级, 可以设置全局变量
+   *org-export-headline-levels*, 或者在文本内设置OPTIONS设置 *H* 配置: 
+   #+BEGIN_SRC elisp 
+   #+END_SRC
+*** 目录.
+   org mode默认会导出目录, 将其放在第一个标题的前面,目录深度与标题层级相同,
+   不过可以通过设置 *org-export-with-toc* 或修改OPTIONS的 *toc* 来修改目录
+   深度或将其关闭. 例如
+   #+BEGIN_SRC elisp
+   #+END_SRC
+  
+   如果想改变目录的导出位置, 先将默认导出关闭, 然后使用 *#+TOC: headlines N*
+   配置到想插入的地方. 例如:
+   #+BEGIN_SRC elisp
+     ...
+     #+TOC: headlines 2        (insert TOC here, with two headline levels)
+   #+END_SRC
+  
+   同时, org mode还支持列表和表格的导出.
+   #+BEGIN_SRC elisp 
+     #+TOC: listings           (build a list of listings)
+     #+TOC: tables             (build a list of tables)
+   #+END_SRC
+*** 换行, 引用
+ orgmode中,段落之间用空白行来分割,如果需要段落内换行, 在该行结尾使用 *\\* 关键字.
+
+ 如果想在该段落部分内容保持换行, 可以使用 =#+BEGIN_VERSE= 关键字, 写诗的人肯定需要这个功能, 
+ 例如:
+ #+BEGIN_SRC elisp
+ #+BEGIN_VERSE
+       Great clouds overhead
+       Tiny black birds rise and fall
+       Snow covers Emacs
+
+           -- AlexSchroeder
+ #+END_VERSE
+ #+END_SRC
+
+ 引用他人内容可以使用 =#+BEGIN_QUOTE=, 这样可以保持缩进
+ #+BEGIN_SRC elisp
+ #+BEGIN_QUOTE
+      Everything should be made as simple as possible,
+      but not any simpler -- Albert Einstein
+ #+END_QUOTE
+ #+END_SRC
+
+ 想要内容居中可以使用 =#+BEGIN_CENTER=
+ #+BEGIN_SRC elisp
+ #+BEGIN_CENTER
+ Keep me in the center!!!!
+ #+END_CENTER
+ #+END_SRC
+
+*** 修饰符
+ org mode提供了一些字符串的修饰符号, 这些修饰符都是成对出现, 
+ 用于修饰其包含的内容.\\
+ 包括以下几种:
+ #+BEGIN_SRC elisp
+ *粗体*, /斜体/, _下划线_, =原文=, ~代码~, +删除线+. 
+ #+END_SRC
+
+
+ 如果一行只包含且包含5个以上 "-" 那么会被导出为横线.
+*** 注释
+ 注释可以用三中方式表示, 注释永远不会被导出.
+ + 以零个或多个空格开始, 并跟着#号, 然后后面在接一个空格的行被认为是
+   注释行, 该行永远不会被导出. 
+ + 以 *COMMENT* 开始的整个子树
+ + 被 =#+BEGIN_COMMENT= 和 =#+END_COMMENT= 包裹的内容.
+
+ 下面是示例, 下面的内容不会被导出
+ #+BEGIN_SRC elisp
+   # 注释
+
+   * COMMENT 注释子树
+   ** 二级目录
+
+   #+BEGIN_COMMENT
+    test
+   #+END_COMMENT
+ #+END_SRC
+** "字面"内容
+ Orgmode提供了几种方式, 可以使位子内容不受org mode的处理, 即使文字中
+ 有org mode的特殊字符, 主要的方式包括:
+ + #+BEGIN_SRC elisp..#+END_SRC \\
+   例如:
+   #+BEGIN_SRC elisp 
+   #+BEGIN_SRC elisp 
+   This is an example, *nothing works* 
+   `#+END_SRC 
+   #+END_SRC 
+   如果内容特别短, 也可以使用"空格:空格"字符串修饰
+ + #+BEGIN_SRC elisp..#+END_SRC \\
+   如果示例是一段程序, 可以使用这对关键字, 例如
+   #+BEGIN_SRC elisp  -r -n
+     ,#+BEGIN_SRC elisp elisp
+     (+ 1 1)
+     (concat "helo" "wold") (ref:lxxtest)
+     ,#+END_SRC
+   #+END_SRC
+
+ 上面两种方式都可以添加一些配置:
+ + "-n/+n" 显示行号, "+n"会接着前面的block行号继续.
+ + (ref:name) 定义block内的引用.可以在block之外引用block里面的内容.
+   例如可以使用[[(lxxtest)][代码块链接]]来引用代码内容.
+ + "-r", 在导出的文件中移除引用.
+
+ 可以使用快捷键 "C-c '"打开一个buffer编辑block中的内容.
+** 引用其他文件
+ 使用 *#+INCLUDE:* 来在org文件中引用其他文件, 被引用文件的内容会被放在当前
+ 部分 如果被引用文件也有标题的话, 这些标题会被设置为当前章节的子标题. 
+ 如果你想修改这种设置, 修改被引用文件的标题级别, 可以通过设置 minlevel参数.
+ #+BEGIN_SRC elisp
+  #+INCLUDE: file :minlevel N
+ #+END_SRC
+
+ 也可以通过 *:lines* 来引用该文件的一部分, 例如:
+ #+BEGIN_SRC elisp
+  #+INCLUDE: file :minlevel N :lines "5-10" ;; 5到10行
+  #+INCLUDE: file :minlevel N :lines "5-" ;; 5到结尾
+  #+INCLUDE: file :minlevel N :lines "-10" ;; 1到9行
+ #+END_SRC
+
+ 也可以通过在后面使用 *src language* 或 *example* 来将被引用内容转化为
+ src或example结构. 
+
+** 宏
+ #+BEGIN_CENTER
+ MACRO is everywhere.
+ #+END_CENTER
+
+ orgmode同样支持宏定义, 使用关键字 *#+MACRO name body* 来定义你自己的宏, 然后以
+ *{% raw %}{{{}}}{% endraw %}* 的方式调用宏, 可以在宏定义中使用 "$N" 定义多个参数. 
+
+ #+BEGIN_SRC elisp
+ #+MACRO: awesome Hi, $, you are an awesome guy.
+
+ {% raw %}{{{awesome(Jake Wharton)}}}{% endraw %}
+ #+END_SRC
+ 系统也提供了一些预定义的宏, 同样可以调用, 例如 ={% raw %}{{{title}}}{% endraw %}= , ={% raw %}{{{author}}}{% endraw %}= ,
+ ={% raw %}{{{time(FORMAT)}}}{% endraw %}= 等.
+** LaTex
+ As i never use LaTex, I dont read this part. \\
+ It will be catched up when I have some experience with LaTex someday.
+
+* Orgmode手册7:运行代码
+在org文件中可以运行代码, 这里并不是指类似VBA那样的宏, 
+而是指各种各种的代码, 例如C/Python/Java/Lisp/Elisp/Ruby...等所有目前
+市面上的主流和非主流代码, 都可以在org mode中运行.
+还有比这更酷的事情吗? \\
+这个功能叫做org babel. Babel这个词取自圣经:
+
+#+BEGIN_VERSE
+据《圣经·旧约·创世记》第11章记载，当时人类联合起来希望兴建能通往天堂的高塔。
+为了阻止人类的计划，上帝让人类说不同的语言，使人类相互之间不能沟通，计划因此失败，人类自此各散东西。
+此故事试图为世上出现不同语言和种族提供解释。
+#+END_VERSE
+
+Org babel就是这个通天塔, 你可以同一个org文件中运行各种代码. \\
+下面就来具体看下org mode中运行代码这个"黑魔法"功能.
+
+** 添加代码
+ 下面是一个简单的在org文件中运行代码的例子. 在orgmode的任意位置添加
+ 下面这段python代码. 
+ #+BEGIN_SRC elisp
+ #+BEGIN_SRC python
+ def x():
+      s = 1 + 1
+      return s
+
+ return x()
+ #+END_SRC
+ #+END_SRC
+ 添加完成后, 在代码块上使用快捷键"C-c C-c", 会看到代码块下面会显示如下的
+ 内容, 即这段代码的运行结果. 这就是一个简单的在orgmode中使用代码的例子, 
+ 是不是觉得很酷?
+ #+BEGIN_SRC elisp
+ #+RESULTS:
+ : 2
+ #+END_SRC
+
+ 上面的例子简单展示了在org mode中使用代码. 一般而言, 在org中插入的代码格式为
+ 1. 代码块.
+    可以使用 =#+NAME= 为当前代码块命名, 然后在其他地方引用. 
+   #+BEGIN_SRC elisp
+ #+NAME: <name>
+ #+BEGIN_SRC <language> <switches> <header arguments>
+  <body>
+ #+END_SRC
+ #+END_SRC
+ 2. 在行内使用代码, 格式为 =src_<language>{body}= 的方式. 如下例
+    #+BEGIN_SRC elisp
+    hi src_elisp{(print "jack")} 
+    #+END_SRC
+** 编辑代码
+ 可以直接在org文件中编辑代码, 也可以使用快捷键"C-c '"打开另一个buffer来
+ 编辑文件, 该buffer默认使用了该代码语言的emacs mode模式, 这样会更容易
+ 对代码进行缩进补全等编辑. 编辑完成后用"C-x C-s"保存. 然后再次使用"C-c '"
+ 退出. 放弃编辑使用快捷键"C-c C-k".
+** 运行代码
+ 前面示例讲过可以通过在代码块上使用 "C-c C-c" 或 "C-c C-v e"来运行代码.这样
+ 会在代码块后面显示运行结果, 以"#+RESULTS:"开头. 如果想修改
+ "RESULTS"为其他字符串, 可以设置"org-babel-results-keyword"变量.
+
+ org mode同样支持在一处定义代码块, 然后在文件的其他地方进行引用, 这需要对代码块
+ 设置名称, 例如下面定义了一个名称为"helowold"的代码块.
+ #+BEGIN_SRC elisp
+ #+NAME: helowold
+ #+BEGIN_SRC elisp
+ (print "helowold")
+ #+END_SRC
+ #+END_SRC
+
+ 这样可以在文件的其他地方使用下面的方式调用该代码块:
+ #+BEGIN_SRC elisp
+ #+CALL: helowold()
+ 或者在一行中间使用
+ call_helowold()
+ #+END_SRC
+
+** 给代码添加参数
+ 可以在 =#+BEGIN_SRC= 后面接 ":var name=value"的方式来向给代码块设置参数,
+ 如下例:
+ #+BEGIN_SRC elisp
+ #+NAME: lxxxx
+ #+BEGIN_SRC elisp :var n=5
+ (+ 1 n)
+ #+END_SRC
+ #+END_SRC
+
+ 在其他地方使用 =#+CALL= 调用代码时, 可以想其中传入参数替代默认参数, 例如
+ #+BEGIN_SRC elisp
+ #+CALL: lxxxx(9)
+ #+END_SRC
+** 导出代码
+ 在将org文件导出为HTML/PDF等格式时, 可以有选择行的导出代码块或结果,
+ orgmode支持以下方式的代码导出
+ 1. 只导出代码, 默认形式.
+ 2. 导出代码和结果.
+ 3. 只导出结果.
+ 4. 都不导出
+   
+ 可以通过设置header argument的":exports"属性来实现上述的特性, 该属性的
+ 值可以为:
+ | code    | 代码 |                          |
+ | results | 结果 | 结果需要已经在文件中显示 |
+ | both    | 都   |                          |
+ | none    | 都不 |                          |
+
+ 例如下面的代码:
+ #+BEGIN_SRC elisp
+ #+NAME: lxxxx
+ #+BEGIN_SRC elisp :var n=5 :exports results
+ (+ 1 n)
+ #+END_SRC
+ #+END_SRC
+
+** 提取代码
+ orgmode支持将org文件中的代码块提取到代码原文件中, 
+ 使用快捷键 "C-c C-v t" 或命令"org-babel-tangle"可以
+ 实现该功能, 该命令默认在当前目录创建一个源码文件, 文件
+ 名与org文件名相同, 后缀为该类型语言的后缀. 
+
+ 该功能默认是关闭的, 可以通过设置 header argument的":tangle"
+ 属性来打开, 将其设置为"yes"即可打开. 
+ 也可以将其设置为文件名,这样可以将代码导出到该文件,
+ 使用命令"org-babel-tangle-file"或"C-c C-v f"也可以.
+ #+BEGIN_SRC elisp
+   :PROPERTIES:
+   :header-args: :exports results :tangle yes
+   :END:
+ 或者
+ #+BEGIN_SRC elisp :tangle yes/filename
+
+ #+END_SRC
+ #+END_SRC
+
+** Babel库
+ orgmode的babel包含了一些可重用代码, 可以直接在当前org mode中使用.
+ 如果想将你的代码加入到babel库中,可以使用函数 "org-babel-lob-ingest".
+ 然后就可以调用里面的代码了.
+
+ *注:* \\
+ Emacs自带的org mode中默认并没有安装babel库, 如果想使用带babel库的orgmode,
+ 可以从orgmode的elpa中获取, 在配置文件中加入如下配置, 使用"eval-buffer"更新
+ 配置, 然后调用 "package-refresh-content", 接着安装 "org-plus-contrib"包.
+ #+BEGIN_SRC elisp
+ (require 'package)
+ (add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t)
+ #+END_SRC
+
+ 安装完成后, 如果想使用那个包, 可以在配置文件中使用 *require* 引用:
+ #+BEGIN_SRC elisp
+ (require 'org-mac-iCal)
+ ;;在 org 文件调用
+ #+CALL: org-mac-iCal()
+ #+END_SRC
+
+** header参数
+ 可以通过header参数来配置代码块的一些功能, 本节会介绍一下
+ 各种header参数.
+
+ orgmode可以设置各种范围的header参数, 下面会逐一介绍, 一般来说, 范围
+ 越大, 优先级越小, 即最小范围的header参数总是会覆盖大范围的header参数.
+*** 全局header参数
+ 可以通过设置"org-babel-default-header-args"变量来设置全局的header参数. 
+ 例如下面的例子将":noweb"设置为"yes". ":noweb"功能会在后面介绍.
+ #+BEGIN_SRC elisp
+     (setq org-babel-default-header-args
+            (cons '(:noweb . "yes")
+                  (assq-delete-all :noweb org-babel-default-header-args)))
+ #+END_SRC
+ 也可以通过设置 `org-babel-default-header-args:<lang>'为某个语言设置header参数.
+ 可以参考[[支持的语言]]一节.
+*** 文件级header参数
+ 可以通过设置 =#+PROPERTY= 来设置文件级的header参数, 这个变量可以设置多次.
+ 例如下面的例子设置"R"语言的seesion为"R", 并设置result为silent.
+ #+BEGIN_SRC elisp
+      #+PROPERTY: header-args:R  :session *R*
+      #+PROPERTY: header-args    :results silent
+ #+END_SRC
+*** 标题header参数
+ 可以为标题及所有子树设置header参数, 例如
+ #+BEGIN_SRC elisp
+      * outline header
+	:PROPERTIES:
+	:header-args:    :cache yes
+	:END:
+ #+END_SRC
+ 也可以给具体语言设置header参数, 例如
+ #+BEGIN_SRC elisp
+      * Heading
+	:PROPERTIES:
+	:header-args:clojure:    :session *clojure-1*
+	:header-args:R:          :session *R*
+	:END:
+      ** Subheading
+	:PROPERTIES:
+	:header-args:clojure:    :session *clojure-2*
+	:END:
+
+ #+END_SRC
+*** 代码块设置header参数
+ 也可以给单独的代码块设置header参数.有两种方式:
+ 1. 在 =#+BEGIN_SRC= 后面.
+    #+BEGIN_SRC elisp
+      #+NAME: factorial
+      #+BEGIN_SRC haskell :results silent :exports code :var n=0
+      fac 0 = 1
+      fac n = n * fac (n-1)
+      #+END_SRC
+    #+END_SRC
+ 2. 使用 =#+HEADERS= 关键字
+    #+BEGIN_SRC elisp
+       #+HEADERS: :var data1=1
+       #+BEGIN_SRC emacs-lisp :var data2=2
+         (message "data1:%S, data2:%S" data1 data2)
+       #+END_SRC
+    或者使用多岗
+       #+NAME: named-block
+       #+HEADER: :var data=2
+       #+BEGIN_SRC emacs-lisp
+    #+END_SRC
+*** 调用代码块时使用header参数
+ 有两种方式:
+ 1. =#+CALL: func() :exports results
+ 2. =#+CALL: func[:exports results]()
+*** 支持的header参数
+ 未完成
+** 支持的语言
+ 下表是orgmode支持的语言和在org文件中的写法, 可以通过设置变量
+ "org-babel-load-languages"设置默认支持的语言, 例如
+ | Language   | 识别符    | Language        | 识别符     |
+ |------------+-----------+-----------------+------------|
+ | Asymptote  | asymptote | Awk             | awk        |
+ | Emacs Calc | calc      | C               | C          |
+ | C++        | C++       | Clojure         | clojure    |
+ | CSS        | css       | ditaa           | ditaa      |
+ | Graphviz   | dot       | Emacs Lisp      | emacs-lisp |
+ | gnuplot    | gnuplot   | Haskell         | haskell    |
+ | Java       | java      |                 |            |
+ | Javascript | js        | LaTeX           | latex      |
+ | Ledger     | ledger    | Lisp            | lisp       |
+ | Lilypond   | lilypond  | MATLAB          | matlab     |
+ | Mscgen     | mscgen    | Objective  Caml | ocaml      |
+ | Octave     | octave    | Org mode        | org        |
+ | Oz         | oz        | Perl            | perl       |
+ | Plantuml   | plantuml  | Python          | python     |
+ | R          | R         | Ruby            | ruby       |
+ | Sass       | sass      | Scheme          | scheme     |
+ | GNU Screen | screen    | shell           | sh         |
+ | SQL        | sql       | SQLite          | sqlite     |
+
+ #+BEGIN_SRC elisp
+      (org-babel-do-load-languages
+       'org-babel-load-languages
+       '((emacs-lisp . nil)
+         (R . t)))
+ #+END_SRC
+
+* Tricks
+** 使用 orgmode + beamer 写幻灯片
+ (on-going)
+
+ 之前的一次报告使用 orgmode 结合 [[https://github.com/yjwen/org-reveal][org-reveal]] 写幻灯片, 写过还行,
+ 对于简单的报告可以使用这个方法. 但是总是感觉效果没达到自己的要求. 
+ 于是使用了比较复杂的 LaTex Beamer 结合 orgmode 写幻灯片. 
+
+*** 安装MacTex
+  网上找了个[[http://orgmode.org/worg/exporters/beamer/tutorial.html][例子]], 写完后需要使用 *org-beamer-export-to-pdf* 命令导成为PDF文件,
+  结果报错, 提示找不到 *pdflatex* 命令, 上网搜索发现是因为电脑没装LaTex, 
+  真是个LaTex菜鸟啊 (= =!). 
+
+  于是从网上下载了[[https://tug.org/mactex/][MacTex]], 很大, 有两个G, 安装上之后对里面的一些应用做了升级, 
+  升级原因[[https://tug.org/mactex/mactex-download.html][这里]] 提到了, 主要是EI Captian版本的兼容问题. 
+
+  然后将 MacTex的命令目录加入到了PATH中. 就可以在OrgMode下使用beamer了.
+  #+BEGIN_SRC elisp
+  export PATH="/Library/TeX/texbin":$PATH
+  #+END_SRC
+*** TODO 支持中文
+  这个没时间查资料, 等有时间再配置. 
+*** 语法
+  对LaTex一无所知, 暂时使用网上的 [[http://orgmode.org/worg/sources/exporters/beamer/presentation.org][该模板]] 略作修改. 
+
+  (这部分内容边学习边补充)
+
+** OrgMode常用表格处理公式
+*** 单一表项的使用
+  1. 列使用 *$N* 表示, 或相对位置 *$-/+N*. $< 第一行, $> 最后一行. $0, 当前列.
+  2. 行使用 *@*. 
+  3. 公式中使用相对位置. 该相对位置一般是指要求结果的表格的相对位置.
+     例如下面的公式, 就是将 @2$4 这个表格的 "上一行左移3个" 位置的表格中的
+     值加上4.
+     #+BEGIN_SRC elisp
+     #+TBLFM: @2$4=@-1$-3+4
+     #+END_SRC
+*** 范围的使用
+  使用两个 dot 即 *..* 来表示范围, 例如 
+  1. $1..$3. 表示当前行的前三个元素.
+  2. @2$1..@4$3, 表示一块6个表格的正方形区域
+
+*** 使用其他表项或其他文件中的表
+  1. 使用remote(file, ref)
+  2. 其他表必须可以被引用, 例如可以用 "#+NAME" 修饰. file也可以是一个
+     表格项, 该项的内容必须是另外一个表格的合法引用.
+  3. ref是指远程表格的一个合法表项.
+
+*** 常用公式
+  1. 使用Lisp代码需要前面加上' 
+  2. 两列相加: $X = $M + $N. 或者 Lisp代码 '(+ $M $N);N'
+     也可以
+     需要说明的是: 如果第一行是表头, (即第二行是 ---- ), 第一行不会相加.
+     例如下面的例子. 但是行相加会作用在第一行上.
+     #+BEGIN_SRC elisp
+     #+NAME: tbl1
+  |  9 | 1 |  2 | 0 | 2 |
+  |----+---+----+---+---|
+  |  1 | 3 |  4 | 0 | 1 |
+  | 10 | 3 | 13 | 0 | 3 |
+  |  1 | 3 |  4 | 0 | 1 |
+  |----+---+----+---+---|
+  |  3 | 9 | 12 |   |   |
+  #+TBLFM: $3=$1+$2
+     #+END_SRC
+  3. 多列相加: vsum($M..$N). 或者 '(apply '+ '($M..$N));N
+  4. 时间计算, 时间格式必须为 HH:MM[:SS], 后面接 *T* 则结果会同样
+     显示为时间, 接 *t* 则会表示为小数, 例如
+     #+BEGIN_SRC elisp
+  |         |        |      |          |
+  |---------+--------+------+----------|
+  |    1:00 |   2:23 | 3:33 | 06:56:00 |
+  | 3:01:20 | 2:11:2 | -9:2 |    -3.83 |
+  #+TBLFM: @2$4=$1+$2+$3;T::@3$4=$1+$2+$3;t
+ 
+     #+END_SRC
+*** 让第一列自动显示行号的几个函数
+  效果如下:  
+  #+BEGIN_SRC elisp
+  | N |   |
+  |---+---|
+  | 1 |   |
+  | 2 |   |
+  | 3 |   |
+  | 4 |   |
+  #+END_SRC
+  1. ~#+TBLFM: $1=@-1+1::@2$1=1~
+     注意: 
+     + 如果用这个函数, 第一在函数上运行 "C-c C-c", 结果会显示不正确, 
+       必需再重复一次快捷键.
+     + 可以在表格的任一域内使用 "C-u C-u C-c C-c" 来显示正确结果.
+  2. ~#+TBLFM: @3$1..@>$1=@-1+1::@2$1=1~
+  3. ~#+TBLFM: $1=@#-1~
+
+* 附录: "TODO"快捷键						   :shortkey:
+|                     | 说明               |
+|---------------------+--------------------|
+| C-c C-t             | 修改项目状态       |
+| S-right/left        | 同上               |
+| C-u C-c C-t         | 选择状态           |
+| C-c / t(T)          | 显示todo 树        |
+| C-c a t             | 显示全局todo       |
+| S-M-RET             | 插入TODO           |
+| C-c C-x o           | 打开ORDERED属性    |
+| C-u C-u C-u C-c C-t | 强制修改状态       |
+| C-c ,               | 设置优先级         |
+| S-up/down           | 更改优先级         |
+| C-c #               | 更新当前标题完成率 |
+|                     |                    |
