@@ -32,13 +32,11 @@
      + [[file:lisp/create-post-and-input-header.org][自动创建文章并设置Header]]
      + [[file:lisp/add-running-record.org][自动添加跑步记录]]
      + [[file:lisp/auto-github-post.org][自动生成github文章名]]
-   + orgmode
-     + [[file:orgmode/orgmode-manual.org][orgmode-manual]]
-     + [[file:orgmode/Use-Emacs-Org-Mode-Write-Github-Post.org][使用OrgMode撰写博客]]
    + reading
      + [[file:reading/2013-books.org][2013年读过的实体书]]
      + [[file:reading/bookmarks.org][Favorite Links]]
      + [[file:reading/intro-to-Rx.org][Introduction To Rx读书笔记]]
+     + [[file:reading/orgmode-manual.org][orgmode-manual]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
    + 新桑渡
      + [[file:新桑渡/liblog.org][Android liblog]]
@@ -52,4 +50,5 @@
      + [[file:新桑渡/food.org][豆渣食谱]]
      + [[file:新桑渡/running.org][跑步日志]]
      + [[file:新桑渡/What-do-I-learn-from-the-project.org][项目总结]]
+   + [[file:Use-Emacs-Org-Mode-Write-Github-Post.org][使用OrgMode撰写博客]]
    + [[file:about.org][关于这个博客]]
