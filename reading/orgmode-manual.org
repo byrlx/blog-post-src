@@ -2,6 +2,7 @@
 #+AUTHOR: Luis Xu
 #+EMAIL: xuzhengchaojob@gmail.com
 #+DATE: <2015-12-12 Thu 23:25>
+#+TITLE: OrgMode 手册阅读笔记
 
 [[http://orgmode.org/manual/][Org Manual]]的 阅读笔记, 及一些积累的使用技巧
 
