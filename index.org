@@ -2,6 +2,7 @@
 
    + android
      + [[file:android/gradle.org][Android Gradle Plugin User Guide 文档翻译]]
+     + [[file:android/log-system.org][Android Log 系统]]
      + [[file:android/performace-patterns.org][Android Performance Patterns 视频笔记]]
      + [[file:android/view.org][Android View笔记]]
      + [[file:android/message.org][Android 消息机制源码笔记]]
@@ -33,10 +34,6 @@
      + [[file:reading/sicp.org][SICP 阅读笔记]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
    + 新桑渡
-     + [[file:新桑渡/liblog.org][Android liblog]]
-     + [[file:新桑渡/logcat.org][Android Logcat]]
-     + [[file:新桑渡/logger.org][Android Logger]]
-     + [[file:新桑渡/logwrapper.org][Android logwrapper]]
      + [[file:新桑渡/twitter.org][twitter消息一览]]
      + [[file:新桑渡/wutaishan.org][五台山]]
      + [[file:新桑渡/ack.org][搜索利器 -- ack]]
