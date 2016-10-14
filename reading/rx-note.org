@@ -13,7 +13,7 @@ file:../img/zmantra.jpg
 
 Rx 基于"观察者模式", 支持流式的数据和事件以及在其上的各种操作.
 * Observable
-这张图介绍了 Observable 的形式:
+这张图介绍了 Observable 的形式:\\
 [[file:../img/observable.png]]
 ** 基本介绍
 可以把 Observable 看作是 Iterable 的"push"版本. 对于 Iterable,
