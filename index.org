@@ -18,6 +18,8 @@
      + [[file:emacs/tips.org][Emacs Little Tips]]
      + [[file:emacs/magit.org][Magit文档笔记]]
      + [[file:emacs/emacs-ide.org][打造Emacs编程环境]]
+   + img
+     + [[file:img/observable.org][observable]]
    + java
      + [[file:java/retrofit-source-code.org]['Retrofit源码1: 为什么写一个interface就可以实现http请求']]
      + [[file:java/arraylist-linkedlist-note.org][ArrayList, LinkedList源码笔记]]
@@ -30,7 +32,7 @@
      + [[file:reading/2013-books.org][2013年读过的实体书]]
      + [[file:reading/bookmarks.org][Favorite Links]]
      + [[file:reading/orgmode-manual.org][OrgMode 手册阅读笔记]]
-     + [[file:reading/intro-to-Rx.org][RxJava 笔记]]
+     + [[file:reading/rx-note.org][RxJava 笔记]]
      + [[file:reading/sicp.org][SICP 阅读笔记]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
    + 新桑渡

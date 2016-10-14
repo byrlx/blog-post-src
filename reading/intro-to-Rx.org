@@ -1,9 +1,0 @@
-#+OPTIONS: toc:t H:3
-#+AUTHOR: Luis Xu
-#+EMAIL: xuzhengchaojob@gmail.com
-#+DATE: <2016-04-18 Thu 22:15>
-#+TITLE: RxJava 笔记
-(on-going)
-
-file:../img/zmantra.jpg
-

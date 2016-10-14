@@ -1,0 +1,39 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-04-18 Thu 22:15>
+#+TITLE: RxJava 笔记
+
+file:../img/zmantra.jpg
+
+本文主要学习RxJava笔记.
+* 简介
+  ReactiveX 是将"异步"和"事件驱动编程"结合的一个库, 结合的手段是通过
+"可观察流"(observable sequences).
+
+Rx 基于"观察者模式", 支持流式的数据和事件以及在其上的各种操作.
+* Observable
+这张图介绍了 Observable 的形式:
+[[file:../img/observable.png]]
+** 基本介绍
+可以把 Observable 看作是 Iterable 的"push"版本. 对于 Iterable,
+消费者通过 iterator 来获取数据. 而 Observable 是采用的"观察者模式",
+所以数据生成之后生产者直接 push 给消费者.  这种操作的一个灵活性是
+数据的到达即可以是同步的又可以是异步的.
+
+ 1. Observable 支持像操作数组一样操作异步数据.
+ 2. 可以发射单个/多个/无限的事件流.下面是 Observable 和 Iterable 的
+    对比.
+    | event         | Iterable   | Observable         |
+    |---------------+------------+--------------------|
+    | retrieve data | T next()   | onNext(T)          |
+    | error         | throws     | onError(Exception) |
+    | complete      | !hasNext() | onCompleted()      |
+ 3. 客户端代码要一直把与 Observable 操作当作异步操作.
+ 4. callback 虽然和使用, 但是在内嵌多个 callback 的场景中变得
+    很[[https://gist.github.com/4677544][笨重]].
+ 5. 可以分为"热"和"冷"两种, 热方式会立刻发射生成的数据.
+    而冷方式会等有 subscriber 注册之后才发射.
+
+
+** 支持的操作符
