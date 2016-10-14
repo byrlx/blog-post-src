@@ -35,8 +35,9 @@
    + reading
      + [[file:reading/2013-books.org][2013年读过的实体书]]
      + [[file:reading/bookmarks.org][Favorite Links]]
-     + [[file:reading/intro-to-Rx.org][Introduction To Rx读书笔记]]
+     + [[file:reading/intro-to-Rx.org][RxJava 笔记]]
      + [[file:reading/orgmode-manual.org][OrgMode 手册阅读笔记]]
+     + [[file:reading/sicp.org][SICP 阅读笔记 求解函数 f(x)=0]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
    + 新桑渡
      + [[file:新桑渡/liblog.org][Android liblog]]
