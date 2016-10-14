@@ -11,6 +11,8 @@
      + [[file:android/robolectric.org][使用开源项目Robolectric测试Android代码]]
      + [[file:android/topeka.org][开源项目Topeka的Material Design]]
    + emacs
+     + [[file:emacs/elisp-fun-program.org][Elisp 小程序]]
+     + [[file:emacs/elisp-doc-note.org][Elisp 文档笔记]]
      + [[file:emacs/read-gmail.org][Emacs gnus 的日常使用]]
      + [[file:emacs/tips.org][Emacs Little Tips]]
      + [[file:emacs/magit.org][Magit文档笔记]]
@@ -23,13 +25,6 @@
      + [[file:java/retrofit.org][Retrofit之项目介绍]]
      + [[file:java/bitmap-implementation.org][一个bitmap的实现代码]]
      + [[file:java/rbtree.org][红黑树]]
-   + lisp
-     + [[file:lisp/func-call.org][Elisp 中的特殊函数调用]]
-     + [[file:lisp/elisp-text-apis.org][Elisp 文本处理函数]]
-     + [[file:lisp/emacs-data-structure.org][Elisp基本数据结构]]
-     + [[file:lisp/create-post-and-input-header.org][自动创建文章并设置Header]]
-     + [[file:lisp/add-running-record.org][自动添加跑步记录]]
-     + [[file:lisp/auto-github-post.org][自动生成github文章名]]
    + reading
      + [[file:reading/2013-books.org][2013年读过的实体书]]
      + [[file:reading/bookmarks.org][Favorite Links]]
