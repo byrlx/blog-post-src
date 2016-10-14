@@ -37,3 +37,111 @@ Rx 基于"观察者模式", 支持流式的数据和事件以及在其上的各�
 
 
 ** 支持的操作符
+1. 创建. 包括 Create, Defer, Empty/Never/Throw, From, Interval, Just, Range, Repeat, Start, and Timer
+2. 转化. 包括 Buffer, FlatMap, GroupBy, Map, Scan, and Window.
+3. 过滤. 包括 Debounce, Distinct, ElementAt, Filter, First, IgnoreElements, Last, Sample, Skip, SkipLast, Take, and TakeLast.
+4. 合并. 包括 And/Then/When, CombineLatest, Join, Merge, StartWith, Switch, and Zip.
+5. 条件. 包括 All, Amb, Contains, DefaultIfEmpty, SequenceEqual, SkipUntil, SkipWhile, TakeUntil, and TakeWhile
+6. 计算. 包括 Average, Concat, Count, Max, Min, Reduce, and Sum.
+7. 连接. 包括Connect, Publish, RefCount, and Replay.
+8. 工具类. 包括Delay, Do, Materialize/Dematerialize, ObserveOn, Serialize, Subscribe, SubscribeOn, TimeInterval, Timeout, Timestamp, and Using.
+
+这些操作符有的会返回 Observable序列, 所以可以将这些操作性连在一起
+做序列化操作.
+* 操作符
+** 创建类操作符
+*** Create
+ 从头开始创建一个 Observable, 该函数的参数必须能够
+接受一个 Observer 作为参数.这样通过该函数创建的 Observable
+才能注册 Observer.
+
+ 在 Java 中,create()函数接受一个 OnSubscribe 对象.
+#+BEGIN_EXAMPLE
+Observable.create(new Observable.OnSubscribe<Integer>() {
+    @Override
+    public void call(Subscriber<? super Integer> observer) {
+        try {
+            if (!observer.isUnsubscribed()) {
+                for (int i = 1; i < 5; i++) {
+                    observer.onNext(i);
+                }
+                observer.onCompleted();
+            }
+        } catch (Exception e) {
+            observer.onError(e);
+        }
+    }
+ } ).subscribe(new Subscriber<Integer>() {
+        @Override
+        public void onNext(Integer item) {
+            System.out.println("Next: " + item);
+        }
+
+        @Override
+        public void onError(Throwable error) {
+            System.err.println("Error: " + error.getMessage());
+        }
+
+        @Override
+        public void onCompleted() {
+            System.out.println("Sequence complete.");
+        }
+    });
+#+END_EXAMPLE
+*** Defer
+ 当有observer注册的时候才创建 Observable. 例如下面的例子,
+ 虽然只创建了一个 defer() 返回值对象, 但是call()函数会调用两次.
+说明每次注册一个新的观察者时, 都会生成一个新的 Observable 对象.
+#+BEGIN_EXAMPLE
+        Observable<String> observable = Observable.defer(new Func0<Observable<String>>() {
+                @Override
+                public Observable<String> call() {
+                    System.out.println("create observable id = " + cont++);
+                    return Observable.just(value);
+                }
+            });
+        observable.subscribe(glbSubscriber);
+        observable.subscribe(glbSubscriber);
+#+END_EXAMPLE
+*** Empty/Never/Throw
+empty()创建一个 Observable, 注册之后立刻调用 onComplete()
+never()创建一个 Observable, 注册之后永远都不调用
+throw()(java叫 error())创建一个 Observable, 注册之后立刻调用 onError()
+*** From
+将一系列其他类型(Iterable, array...)转化为 Observable
+ 
+RxJava 支持的类型包括: Iterable, Array, Callable, Future
+#+BEGIN_EXAMPLE
+        Observable.from(names).subscribe(new Action1<String>() {
+            @Override
+            public void call(String s) {
+                System.out.println("hi:" + s);
+            }
+        });
+#+END_EXAMPLE
+*** Interval
+ 间隔性的发射数据.  一直下去,不停止.\\
+RxJava提供了多个重载版本.
+*** Just
+ 接受一个参数,并原封不动的发射出去, 这与[[From]]不同, 后者
+会把 array 分解然后一个个的发射. 
+
+RxJava 不支持参数为 array.
+*** Range
+发射一段范围内的整数. 接受两个参数:起始值和个数.
+*** Repeat
+创建一个 Observable, 重复性的发射数据.
+
+RxJava 的该操作符实现并不初始化一个 observable, 它需要
+在一个 Observable 对象内部调用.
+#+BEGIN_EXAMPLE
+        Observable.just("helo", "wold")
+                .repeat(3)
+                .subscribe(glbSubscriber);
+#+END_EXAMPLE
+*** TODO Start
+ 接受一个函数, 然后发射函数的返回值.
+
+RxJava 中该操作符的实现放在了一个单独的模块 rxjava-async 中
+*** Timer
+ 延迟反射数据.
