@@ -44,7 +44,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
 
 #+END_SRC	
 ** test 参数
-
+#+BEGIN_SRC c
  如果logcat只有一个参数"--test",则执行logprint_run_tests()函数,从代码来看,这个函数主要是测试logcat的功能的.
 
 	 /* logprint_run_tests()*/
@@ -145,7 +145,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
 	     // Yes, I'm using strsep
 	     while (NULL != (p_ret = strsep(&p_cur, " \t,"))) {
 	         // ignore whitespace-only entries
-	         if(p_ret[ 0]= != '\0') {
+	         if(p_ret[0] != '\0') {
 	             err = android_log_addFilterRule(p_format, p_ret);
 	         }
 	     }
@@ -155,6 +155,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
  android_log_addFilterString()会循环遍历传入的filter string,并将其添加到filter 链表中.
  ok, "--test" 参数到这里就讲完了.
 
+#+END_SRC
 ** "-s" 参数
 
  将全局的log level 设为 ANDROID_LOG_SILENT, 即不输出所有level的log
@@ -339,7 +340,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
 	     int32_t     tid;    /* generating process's tid */
 	     int32_t     sec;    /* seconds since Epoch */
 	     int32_t     nsec;   /* nanoseconds */
-	     char        msg[ 0]=; /* the entry's payload */
+	     char        msg[0]; /* the entry's payload */
 	 };
 
  #+END_SRC	
@@ -447,7 +448,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
 	     int32_t     tid;    /* generating process's tid */
 	     int32_t     sec;    /* seconds since Epoch */
 	     int32_t     nsec;   /* nanoseconds */
-	     char        msg[ 0]=; /* the entry's payload */
+	     char        msg[0]; /* the entry's payload */
 	 };
 		
 	 typedef struct AndroidLogEntry_t {
@@ -484,7 +485,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
 	         }
 	     }
 	
-	     entry->priority = buf->msg[ 0]=;
+	     entry->priority = buf->msg[0];
 	     entry->tag = buf->msg + 1;
 	     entry->message = buf->msg + msgStart;
 	     entry->messageLen = msgEnd - msgStart;
@@ -543,7 +544,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
              suffixLen = 1;
              break;
          case FORMAT_RAW:
-             prefixBuf[ 0]= = 0;
+             prefixBuf[0] = 0;
              prefixLen = 0;
              strcpy(suffixBuf, "\n");
              suffixLen = 1;
@@ -587,7 +588,7 @@ Android 系统提供了一整套的API供Java层和Native层的程序写log,以�
      const char *pm;
 
 
-     ret[ 0]= = '\0';       /* to start strcat off */
+     ret[0] = '\0';       /* to start strcat off */
 
      p = ret;
      pm = entry->message;
@@ -736,7 +737,7 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
  #+BEGIN_SRC c
 	 int __android_log_write(int prio, const char *tag, const char *msg)
 	 {
-	     struct iovec vec[3]=;
+	     struct iovec vec[3];
 	     log_id_t log_id = LOG_ID_MAIN;
 	
 	     if (!tag)
@@ -754,12 +755,12 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	         !strcmp(tag, "SMS"))
 	             log_id = LOG_ID_RADIO;
 	
-	     vec[ 0]=.iov_base   = (unsigned char *) &prio;
-	     vec[ 0]=.iov_len    = 1;
-	     vec[1]=.iov_base   = (void *) tag;
-	     vec[1]=.iov_len    = strlen(tag) + 1;
-	     vec[2]=.iov_base   = (void *) msg;
-	     vec[2]=.iov_len    = strlen(msg) + 1;
+	     vec[0].iov_base   = (unsigned char *) &prio;
+	     vec[0].iov_len    = 1;
+	     vec[1].iov_base   = (void *) tag;
+	     vec[1].iov_len    = strlen(tag) + 1;
+	     vec[2].iov_base   = (void *) msg;
+	     vec[2].iov_len    = strlen(msg) + 1;
 	
 	     return write_to_log(log_id, vec, 3);
 	 }
@@ -868,7 +869,7 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	
 	 int __android_log_buf_write(int bufID, int prio, const char *tag, const char *msg)
 	 {
-	     struct iovec vec[3]=;
+	     struct iovec vec[3];
 	
 	     if (!tag)
 	         tag = "";
@@ -885,12 +886,12 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	         !strcmp(tag, "SMS"))
 	             bufID = LOG_ID_RADIO;
 	
-	     vec[ 0]=.iov_base   = (unsigned char *) &prio;
-	     vec[ 0]=.iov_len    = 1;
-	     vec[1]=.iov_base   = (void *) tag;
-	     vec[1]=.iov_len    = strlen(tag) + 1;
-	     vec[2]=.iov_base   = (void *) msg;
-	     vec[2]=.iov_len    = strlen(msg) + 1;
+	     vec[0].iov_base   = (unsigned char *) &prio;
+	     vec[0].iov_len    = 1;
+	     vec[1].iov_base   = (void *) tag;
+	     vec[1].iov_len    = strlen(tag) + 1;
+	     vec[2].iov_base   = (void *) msg;
+	     vec[2].iov_len    = strlen(msg) + 1;
 	
 	     return write_to_log(bufID, vec, 3);
 	 }
@@ -933,14 +934,14 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	 int __android_log_btwrite(int32_t tag, char type, const void *payload,
 	     size_t len)
 	 {
-	     struct iovec vec[3]=;
+	     struct iovec vec[3];
 	
-	     vec[ 0]=.iov_base = &tag;
-	     vec[ 0]=.iov_len = sizeof(tag);
-	     vec[1]=.iov_base = &type;
-	     vec[1]=.iov_len = sizeof(type);
-	     vec[2]=.iov_base = (void*)payload;
-	     vec[2]=.iov_len = len;
+	     vec[0].iov_base = &tag;
+	     vec[0].iov_len = sizeof(tag);
+	     vec[1].iov_base = &type;
+	     vec[1].iov_len = sizeof(type);
+	     vec[2].iov_base = (void*)payload;
+	     vec[2].iov_len = len;
 	
 	     return write_to_log(LOG_ID_EVENTS, vec, 3);
 	 }
@@ -958,8 +959,8 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	     const int max = sizeof(buf) - sizeof(len) - 2;  // Type byte, final newline
 	     if (len > max) len = max;
 	
-	     buf[ 0]= = EVENT_TYPE_STRING;
-	     memcpy(&buf[1]=, &len, sizeof(len));
+	     buf[0] = EVENT_TYPE_STRING;
+	     memcpy(&buf[1], &len, sizeof(len));
 	     memcpy(&buf[1 + sizeof(len)], str, len);
 	     buf[1 + sizeof(len) + len] = '\n';
 	
@@ -973,12 +974,12 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
  #+BEGIN_SRC c
 	 int __android_log_bwrite(int32_t tag, const void *payload, size_t len)
 	 {
-	     struct iovec vec[2]=;
+	     struct iovec vec[2];
 	
-	     vec[ 0]=.iov_base = &tag;
-	     vec[ 0]=.iov_len = sizeof(tag);
-	     vec[1]=.iov_base = (void*)payload;
-	     vec[1]=.iov_len = len;
+	     vec[0].iov_base = &tag;
+	     vec[0].iov_len = sizeof(tag);
+	     vec[1].iov_base = (void*)payload;
+	     vec[1].iov_len = len;
 	
 	     return write_to_log(LOG_ID_EVENTS, vec, 2);
 	 }
@@ -1030,8 +1031,8 @@ Androi系统提供了一套完整的API供其他程序调用输出log,这套API�
 	         env->DeleteLocalRef(item);
 	     }
 	
-	     buf[ 0]= = EVENT_TYPE_LIST;
-	     buf[1]= = copied;
+	     buf[0] = EVENT_TYPE_LIST;
+	     buf[1] = copied;
 	     buf[pos++] = '\n';
 	     return android_bWriteLog(tag, buf, pos);
 	 }
@@ -1564,7 +1565,7 @@ Android 在 kernel 层提供了四个虚拟的device 设备,用于存放log. 可
 	         usage();
 	     }
 	
-	     rc = android_fork_execvp_ext(argc, &argv[ 0]=, &status, true,
+	     rc = android_fork_execvp_ext(argc, &argv[0], &status, true,
 	                                  log_target, abbreviated, NULL);
 
 		 ....
@@ -1663,7 +1664,7 @@ Android 在 kernel 层提供了四个虚拟的device 设备,用于存放log. 可
              sigaction(SIGQUIT, &ignact, &quitact);
          }
 
-         rc = parent(argv[ 0]=, parent_ptty, pid, status, log_target,
+         rc = parent(argv[0], parent_ptty, pid, status, log_target,
                      abbreviated, file_path);
      }
 
@@ -1681,8 +1682,8 @@ Android 在 kernel 层提供了四个虚拟的device 设备,用于存放log. 可
 	     memcpy(argv_child, argv, argc * sizeof(char *));
 	     argv_child[argc] = NULL;
 	
-	     if (execvp(argv_child[ 0]=, argv_child)) {
-	         FATAL_CHILD("executing %s failed: %s\n", argv_child[ 0]=,
+	     if (execvp(argv_child[0], argv_child)) {
+	         FATAL_CHILD("executing %s failed: %s\n", argv_child[0],
 	                 strerror(errno));
 	     }
 	 }
@@ -1697,7 +1698,7 @@ Android 在 kernel 层提供了四个虚拟的device 设备,用于存放log. 可
 	 ...
 	
      struct pollfd poll_fds[] = {
-         [ 0]= = {
+         [0] = {
              .fd = parent_read,
              .events = POLLIN,
          },
@@ -1747,7 +1748,7 @@ Android 在 kernel 层提供了四个虚拟的device 设备,用于存放log. 可
              goto err_poll;
          }
 
-         if (poll_fds[ 0]=.revents & POLLIN) {
+         if (poll_fds[0].revents & POLLIN) {
              sz = read(parent_read, &buffer[b], sizeof(buffer) - 1 - b);
 
              sz += b;
@@ -1782,7 +1783,7 @@ Android 在 kernel 层提供了四个虚拟的device 设备,用于存放log. 可
              }
          }
 
-         if (poll_fds[ 0]=.revents & POLLHUP) {
+         if (poll_fds[0].revents & POLLHUP) {
              int ret;
 
              ret = waitpid(pid, &status, WNOHANG);
