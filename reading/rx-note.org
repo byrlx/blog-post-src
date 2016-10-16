@@ -145,3 +145,12 @@ RxJava 的该操作符实现并不初始化一个 observable, 它需要
 RxJava 中该操作符的实现放在了一个单独的模块 rxjava-async 中
 *** Timer
  延迟反射数据.
+** 转化类操作符
+*** Buffer
+ 收集到一定数量之后才发射全部收集到的数据.
+ 
+RxJava 把收集到的数据放到一个 List 中
+*** TODO FlatMap
+flatMap()接受一个能够返回 Observable 的参数. 这样, 该参数会将
+flatMap()的调用者(原始 Observable)里面的值转化为一个个的 Observable,
+然后再把这些 Observable 合成一个 Observable.
