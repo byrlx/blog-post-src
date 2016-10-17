@@ -154,3 +154,146 @@ RxJava 把收集到的数据放到一个 List 中
 flatMap()接受一个能够返回 Observable 的参数. 这样, 该参数会将
 flatMap()的调用者(原始 Observable)里面的值转化为一个个的 Observable,
 然后再把这些 Observable 合成一个 Observable.
+*** GroupBy
+ 把一个 observable 分成根据条件几个 observable, 每个 observable 都有
+一个 key.
+
+RxJava 实现了该操作符, 会返回一个 GroupedObservable 类.
+#+BEGIN_EXAMPLE
+    public void groupBy() {
+        Integer[] integers = new Integer[]{4, 2, 16, 6, 1, 20, 5};
+        Observable.from(integers)
+                .groupBy(new Func1<Integer, String>() {
+                    @Override
+                    public String call(Integer integer) {
+                        if(integer % 4 == 0) {
+                            return "can";
+                        } else {
+                            return "can't";
+                        }
+                    }
+                })
+                .subscribe(new Subscriber<GroupedObservable<String, Integer>>() {
+                    @Override
+                    public void onCompleted() {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onNext(GroupedObservable<String, Integer> objectIntegerGroupedObservable) {
+                        String key = objectIntegerGroupedObservable.getKey();
+                        if("can".equals(key)) {
+                            objectIntegerGroupedObservable.subscribe(glbIntSub);
+                        }else{
+                            objectIntegerGroupedObservable.subscribe(glbIntSub2);
+                        }
+                    }
+                });
+    }
+#+END_EXAMPLE
+*** Map
+ 转化发射的值为另一个值发射. 该函数接受一个函数作为参数
+用来转化 item.
+#+BEGIN_EXAMPLE
+        Observable.just(2, 5, 8).map(new Func1<Integer, String>() {
+            @Override
+            public String call(Integer integer) {
+                return "map " + integer;
+            }
+        }).subscribe(glbSubscriber);
+#+END_EXAMPLE
+*** Scan
+ 该操作符接受一个函数, 该函数将源 Observable 发射的数据
+转化为另外的数据, 并基于该转化的数据和源 Observable 的下一个
+数据生成自己下一个数据.
+#+BEGIN_EXAMPLE
+        Observable.just(1, 9, 8, 8, 02, 06)
+        .scan(new Func2<Integer, Integer, Integer>() {
+            @Override
+            public Integer call(Integer integer, Integer integer2) {
+                return integer * integer;
+            }
+        }).subscribe(glbIntSub);
+#+END_EXAMPLE
+*** TODO Window
+ 把发射的元素分成几块, 每块都通过 observable 发射.
+ 
+RxJava: 下面的代码有问题, 如果注册一个全局的 subscriber, 则只会输出第一个 window 的内容.
+ 第二块代码是输出正确的代码. *猜测应该是全局的 subscriber 调用了onComplete()导致.*
+#+BEGIN_EXAMPLE
+        Observable.just(1, 9, 8, 3, 1, 6, 4)
+                .window(2)
+                .subscribe(new Subscriber<Observable<Integer>>() {
+                    @Override
+                    public void onCompleted() { System.out.println(this + " ends"); }
+
+                    @Override
+                    public void onError(Throwable e) { }
+
+                    @Override
+                    public void onNext(Observable<Integer> integerObservable) {
+                        System.out.println("onNext called " + integerObservable);
+                        integerObservable.subscribe(glbIntSub);
+                    }
+                });
+		
+//修复版
+        Observable.just(1, 9, 8, 3, 1, 6, 4)
+                .window(4)
+                .subscribe(new Subscriber<Observable<Integer>>() {
+                    @Override
+                    public void onCompleted() { System.out.println(this + " ends"); }
+
+                    @Override
+                    public void onError(Throwable e) { }
+
+                    @Override
+                    public void onNext(Observable<Integer> integerObservable) {
+                        System.out.println("onNext called " + integerObservable);
+                        integerObservable.subscribe(new Subscriber<Integer>() {
+                            @Override
+                            public void onCompleted() {
+                                System.out.println();
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+
+                            }
+
+                            @Override
+                            public void onNext(Integer integer) {
+                                System.out.print(integer + ", ");
+                            }
+                        });
+                    }
+                });
+#+END_EXAMPLE
+** 过滤类操作符
+*** TODO Debounce
+接受一个 timeout 值, 在 timeout 结束之前所产生的源 Observable
+ 的值都会被抛弃.
+*** Distinct
+ 只发射没发射过的项目, 已经发射过的会被过滤掉.
+*** ElementAt
+ 接受一个 index 值参数, 只发射第 index 个参数(下标从1开始).
+*** Filter
+ 只发射通过 filter 函数的元素.
+*** First
+    只发射第一个元素.
+*** IgnoreElements
+ 忽略所有元素
+*** Last
+ 发射最后一个元素
+*** TODO Sample
+*** Skip/SkipLast
+ 跳过前/后 N 个元素.
+*** Take/TakeLast
+ 只拿前/后 N 个元素.
+* RxJava 在 Android 中应用
+** RxBus
