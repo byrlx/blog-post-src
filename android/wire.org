@@ -1,0 +1,2 @@
+1. 有一个 IControllerFactory,  用来返回大部分的 controller 接口,
+   里面函数大部分的返回值都是 interface.
