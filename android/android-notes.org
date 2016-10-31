@@ -4,6 +4,252 @@
 #+DATE: <2016-10-31 Thu 23:25>
 
 #+TITLE: Android 大笔记
+* MVVM 的一种实现
+原文 https://medium.com/@Miqubel/refactoring-to-mvvm-40ebafff43de#.3pd0ag4sb
+** MVVM 的含义
+1. M: model, 负责提供数据以及跟后台服务交互.
+2. VM: 中间件. 负责将 model 提供的数据进行转化, 方便 view 使用.并将 view
+   的请求发送给 model.
+3. V: 实现用户接口并包含一个 VM.
+
+** 主流的两种实现方式
+1. RxJava Observables.
+2. Android Data Binding.
+** 常见代码:activity 做所有事情
+    下述代码中, activity 同时负责数据的请求和 UI 的更新.这样做的弊端:
+1. MainActivity 知道的太多, 例如数据的获取方式.
+2. 测试代码不好写.
+#+BEGIN_EXAMPLE
+public class MainActivity extends AppCompatActivity {
+
+    EditText editText;
+    ImageButton imageButton;
+    BooksAdapter adapter;
+    ListView listView;
+    TextView textNoDataFound;
+    GoogleBooksService service;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Configure Retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                // Base URL can change for endpoints (dev, staging, live..)
+                .baseUrl("https://www.googleapis.com")
+                // Takes care of converting the JSON response into java objects
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        // Create the Google Book API Service
+        service = retrofit.create(GoogleBooksService.class);
+
+
+        editText = (EditText) findViewById(R.id.editText);
+        imageButton = (ImageButton) findViewById(R.id.imageButton);
+        textNoDataFound = (TextView) findViewById(R.id.text_no_data_found);
+
+        adapter = new BooksAdapter(this, -1);
+
+        listView = (ListView) findViewById(R.id.listView);
+        listView.setAdapter(adapter);
+
+        imageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                performSearch();
+            }
+        });
+    }
+
+    private void performSearch() {
+        String formatUserInput = getUserInput().trim().replaceAll("\\s+", "+");
+        // Just call the method on the GoogleBooksService
+        service.search("search+" + formatUserInput)
+                // enqueue runs the request on a separate thread
+                .enqueue(new Callback<BookSearchResult>() {
+
+                    // We receive a Response with the content we expect already parsed
+                    @Override
+                    public void onResponse(Call<BookSearchResult> call, Response<BookSearchResult> books) {
+                        updateUi(books.body().getBooks());
+                    }
+
+                    // In case of error, this method gets called
+                    @Override
+                    public void onFailure(Call<BookSearchResult> call, Throwable t) {
+                        t.printStackTrace();
+                    }
+                });
+    }
+
+    private void updateUi(List<Book> books) {
+        if (books.isEmpty()) {
+            // if no books found, show a message
+            textNoDataFound.setVisibility(View.VISIBLE);
+        } else {
+            textNoDataFound.setVisibility(View.GONE);
+        }
+        adapter.clear();
+        adapter.addAll(books);
+    }
+
+    private String getUserInput() {
+        return editText.getText().toString();
+    }
+}
+#+END_EXAMPLE
+** 使用 RxJava 改造
+*** 创建 Model
+顶层的 model 使用接口实现, 接口定义了 model 的行为和返回的结果. 然后提供一个
+实现类. 实现类中使用 Retrofit 的 Observable 取代了 Callable.  返回的 Observable
+ 已经配置为在线程中执行请求.
+#+BEGIN_EXAMPLE
+public interface BooksInteractor {
+    Observable<BookSearchResult> search(String search);
+}
+
+public class BooksInteractorImpl implements BooksInteractor {
+    private GoogleBooksService service;
+
+    public BooksInteractorImpl() {
+        // Configure Retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                // Base URL can change for endpoints (dev, staging, live..)
+                .baseUrl("https://www.googleapis.com")
+                // Takes care of converting the JSON response into java objects
+                .addConverterFactory(GsonConverterFactory.create())
+                // Retrofit Call to RxJava Observable
+                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                .build();
+        // Create the Google Book API Service
+        service = retrofit.create(GoogleBooksService.class);
+    }
+
+    @Override
+    public Observable<BookSearchResult> search(String search) {
+        return service.search("search+" + search).subscribeOn(Schedulers.io());
+    }
+}
+#+END_EXAMPLE
+*** 创建 ViewModel
+ViewModel 的功能比较简单, 配置执行的线程.
+ 如下例设置了返回的搜索结果在 scheduler 中被执行.
+#+BEGIN_EXAMPLE
+public class BooksViewModel {
+
+    private BooksInteractor interactor;
+    private Scheduler scheduler;
+
+    public BooksViewModel(BooksInteractor interactor, Scheduler scheduler) {
+        this.interactor = interactor;
+        this.scheduler = scheduler;
+    }
+
+    public Observable<BookSearchResult> search(String search) {
+        return interactor.search(search).observeOn(scheduler);
+    }
+}
+#+END_EXAMPLE
+*** 改造后的 activity
+#+BEGIN_EXAMPLE
+public class MainActivity extends AppCompatActivity {
+
+    EditText editText;
+    ImageButton imageButton;
+    BooksAdapter adapter;
+    ListView listView;
+    TextView textNoDataFound;
+
+    private CompositeSubscription subscriptions = new CompositeSubscription();
+    private BooksViewModel booksViewModel;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        booksViewModel = new BooksViewModel(new BooksInteractorImpl(), 
+                                            AndroidSchedulers.mainThread());
+
+        editText = (EditText) findViewById(R.id.editText);
+        imageButton = (ImageButton) findViewById(R.id.imageButton);
+        textNoDataFound = (TextView) findViewById(R.id.text_no_data_found);
+
+        adapter = new BooksAdapter(this, -1);
+
+        listView = (ListView) findViewById(R.id.listView);
+        listView.setAdapter(adapter);
+
+        imageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                performSearch();
+            }
+        });
+    }
+  
+    @Override
+    protected void onDestroy() {
+        subscriptions.unsubscribe();
+        super.onDestroy();
+    }
+
+    private void performSearch() {
+        String formatUserInput = getUserInput().trim().replaceAll("\\s+", "+");
+        subscription = booksViewModel.search(formatUserInput)
+                .subscribe(new Observer<BookSearchResult>() {
+                    @Override
+                    public void onCompleted() {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        e.printStackTrace();
+                    }
+
+                    @Override
+                    public void onNext(BookSearchResult bookSearchResult) {
+                        updateUi(bookSearchResult.getBooks());
+                    }
+                });
+    }
+
+    private void updateUi(List<Book> books) {
+        if (books.isEmpty()) {
+            // if no books found, show a message
+            textNoDataFound.setVisibility(View.VISIBLE);
+        } else {
+            textNoDataFound.setVisibility(View.GONE);
+        }
+        adapter.clear();
+        adapter.addAll(books);
+    }
+
+    private String getUserInput() {
+        return editText.getText().toString();
+    }
+}
+#+END_EXAMPLE
+** 好处
+1. 方便写测试用例.
+   #+BEGIN_EXAMPLE
+   public class BooksInteractorMock implements BooksInteractor {
+    @Override
+    public Observable<BookSearchResult> search(String search) {
+        return Observable.just(getMockedBookSearchResult());
+    }
+
+    private BookSearchResult getMockedBookSearchResult() {
+        BookSearchResult bookSearchResult = new BookSearchResult();
+//        bookSearchResult.setBooks(myListOfBooks);
+        return bookSearchResult;
+    }
+}
+   #+END_EXAMPLE
+2. ViewModel 不需要知道 View 的存在(对比 Presenter).
+3. 可以包含多个 ViewModel.
 * View笔记
 View是Android 中的用户交互组件,一个 view 就代表屏幕上的一块区域, 你可以在这块区域上画图,
 点击, 移动等各种操作.
