@@ -27,6 +27,7 @@
      + [[file:reading/2013-books.org][2013年读过的实体书]]
      + [[file:reading/bookmarks.org][Favorite Links]]
      + [[file:reading/orgmode-manual.org][OrgMode 手册阅读笔记]]
+     + [[file:reading/programming-scala.org][programming-scala]]
      + [[file:reading/rx-note.org][RxJava 笔记]]
      + [[file:reading/sicp.org][SICP 阅读笔记]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
