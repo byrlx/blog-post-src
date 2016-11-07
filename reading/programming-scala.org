@@ -1,5 +1,52 @@
 * implicit
-1. 修饰函数参数时, 标志该参数不是在调用时必须提供的.\
-   如果没有提供, 会使用"范围"内的 该类型的默认值, 即用
-   *implicit* 定义的值.\
-   如果没有默认值, 会报编译错误.
+  1. 修饰函数参数时, 标志该参数不是在调用时必须提供的.\\
+     如果没有提供, 会使用"范围"内的 该类型的默认值, 即用
+     *implicit* 定义的值, 或者是 implicit 修饰的返回该类型结果的参数.\\
+     如果没有默认值, 会报编译错误.
+  2. 
+
+* 简写规则
+  1. 函数只有一行代码, 可以去掉大括号和返回类型. 编译器会自动推理.
+  2. 如果函数参数是一个函数, 参数函数也只有一个参数 并只使用一次, 那么可以将参数函数
+     的参数用 *_* 代替. 编译器会自动推理.
+     #+BEGIN_src scala
+     class Upper {
+       def upper(strings: String*): Seq[String] = {
+           strings.map((s: String) => s.toUpperCase())
+       }
+    }
+
+    class Upper {
+       def lower(strings:String*) = strings.map(_.toLowerCase())
+    }
+     #+END_src
+
+* case 关键字
+2. case 修饰类时, 构造函数参数可以直接访问, 但是不能修改其值.
+3. case 修饰的类会在编译时构造一个 companion object.
+4. 创建"companion object"对象时, 编译器会自动寻找 apply()方法, 参数与类相同.
+5. case 会创建很多默认的函数, 如 toString(), hash(), apply()...
+
+* 规则
+1. scala 中, 整个类定义的代码就是构造函数.
+2. 允许小范围 import
+
+* PartialFunction
+1. 接受任意类型参数, 返回 Unit.
+2. 代码只有 case 组成, 判断接受的参数类型
+3. unexpected 是默认值, 放到 case 的最后
+如下形式:
+#+BEGIN_src scala
+      def receive = {
+        case s: Shape =>
+          s.draw(str => println(s"draw $str"))
+          sender ! Response(s" $s drawn")
+        case Exit =>
+          println("exiting...")
+          sender ! Finished
+        case unexpected =>
+          val response = Response("unkonw")
+          println(s"response: $response")
+          sender ! response
+      }
+#+END_src
