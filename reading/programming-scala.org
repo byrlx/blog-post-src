@@ -21,15 +21,19 @@
     }
      #+END_src
 
+   3. 如果函数只有一看参数, 可以这样写 obj fun param. 这种形式等于 obj.fun(param)
+
 * case 关键字
-2. case 修饰类时, 构造函数参数可以直接访问, 但是不能修改其值.
-3. case 修饰的类会在编译时构造一个 companion object.
-4. 创建"companion object"对象时, 编译器会自动寻找 apply()方法, 参数与类相同.
-5. case 会创建很多默认的函数, 如 toString(), hash(), apply()...
+1. case 修饰类时, 构造函数参数可以直接访问, 但是不能修改其值.
+2. case 修饰的类会在编译时构造一个 companion object.
+3. 创建"companion object"对象时, 编译器会自动寻找 apply()方法, 参数与类相同.
+4. case 会创建很多默认的函数, 如 toString(), hash(), apply()...
+5. copy()函数可以基于一个实例创建另一个实例
 
 * 规则
 1. scala 中, 整个类定义的代码就是构造函数.
 2. 允许小范围 import
+3. val 修饰的变量是 immutable 的
 
 * PartialFunction
 1. 接受任意类型参数, 返回 Unit.
@@ -50,3 +54,93 @@
           sender ! response
       }
 #+END_src
+4. 使用 isDefinedAt 判断是否能 match
+5. 通过 orElse 把多个 PartialFunction 连接起来. 然后判断的时候
+   会依次做 match
+#+BEGIN_src scala
+       val pf1: PartialFunction[Any, String] = {
+         case s: String => "YES"
+       }
+       val pf2: PartialFunction[Any, String] = {
+         case d: Double => "YES"
+       }
+
+       val pf = pf1 orElse pf2
+#+END_src
+
+* 数据结构
+** Range
++. 1 to 10  //(1,...,10)
++. 1 until 10 //(1,...,9)
++. 1 to 10 by 3 //(1, 4, 7 ,10)
+
+* 函数
+1. 函数参数可以写到多个(一般不超过俩)括号里, 一般第二个括号放
+    函数参数比较多, 也可以用 "大括号" 代替括号.
+    #+BEGIN_SRC scala
+    def draw(offset: Point = Point(0.0, 0.0))(f: String => Unit): Unit =    f(s"draw(offset = $offset), ${this.toString}")
+
+    s.draw(Point(1.0, 2.0)){
+        str => println(s"ShapesDrawingActor: $str")
+    }
+    #+END_SRC
+
+* Option, Some, None
+1. Some, 表示有一个数据. None 表示没有数据. 都是 Option 的子类
+2. getOrElse 来获取 Option 中的数据.
+3. map的 getkey 操作返回的都是 Option, 可能为 Some, 也可能为 None
+
+* sealed
+1. 该关键字修饰的类, 其子类必须跟该类位于同一个源文件.
+
+* _
+1. import 中表示引用所有或者所有的 static
+2. import 中不引入某类型
+    #+BEGIN_SRC scala
+        import java.math.BigInteger.{
+          ONE => _,
+          TEN,
+          ZERO => JAVAZERO }
+    #+END_SRC
+
+* :
+1. A f: B == B.f(A)
+2. 相当于 Lisp 中的 cons, (相当于修饰符左边是 car, 右边是 cdr)
+    A::B == B.::(A)
+
+* if
+1. if 及其他的条件判断语句都有返回值.
+
+* for
+1. for (value <- values) action
+2. for (value <- values \\
+            filter \\
+            filter \\
+            ....) action \\
+   也可以在括号中定义变量并使用
+3. 过滤到集合中, yield
+   #+BEGIN_SRC scala
+     var result = for (value <- values filter) yield value
+   #+END_SRC
+
+* <:
+1. A <: B 表示 A 是 B 的 subclass.
+    例如 R <: {def close:Unit} 表示 R 是后面的带函数的匿名类的子类.
+2.  实例解析:
+    #+BEGIN_SRC scala
+      def apply[R <: { def close():Unit }, T](resource: => R)(f: R => T)
+      //等于
+      def apply[  R <: { def close():Unit },
+                  T ]
+                  (resource: => R)
+                  (f: R => T) = {...}
+    #+END_SRC
+    + R 表示要处理的类型
+    + T 表示返回的类型
+    + 第一个括号是生成 R 的参数函数
+    + 第二个括号是处理 R 并返回结果的参数函数.
+3. <:<(A, B) == A<:<B
+4. Q[A <: B] means that class Q can take any class A that is a subclass of B.
+   Q[+B] means that Q can take any class, but if A is a subclass of B, then Q[A] is considered to be a subclass of Q[B].
+   Q[+A <: B] means that class Q can only take subclasses of B as well as propagating the subclass relationship.
+* pattern matching
