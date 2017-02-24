@@ -1,0 +1,5 @@
+
+1.  查找并删除
+   #+BEGIN_EXAMPLE
+   find . -name "*.orig"  -exec rm -r "{}" \; 
+   #+END_EXAMPLE
