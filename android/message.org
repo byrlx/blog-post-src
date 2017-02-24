@@ -4,27 +4,89 @@
 #+DATE: <2016-06-11 Thu 23:25>
 
 #+TITLE: Android 消息机制源码笔记
-本笔记是Android中对Handler相关原理的代码阅读笔记.
+
+/Update: 2017.02.24, reread the source code of android-24/
+
+本笔记是Android中对消息系统代码阅读笔记, 包括三个类:
+Message, MessageQueue, Messenger
 
 * Message
   该类是描述了用于作为信息载体的"消息"的实现, 几个重要的成员变量.
-|           | 描述                                                                                                                      |
-|-----------+---------------------------------------------------------------------------------------------------------------------------|
-| what      | 该变量可以用来唯一的标志条消息, 因为每个handler都有自己的命名空间, 所以发给不同handler的message, 即使what相同, 也不会冲突 |
-| arg1/arg2 | 如果传送的消息只是简单的int类型, 可以直接使用这俩                                                                         |
-| when      | 消息的激活时间                                                                                                            |
-| data      | Bundle类型, 发送的数据, 通过setData()设置                                                                                 |
-| target    | 目标Handler                                                                                                               |
-| callback  |                                                                                                                           |
-** 消息池
-Message类本身也定义了一个消息池, 通过链表方式存储, 变量 sPoolSize 定义了消息池的大小,
-消息池的操作都是线程安全的. 
-** 获取消息
-obtain(...)函数族用于获取消息, 这些obtain()函数通过不同的接受不同的
-参数来初始化获取到的消息. 核心函数是obtain(). 通过同步方式
-从消息池中取一个消息. 也可以调用obtain(Handler h)来设置获取到的消息的
-Handler.
-#+BEGIN_SRC java
+Message通常都是与Handler结合在一起使用.
+** 成员变量 
+#+BEGIN_EXAMPLE
+public final class Message implements Parcelable {
+    public int what;
+    public int arg1; 
+    public int arg2;
+    public Object obj;
+    public Messenger replyTo;
+    public int sendingUid = -1;
+    /*package*/ static final int FLAG_IN_USE = 1 << 0;
+    /*package*/ static final int FLAG_ASYNCHRONOUS = 1 << 1;
+    /*package*/ static final int FLAGS_TO_CLEAR_ON_COPY_FROM = FLAG_IN_USE;
+    /*package*/ int flags;
+    /*package*/ long when;
+    /*package*/ Bundle data;
+    /*package*/ Handler target;
+    /*package*/ Runnable callback;
+    /*package*/ Message next;
+    private static final Object sPoolSync = new Object();
+    private static Message sPool;
+    private static int sPoolSize = 0;
+    private static final int MAX_POOL_SIZE = 50;
+    private static boolean gCheckRecycle = true;
+    ...
+}
+#+END_EXAMPLE
+
+1. what.      
+   该变量是消息的标志符,用来标识一条消息. 对于同一个Handler来说, 该条消息的唯一的. 
+   不同Handler来说, what相同不会互相影响, 因为每个handler都有自己的命名空间, 
+   所以发给不同handler的message, 即使what相同, 也不会冲突.
+2. arg1/arg2. 
+   Message支持多重方式存储数据. 
+   如果传送的数据很简单,可以用int来表示的话, 可以使用这两个字段.                                                                         |
+
+3. obj.
+   传送的消息是一个类的实例, 可以用这个表示. 需要说明的是, 如果该
+   Message需要跨进程传输的话(通过Binder), 该类必须支持Parcelable.
+4. replyTo.
+   如果需要"回复"这条消息, 可以使用该变量. 
+   Message一般和Handler配合使用.
+5. sendingUid.
+   发送这条消息的uid. 跨进程使用消息一般会用到.
+6. flags.
+   目前有三个标记: FLAG_IN_USE, FLAG_ASYNCHRONOUS, FLAGS_TO_CLEAR_ON_COPY_FROM.
+7. when. 消息的激活时间                                                                                                            |
+8. data. 
+   Bundle类型, 发送的数据, 通过setData()设置.
+   如果arg1/arg2/obj都不能满足传输数据的需求,可以使用该字段.
+9. target. 目标Handler                                                                                                               |
+10. callback. 
+    目前来说, 当该字段被设置时,标志这条消息是一个Runnable消息, 
+    消息被处理时就会执行这个callback所代笔的Runnable.
+11. next.
+    可以使用该字段构造Message链表.
+12. sPool.
+    全局消息池. 用于存放/回收Message.
+13. sPoolSync.
+    消息池的锁.
+14. sPoolSize. 
+    消息池大小.
+** 构造消息
+两种方法:
+1. 通过obtain(...)函数族用于获取消息, 这些obtain()函数通过不同的接受不同的
+   参数来初始化获取到的消息. 主要流程就是先通过obtain()获取一个消息,
+   然后在把参数赋值给消息字段. 
+    #+BEGIN_EXAMPLE 
+    public static Message obtain(Message orig) 
+    public static Message obtain(Handler h) 
+    public static Message obtain(Handler h, Runnable callback) 
+    public static Message obtain(Handler h, int what) 
+    public static Message obtain(Handler h, int what, Object obj) 
+    public static Message obtain(Handler h, int what, int arg1, int arg2) 
+    public static Message obtain(Handler h, int what, int arg1, int arg2, Object obj) 
     public static Message obtain() {
         synchronized (sPoolSync) {
             if (sPool != null) {
@@ -45,7 +107,8 @@ Handler.
 
         return m;
     }
-#+END_SRC
+#+END_EXAMPLE
+2. 通过构造函数(不推荐).
 ** 发送消息
 调用sendToTarget()函数调用Message的target变量(一个Handler)的sendMessage()函数.
 如果没有设置target则会报错. sendMessage()函数的实现在Handler一节讲述.
@@ -54,12 +117,32 @@ Handler.
         target.sendMessage(this);
     }
 #+END_SRC
+** 异步消息
+如果flags的FLAG_ASYNCHRONOUS被设置, 表明该消息是异步消息.
+异步消息的处理不会收到一些同步barrier的限制.参见[[Looper]].
 * MessageQueue
 该类基于前面的[[Message]]类实现了一个消息队列, 用于"顺序"处理
 消息, 消息按照其产生时间先后排序.
-** 插入消息: enqueueMessage(msg, when)
- 该函数用于插入一个消息, 由于消息队列按照消息时间when升序排序,所以
- 新插入消息会遍历列表, 并插入到相应位置. \\
+一个MessageQueue通常与一个[[Looper]]一起使用
+(一个线程只能有一个Looper).
+
+** 插入消息
+调用enqueueMessage(msg, when)函数, 该函数会锁住整个对象. 
+该函数的流程:
+1. 判断当前MessageQueue是否正在退出(mQuitting被设置). 
+   如果是则报错, 回收消息并返回.
+
+2. 设置消息的FLAG_IN_USE标记位. 然后执行3或4.
+
+3. 如果当前队列为空, 或者消息的when为0, 或者消息的触发时间
+   比当前队列的第一个消息还早. 则将消息设置为消息头.
+
+4. 如果3不成立, 则将新消息与队列进行比较, 将其插入到合适位置.
+   这里有一个其他设置: 如果当前队列被阻塞, 且第一个元素是barrier
+   (barrier是target为null的消息). 那么如果新插入的消息是第一个async消息,
+   就会唤醒阻塞队列(如果不是第一个,就不唤醒).
+
+5. 如果需要唤醒, 则唤醒.
  下面是该函数代码:
  #+BEGIN_SRC java
      boolean enqueueMessage(Message msg, long when) {
@@ -118,26 +201,30 @@ Handler.
 
  #+END_SRC
  函数的流程如下:
- 1. 首先判断该msg是否有target或正在被使用.
- 2. 获取消息队列的锁, 进入同步操作.
-    1. 如果队列正在退出, 回收新消息, 并返回.
-    2. 否则, 插入到相应位置
-    3. 判断是否需要唤醒, 如果是则唤醒.
+   1. 首先判断该msg是否有target或正在被使用.
+   2. 获取消息队列的锁, 进入同步操作.
+      1. 如果队列正在退出, 回收新消息, 并返回.
+      2. 否则, 插入到相应位置
+      3. 判断是否需要唤醒, 如果是则唤醒.
+** 消息队列是否空闲
+空闲条件: 队列为空或第一个消息的触发时间还没到.
+需要获取对象锁.
 ** 从队列获取消息
-通过函数next()从队列中获取一个消息. 下面是该函数代码, 
-代码流程:
-1. 调用JNI函数nativePollOnce(ptr, timeout), 该函数的第二个参数表示要
-   阻塞的时长, 如果为0则立即返回, 如果为-1则一直阻塞.
-2. 试图获取一个消息.
-   1. 如果没有, 则将上一步的timeout变量nextPollTimeoutMillis设为-1.
-   2. 否则(即有消息),
-      1. 如果消息时间大于当前时间(即消息的执行时间还未到来), 则设置
-	 nextPollTimeoutMillis的值为差值.
-      2. 否则, 返回消息.
-3. 获取消息失败, 继续走循环后面的内容.
-   1. 如果队列正在退出, 调用dispose()函数销毁native的消息队列.并返回null.
-      (在Looper中, 这一步会导致looper退出).
-
+通过函数next()从队列中获取一个消息. 下面是该函数流程, 
+1. 判断该队列是否已经退出(mPtr=0), 是则直接返回Null;
+2. 进入一个无限for()循环获取消息.
+   1. 调用JNI函数nativePollOnce(ptr, timeout), 该函数的第二个参数表示要
+      阻塞的时长, 如果为0则立即返回, 如果为-1则一直阻塞.
+   2. 获取全局锁.
+      1. 判断第一个消息是否为barrier. 如果是,获取第一个async消息.
+      2. 如果有可用消息(第一个不为barrier或是async消息), 判断消息触发时间, 
+	 如果未到, 则设置睡眠时间为剩余时间.
+      3. 否则, 说明消息可用, 将消息从队列移除, 设置FLAG_IN_USE, 返回消息.
+      4. 如果2,3不成立, 没获取到任何消息, 则设置睡眠时间为-1, 那么在下一次循环中
+	 会进入一直睡眠状态.
+      5. MessageQueue还支持添加IdleHandler接口, 当当前线程没有消息
+	 可处理即将进入等待之前, 可以执行这些handler的相关函数.
+	 
 #+BEGIN_SRC java
    Message next() {
         // Return here if the message loop has already quit and been disposed.
@@ -227,8 +314,10 @@ PS: Looper还有一个静态变量sMainLooper, 这个变量是UI线程
 的Looper引用, 在应用启动时被初始化.
 ** loop()函数处理消息
 函数的处理在loop()函数中, 该函数建立了一个"无限循环", 
-每次循环都从消息队列中获取一个消息, 若无消息则可能
-会阻塞或者退出循环(主要与[[MessageQueue]]有关. 下面是该函数主要代码:
+每次循环都从消息队列中获取一个消息, 这会调用[[MessageQueue]]的next()
+函数, 
+1. 如果没有可用消息, 该函数会阻塞.
+2. 如果[[MessageQueue]]正在退出, 该函数返回null.
 #+BEGIN_SRC java
     public static void loop() {
         final Looper me = myLooper();
@@ -261,6 +350,23 @@ PS: Looper还有一个静态变量sMainLooper, 这个变量是UI线程
    有可能是别的线程调用了quit()函数.
 3. 调用msg的target变量(即Handler)的dispatchMessage()函数.
 4. 调用[[Message]]的recycleUnchecked()函数回收消息.
+* Messenger
+Messenger可以用来传递消息, 它里面封装了一个Handler, 其他的程序可以
+通过这个Messenger给这个Handler发送消息. 因为它实现了Parcelable,所以
+可以依附在Message上在进程间进行传递.
+下面是Messenger的主要api.
+1. 构造函数.
+   #+BEGIN_EXAMPLE
+    public Messenger(Handler target) {
+        mTarget = target.getIMessenger();
+    }   
+   #+END_EXAMPLE
+2. 发送消息
+   #+BEGIN_EXAMPLE
+    public void send(Message message) throws RemoteException {
+        mTarget.send(message);
+    }
+   #+END_EXAMPLE
 * Handler
 在一般的APP开发中, 都是通过handler进行消息的发送或
 处理. 这里是几个主要功能的代码笔记.
