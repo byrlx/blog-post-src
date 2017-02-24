@@ -186,8 +186,8 @@ right. 那这五者之间的关系为:
 1. 把节点的左子节点放到节点的当前位置, 并将其颜色变成该节点的颜色.
 2. 把节点变成其左子节点的右子节点, 并将颜色设为红色.
    
-* 红黑树Java实现
-通过前面[[红黑树]]一节的描述, 应该不难实现其代码. 这里使用了Java代码.
+* +红黑树Java实现+
+  通过前面[[红黑树]]一节的描述, 应该不难实现其代码. 这里使用了Java代码.
 
 下面代码是节点的实现, 每个节点被创建是都被设成了红色, 因为[[红黑树的规则维持]]
 需要上溯, 所以定义了一个变量parent指向其父节点.
@@ -399,4 +399,106 @@ public class RbTree {
         }
     }
 #+END_SRC
-* 红黑树Elisp实现(待完成)
+* <<算法>>一书的红黑树实现
+[[+红黑树Java实现+][上面代码]]是我理解红黑树之后写出来的代码, 后来在<<算法>>这本书中看到的作者
+写的代码, 那简直是一个简洁明了, 这才是对递归的真正理解.
+#+BEGIN_EXAMPLE
+public class RbTree2<KEY extends Comparable<KEY>, VALUE> {
+    private Node root;
+    private static final boolean RED = true;
+    private static final boolean BLACK = false;
+
+    class Node {
+        KEY key;
+        VALUE value;
+        int N; //number of nodes in this tree
+        Node left, right;
+        boolean color;
+
+        Node(KEY key, VALUE value, int n, boolean color) {
+            this.key = key;
+            this.value = value;
+            this.N = n;
+            this.color = color;
+        }
+    }
+
+    private boolean isRed(Node node) {
+        return node != null && node.color == RED;
+    }
+
+    private int size(Node node) {
+        return node == null ? 0 : node.N;
+    }
+
+    Node rotateLeft(Node h) {
+        Node right = h.right;
+        h.right = right.left;
+        right.left = h;
+        right.color = h.color;
+        h.color = RED;
+        right.N = h.N;
+        h.N = 1 + size(h.left) + size(h.right);
+
+        return right;
+    }
+
+    Node rotateRight(Node h) {
+        Node x = h.left;
+        h.left = x.right;
+        x.right = h;
+        x.color = h.color;
+        h.color = RED;
+
+        x.N = h.N;
+        h.N = 1 + size(h.left) + size(h.right);
+
+        return x;
+    }
+
+    private void flipColors(Node h) {
+        h.color = RED;
+        h.left.color = BLACK;
+        h.right.color = BLACK;
+    }
+
+    public void put(KEY key, VALUE value) {
+        root = put(root, key, value);
+    }
+
+    private Node put(Node node, KEY key, VALUE value) {
+        if (node == null)  //1
+            return new Node(key, value, 1, RED); 
+
+        int cmp = key.compareTo(node.key);
+        if (cmp < 0) node.left = put(node.left, key, value);  
+        else if (cmp > 0) node.right = put(node.right, key, value);
+        else node.value = value; //2
+
+        if (isRed(node.right) && !isRed(node.left)) node = rotateLeft(node);//3
+        if (isRed(node.left) && isRed(node.left.left)) node = rotateRight(node);//4
+        if (isRed(node.left) && isRed(node.right)) flipColors(node);//5
+
+        node.N = size(node.left) + size(node.right) + 1;
+
+        return node;
+    }
+}
+#+END_EXAMPLE
+
+下面是对最后的put()函数的解析:
+1. 首先去遍历树, 找到要插入的位置, 所以1或2的位置是递归停止的条件.
+2. 正常情况下, 如果是更新一个现有节点(key相等), 应该是不会破坏平衡性的.
+3. 如果是插入的一个新节点, 那么在插入之后, 就要去判断最底层的树 -一般是当前
+   节点及其左右子节点- 的平衡性. 如果平衡性被破坏, 那么就去修正, 修正完了之后,
+   返回修正后的当前节点(有可能被更新). 这样递归就回到了上一层, 
+   那么继续在上一层进行修正, 直到返回到根节点那层, 然后只是简单的把根节点置黑就可以了.
+   对子节点的检查顺序如下:
+   1. 首先检查是否只有右节点为红, 如果是那么左旋转. (3位置的代码).
+      这个检查包含了两种情况: 当前节点为黑或当前节点为红, 无论怎么样, 都会被左旋转.
+   2. 检查是否左节点和左节点的左节点都为红.
+      这里的情况可能是新节点本身插入导致. 也可能是上一步的旋转导致.
+   3. 检查左右节点是否都为红. 同样, 这样可能是插入新节点导致, 也可能是旋转导致. 
+      所以, 3/4/5的代码是有顺序的, 上面的操作可能会变成下面的状态, 但倒过来就不成立.
+      
+      
