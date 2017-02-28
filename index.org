@@ -5,7 +5,7 @@
      + [[file:android/log-system.org][Android Log 系统]]
      + [[file:android/android-notes.org][Android 大笔记]]
      + [[file:android/message.org][Android 消息机制源码笔记]]
-     + [[file:android/async-task.org][AsyncTask 源码阅读]]
+     + [[file:android/async-task.org][AsyncTask笔记]]
      + [[file:android/android-annotation.org][【翻译】 10步教你在Android中写"注解"处理程序]]
      + [[file:android/open-libraries.org][【翻译】当我开始Android开发时，希望能早点认识的一些开源库]]
    + emacs

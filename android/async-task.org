@@ -3,51 +3,66 @@
 #+EMAIL: xuzhengchaojob@gmail.com
 #+DATE: <2015-02-20 Thu 23:25>
 
-#+TITLE: AsyncTask 源码阅读
+#+TITLE: AsyncTask笔记
+
+/update: 2017-02-27, comprehend more/
+
 AsyncTask是Android提供的一个封装类, 可以实现后台线程与UI线程的交互. \\
-本文是该类的源码的阅读笔记, 至于AsyncTask的用法, 可以去查阅相关的资料.
 
-AsyncTask的源码实现主要是封装了 *Handler* 和 *Thread* 两个功能. 
-下面是详细的代码实现. 该类是一个抽象类.
+* 注释文档中提到的注意点
+1. 适用于执行短时间的任务(例如几秒钟), 长时间的任务使用Java的Executor框架.
+   注: 如果时间过长,可能导致内存泄漏, 考虑一种场景, 旋转
+   导致Activity被重建, 但之前的activity仍然有AsyncTask在
+   执行, 这会导致onPostExecute()函数更新UI时报错, 因为要
+   更新的view可能已经不在window中了.
+2. 必须继承实现, 至少要重写 doInBackground()函数.
+3. 如果不实用其提供的泛型参数, 将其设置为Void.
+4. 使用cancel(boolean)函数来随时终止一个Task.
+   如果调用了这个函数, 那么onCancel()会被调用, 而不是
+   onPostExecute(). 
+   所以要尽量在doInBackground()里去调用isCancelled()
+   来判断是否为终止.
+5. AsyncTask必须在UI线程中调用, 不能在其他线程中调用.
+   即必须在UI线程中创建对象并调用execute()函数.
+6. 不要手动去调用那几个函数.
+7. 一个task只能被执行一次.
+8. "隐式"同步规则:
+   - 在构造函数或onPreExecute()中创建变量, 并在
+     doInBackground()里访问不需要同步.
+   - 在doInBackground()里设置变量, 在onProgressUpdate()和
+     onPostExecute()里使用不需要同步.
+9. 默认情况下, 所有的AsyncTask都是在一个线程里执行.
+   如果想要并行执行AsyncTask, 可以调用 executeOnExecutor()函数.
+   
+* 静态变量
+1. 核心线程数目: 最小2, 最大4, 如果有4个CPU的话, 是3, 这样是
+   为了保证后台线程不会占用所有CPU.
+2. 最大线程数目: CPU * 2 + 1
+3. 线程存活时间: 30s
+4. ThreadFactory()
+5. 工作队列池: 使用了LinkedBlockingQueue(128);
+6. THREAD_POOL_EXECUTOR: 基于上面的参与生成了一个自定义的ExecutorService.
+   #+BEGIN_EXAMPLE
+    public static final Executor THREAD_POOL_EXECUTOR;
 
-* thread相关
-AsyncTask的源码中定义了如下与"thread"相关的变量或函数.
-** sThreadFactory
-该变量是一个实现了ThreadFacotry类的匿名类变量, 主要实现了
-newThread()函数, 该函数定义了创建线程的方法. 创建的线程
-接受一个Runnable对象. 这个线程就是doInBackground()函数
-所执行的线程. 
-#+BEGIN_SRC java
-    private static final ThreadFactory sThreadFactory = new ThreadFactory() {
-        private final AtomicInteger mCount = new AtomicInteger(1);
+    static {
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
+                CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
+                sPoolWorkQueue, sThreadFactory);
+        threadPoolExecutor.allowCoreThreadTimeOut(true);
+        THREAD_POOL_EXECUTOR = threadPoolExecutor;
+    }
+   #+END_EXAMPLE
+7. 顺序executor, SERIAL_EXECUTOR. 
+   当使用这个Executor来执行任务的时候, 
+   - 创建一个新任务来包装这个传入的任务, 这个新任务在执行这个被包装任务
+     的同时, 会在finally去执行 scheduleNext()函数. 即去执行下一个任务.
+     ArrayDeque里.
+   - execute()和scheduleNext()是同步函数, 所以可以保证一次只处理
+   #+BEGIN_EXAMPLE
+   public static final Executor SERIAL_EXECUTOR = new SerialExecutor();
 
-        public Thread newThread(Runnable r) {
-            return new Thread(r, "AsyncTask #" + mCount.getAndIncrement());
-        }
-    };
-#+END_SRC
-** sPoolWorkQueue
-   创建了一个"阻塞队列". 用于存放Runnable对象.
-** THREAD_POOL_EXECUTOR
-该变量是一个ThreadPoolExecutor对象, 基于上面创建的两个
-变量 "sThreadFacotry" 和 "sPoolWorkQueue" 创建, 意思即
-这个executor执行的thread会从sThreadFactory中创建, 并且
-提交给这个executor的runnable对象在执行前, 都会存放到
-sPoolWorkQueue中. 
-#+BEGIN_SRC java
-   public static final Executor THREAD_POOL_EXECUTOR
-            = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
-                    TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
-#+END_SRC
-** SERIAL_EXECUTOR
-该变量是一个SerialExecutor对象, 后者是一个自定义的
-Executor子类, 该类实现了"顺序"执行任务的功能, 即同一时刻
-只能提交并执行一个runnable. 该对象是AsyncTask默认的执行
-executor. 
-
-该类通过[[THREAD_POOL_EXECUTOR]] 来执行实际的"线程"功能.见代码:
-#+BEGIN_SRC java
-   private static class SerialExecutor implements Executor {
+    private static class SerialExecutor implements Executor {
         final ArrayDeque<Runnable> mTasks = new ArrayDeque<Runnable>();
         Runnable mActive;
 
@@ -72,45 +87,89 @@ executor.
             }
         }
     }
-#+END_SRC
-** sWorker和mFuture
-这两个变量是在AsyncTask的构造函数中创建的. 
+   #+END_EXAMPLE
+* 构造函数
+构造函数里初始化了两个final变量, mWorker/mFuture, 
+1. mWorker是一个WorkerRunnable()的对象, 其继承子Callable.
+   在call()函数里执行一些操作.
+   - 将mTaskInvoked设置为true. 标志已经启动.
+   - 将thread的权限设置为background
+   - 执行doInBackground()函数.
+   - 返回postResult()函数结果
+   #+BEGIN_EXAMPLE
+           mWorker = new WorkerRunnable<Params, Result>() {
+            public Result call() throws Exception {
+                mTaskInvoked.set(true);
 
-mWorker是一个Callable类, 它的call()函数主要就是执行 *doInBackground()*
-这个函数, 然后将结果通过handler传递给UI线程.
-
-mFuture是一个FutureTask变量.它封装了mWorker, 这样可以支持任务的取消.
-* handler相关
-AsyncTask内部定义了一个私有类 InternalHandler, 该类使用了
-UI线程的looper. 所以该Handler对Message的处理都是在UI线程中进行的.
-#+BEGIN_SRC java
-    private static class InternalHandler extends Handler {
-        public InternalHandler() {
-            super(Looper.getMainLooper());
-        }
-
-        @SuppressWarnings({"unchecked", "RawUseOfParameterizedType"})
-        @Override
-        public void handleMessage(Message msg) {
-            AsyncTaskResult<?> result = (AsyncTaskResult<?>) msg.obj;
-            switch (msg.what) {
-                case MESSAGE_POST_RESULT:
-                    // There is only one result
-                    result.mTask.finish(result.mData[0]);
-                    break;
-                case MESSAGE_POST_PROGRESS:
-                    result.mTask.onProgressUpdate(result.mData);
-                    break;
+                Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                //noinspection unchecked
+                Result result = doInBackground(mParams);
+                Binder.flushPendingCommands();
+                return postResult(result);
             }
+        };
+   #+END_EXAMPLE
+
+   postResult()函数通过内部的Handler来发送消息(即结果), 
+   该handler绑定了MainLooper, 所以会在ui线程里处理.
+   #+BEGIN_EXAMPLE
+    private Result postResult(Result result) {
+        @SuppressWarnings("unchecked")
+        Message message = getHandler().obtainMessage(MESSAGE_POST_RESULT,
+                new AsyncTaskResult<Result>(this, result));
+        message.sendToTarget();
+        return result;
+    }
+   #+END_EXAMPLE
+2. mFuture是一个FutureTask的实例. 并重写了done(). 在里面
+   执行一些操作.
+   #+BEGIN_EXAMPLE
+       mFuture = new FutureTask<Result>(mWorker) {
+            @Override
+            protected void done() {
+                try {
+                    postResultIfNotInvoked(get());
+                } catch (InterruptedException e) {
+                    android.util.Log.w(LOG_TAG, e);
+                } catch (ExecutionException e) {
+                    throw new RuntimeException("An error occurred while executing doInBackground()",
+                            e.getCause());
+                } catch (CancellationException e) {
+                    postResultIfNotInvoked(null);
+                }
+            }
+        };
+   #+END_EXAMPLE
+
+   postResultIfNotInvoked()函数会判断wasTaskInvoked, 如果值为false,
+   false, 就会调用postResult()传递"未完成的结果(可能是null)".
+   #+BEGIN_EXAMPLE
+    private void postResultIfNotInvoked(Result result) {
+        final boolean wasTaskInvoked = mTaskInvoked.get();
+        if (!wasTaskInvoked) {
+            postResult(result);
         }
     }
-#+END_SRC
-* 流程
-** execute()函数过程
-使用AsyncTask时, 一般通过调用 execute(var) 函数执行任务, 该函数
-调用了executeOnExecutor()函数, 默认使用 sDefaultEExecutor即
-SERIAL_EXECUTOR来执行任务. 下面是后者的实现:
-#+BEGIN_SRC java
+   #+END_EXAMPLE
+* 执行函数
+1. 任务的执行调用execute()函数, 在里面调用了 executeOnExecutor()函数.
+   该函数是final类型, 所以不可覆盖.
+   #+BEGIN_EXAMPLE
+    public final AsyncTask<Params, Progress, Result> execute(Params... params) {
+        return executeOnExecutor(sDefaultExecutor, params);
+    }
+   #+END_EXAMPLE
+2. executeOnExecutor()函数做真正的执行动作. 该函数接受两个参数, 
+   - 将该task的status设置为RUNNING.
+   - 调用onPreExecute()函数.该函数必须执行在UI线程.
+   - 将worker的参数设置为传入的参数
+   - 使用传入的executor执行FutureTask.
+     + 因为默认调用execute()传入的executor是SERIAL_EXECUTOR.
+       这个变量是类的公共变量, 所以所有的task实例都是顺序在这个
+       executor里执行.
+     + 如果直接调用这个函数, 可以传入该类里自定义的
+       THREAD_POOL_EXECUTOR, 这样就可以实现多个task同时执行.
+   #+BEGIN_EXAMPLE
     @MainThread
     public final AsyncTask<Params, Progress, Result> executeOnExecutor(Executor exec,
             Params... params) {
@@ -134,46 +193,66 @@ SERIAL_EXECUTOR来执行任务. 下面是后者的实现:
         exec.execute(mFuture);
 
         return this;
-    }
-#+END_SRC 
-
-该函数首先判断任务状态. 然后调用 onPreExecute(), 这是在UI线程调用的.
-然后是调用exec.execute(mFuture). 从前面的内容可以知道, 这行代码就会
-在线程中调用doInBackground()函数. 等doInBackground执行完成后, 会调用postResult()
-提交结果. postResult()通过handler将结果传递给UI线程执行.  
-
-#+BEGIN_SRC java
-    private Result postResult(Result result) {
-        @SuppressWarnings("unchecked")
-        Message message = getHandler().obtainMessage(MESSAGE_POST_RESULT,
-                new AsyncTaskResult<Result>(this, result));
-        message.sendToTarget();
-        return result;
-    }
-#+END_SRC
-
-前面handler的内容可知, handler最后会调用到finish()函数, 该函数会调用到
-onPostExecute().
-#+BEGIN_SRC java
-    private void finish(Result result) {
-        if (isCancelled()) {
-            onCancelled(result);
-        } else {
-            onPostExecute(result);
+    }   
+   #+END_EXAMPLE
+* 函数调用位置
+通过前面三部分可以梳理出AsyncTask的各个函数的调用位置:
+1. onPreExecute()在executeOnExecutor()中执行.
+2. doInBackground()在mWorker(一个Runnalb中)执行, 当这个runnable
+   被提交给Executor,就会在线程中执行. 
+3. onProgressUpdate(). 如果要告知用户进度, 需要显示在doInBackground()
+   中调用publishProgress()函数. 该函数会首先检查任务有没有被cancel.
+   如果没有的话,  会向内部的handler发送MESSAGE_POST_PROGRESS的消息.
+4. onPostExecute()/onCancelled(), 会给handler发送 MESSAGE_POST_RESULT消息, 并把结果
+   传递给handler. 然后在里面调用AsyncTask的finish()函数.
+* 内部Handler
+1. 内部Handler创建的时候传入了MainLooper()作为参数, 所以可以
+   保证onPostExecute()/onProgressUpdate()函数执行在UI线程上.
+2. 自定义了两个消息:
+   - MESSAGE_POST_RESULT, 用于处理结果.
+     该消息会把结果放入Message的obj中传递进来, 
+     所以可以处理该doInBG的执行结果.
+     finish()函数会判断任务是否被cancel,如果没有的话, 执行
+     onPostExecute(), 否则执行onCancelled().
+     
+   - MESSAGE_POST_PROGRESS, 用于更新进度.
+     直接调用onProgressUpdate()函数.
+   #+BEGIN_EXAMPLE
+    private static class InternalHandler extends Handler {
+        public InternalHandler() {
+            super(Looper.getMainLooper());
         }
-        mStatus = Status.FINISHED;
-    }
-#+END_SRC
-** 发布进度
-可以通过publishProgress函数发布当前进度.该函数会通过handler向UI线程推送消息.
-#+BEGIN_SRC java
-    @WorkerThread
-    protected final void publishProgress(Progress... values) {
-        if (!isCancelled()) {
-            getHandler().obtainMessage(MESSAGE_POST_PROGRESS,
-                    new AsyncTaskResult<Progress>(this, values)).sendToTarget();
-        }
-    }
-#+END_SRC
 
-该消息的处理会调用到onProgressUpdate()函数.
+        @SuppressWarnings({"unchecked", "RawUseOfParameterizedType"})
+        @Override
+        public void handleMessage(Message msg) {
+            AsyncTaskResult<?> result = (AsyncTaskResult<?>) msg.obj;
+            switch (msg.what) {
+                case MESSAGE_POST_RESULT:
+                    // There is only one result
+                    result.mTask.finish(result.mData[0]);
+                    break;
+                case MESSAGE_POST_PROGRESS:
+                    result.mTask.onProgressUpdate(result.mData);
+                    break;
+            }
+        }
+    }   
+   #+END_EXAMPLE
+* 取消任务
+1. 调用AsyncTask的cancel()接口. 该函数会将标志符 mCancelled 
+   设置为true. 并尝试调用mFuture的cancel()函数来停止任务执行.
+   该接口可以保证onPostExecute()永远不会被调用到.
+* 同步
+1. SerialExecutor的两个函数进行同步.
+   可以保证任务的添加顺序, 以及顺序执行所有AsyncTask.
+2. 静态函数getHandler()同步, 保证内部handler只被初始化一次.
+3. AsyncTask的mCancelled和mTaskInvoked
+   使用的AtomicBoolean. 保证状态的更新是
+   线程安全的.
+4. AsyncTask可以在其他线程里进行创建. 
+* 实验
+在android-24的版本上, 
+AsyncTask可以其他线程中创建, onPreExecute()
+也会在该线程执行. 但是onPostExecute()跟onProgressUpdate()
+会在ui执行.
