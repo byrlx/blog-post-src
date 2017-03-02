@@ -1,0 +1,699 @@
+* 通过反射获取toolbar的title view :view:
+#+BEGIN_EXAMPLE
+  private TextView getActionBarTextView() {
+    TextView titleTextView = null;
+
+    try {
+        Field f = mToolBar.getClass().getDeclaredField("mTitleTextView");
+        f.setAccessible(true);
+        titleTextView = (TextView) f.get(mToolBar);
+    } catch (NoSuchFieldException e) {
+    } catch (IllegalAccessException e) {
+    }
+    return titleTextView;
+}
+#+END_EXAMPLE
+* AppBarLayout					  :coordinatorlayout:
+1. 该类的默认behavior是[[Behavior]], 是用标注修饰的.
+2. 定义了OnOffsetChangedListener接口. 可以将该view
+   offset的变化传递给子view.
+3. getTotalScrollRange()
+   获取appbar的scroll的范围, 因为appbar是linearlayout,
+   所以从上向下遍历, 直到遇到没有设置sroll flag的子view,
+   其range是所有该设置flag的子view的高度和, 如果碰到设置了
+   scroll flag的子view同时设置了SCROLL_FLAG_EXIT_UNTIL_COLLAPSED,
+   则值等于前面相加的和减去该子view的最小高度.
+4. 调用checkAppCompatTheme()检查有没有用AppCompat主题.
+5. 获取xml配置中的elevation属性
+6. 设置xml定义的drawable
+7. 如果xml中定义了expand属性(boolean值), 获取并调用expand()设置.
+8. ViewCompat的isLaidOut()函数返回true如果view至少经历过一次layout.
+9. recycle()函数会回收typedarray, 调用只有不能再使用typearray.
+10. 设置elevation 阴影.
+11. 调用ViewCompat的setOnApplyWindowIInsetsListener()函数设置
+    使用window insets的策略.
+    策略为: 设置变量mLastInsets的值为得到的insets.然后
+    遍历子view, 用该insets调用每个child的dispatchApplyWindowInsets函数.
+12. 在layout阶段会检查子view是否设置了interpolator.
+** Behavior
+1. scroll()函数
+   1. 调用setAppBarTopBottomOffset()函数
+      1. 判断当前的offset是否在合理区间
+	 如果是, 计算新的offset值.
+      2. 调用setTopAndBottomOffset移动view.
+      3. 通知依赖appbarlayout的兄弟view appbarlayout的移动事件.
+      4. 通知注册了OffsetChange Listener的listenerview的变化.
+	 将新的offset通知给listeners.
+2. interpolateOffset()
+3. 可以给appbarlayout的子view设置interpolator.
+4. 在onStartNestedScroll()中, 检查子view是否设置了scroll参数, 是则返回true.
+5. 在onNestPreScroll()中, 检查y方向移动参数是否不为0, 
+   如果是
+   + dy<0. 向下滚动, 最小高度getTotalScrollRange()的值, 该值
+     代表的是移动的最大的高度. 因为appbarlayout是向上移动, 所以
+     该值是一个负值. max也是一个负值. 
+     最大高度是该值加上getDownNestedPreScrollRange()的值
+     (当设置了ENTER_ALWAYS时该函数的返回值不为0).
+     向下滚动时, 其实该behavior实际没有做任何移动的动作.
+     移动此时min=max, 而appbar的offset一般>min, 所以不满足
+     min<=curoffset<=max的判断条件.
+   + dy>0. 向上滚动. 最小值跟上面一样. 最大值为0.
+   + 调用scroll()函数. 只有向上滚动的时候这个函数才起左右.
+     此时将修改appbar的offsettop的值, 并将其与之前值的差值
+     返回.
+6. onNestScroll(). 该函数有四个坐标参数, 其中dxConsumed/dyConsumed
+   是在scroll过程中生成scroll动作的view本身消耗的距离, 然后剩下的
+   才通过该函数传递给appbarlayout, 以协调两个函数之间的ui动画.
+   + 首先判断未消耗的y方向参数是否小于0, 如果是, 则调用scroll()函数
+     移动appbar. 并设置mSkipNNestedPreScroll的值为true.
+7. 在onStopNestedScroll()函数中会调用snapToChildIfNeed()
+   对snap标志进行检查. 如果设置该参数, 则会计算子view的位移量, 
+   (不是该view的top就是bottom), 然后在移动子view到新的offset.
+8. 如果侦测到这次scroll是一此fling动作(速度比较快), 则会调用
+   onNestedFling()函数, 该函数有一个参数consumed, 代表这次fling
+   是否已被被发出scroll动作的view消耗.
+   + 如果否, 则appbar调用fling()函数自己做fling动画.
+     对于appbar来说, 向上滚动时, consumed总是是true.所以
+     只对向下滚动有效.
+9. 如果子view设置了interpolator, 计算interpolator offset.
+10. 如果在behavior中设置了layoutDependsOn()函数(即该函数返回true), 
+    则代表该behavior依附的view有依赖view, 则CoL在每次对依赖view昨晚laid out
+    之后, 都会对该view做layout. 如果依赖view的位置改变了, 则
+    会调用该view的onDependentViewChanged()函数.
+11. 
+** ScrollingViewBehavior
+1. updateOffset()函数, 该函数会获取依赖view的behavior,
+   如果依赖view是appbar, 那么会调用appbar(及behavior)的相关
+   函数获取offset, 然后基于appbar的offset来移动自己.
+2. 
+** ViewOffsetHelper
++ getTopAndBottomOffset
+  
+* umeng和okhttp报错: okio的duplicated file 
+#+BEGIN_EXAMPLE
+    packagingOptions {
+        exclude 'META-INF/maven/com.squareup.okio/okio/pom.xml'
+        exclude 'META-INF/maven/com.squareup.okio/okio/pom.properties'
+    }
+#+END_EXAMPLE
+* RecyclerView						       :recyclerview:
+** note
+1. Scrap
+2. Recycle
+3. Dirty
+4. 在RV进行layout或scroll的过程中不能修改adapter的内容,
+   否则会报异常.
+
+** Adapter
+1. onCreateViewHolder() 
+   创建一个VH. 客户端实现.
+2. createViewHolder(RV, type)
+   创建一个VH. RV内部在getViewForPosition中调用.
+   通过type,可以为RV创建不同的item view.
+3. bindViewHolder(VH, pos)
+   将adapter里pos位置的数据跟一个VH绑定起来.
+4. getItemId(pos)
+   返回adapter里pos位置的元素的id. 需要客户端实现.
+5. viewAttach/viewDetach
+6. adapter数据改变函数.
+*** note
+1. 把stableIds设为true显示效果跟false不一样.
+** ViewHolder
+该类用来存放view及其相关属性.
+1. 通过getLayoutPosition获取item在adapter的位置.
+2. 可以设置一个view的标志为ignore. 这样不会被回收.
+** AdapterDataObserver
+用来监测Adapter的数据变化, 提供的API:
+1. onChanged()
+2. onItemRangeChanged()
+3. onItemRangeInserted()
+4. onItemRangeRemoved()
+5. onItemRangeMoved()
+** AdapterDataObservable
+该类继承自Observable<T>, 所以天然自带一个arraylist, 
+该arraylist的元素类型为 AdapterDataObserver. 
+该类提供了一些api, 在api的实现上, 基本都是迭代调用
+arraylsit里的[[AdapterDataObserver]]的对应api. 
+** LayoutManager
+1. 该类用于测量和放置RV里的子View.
+2. 可以在RV的xml中设置一个layoutmanager.
+3. 
+*** setMeasuredDimensionFromChildren
+该函数用于根据RV的子view来测量RV的边界. 会遍历
+所有的子view, 找到"最边上"的子view的"上下左右"边界.
+然后跟onMeasure()传入的spec作比较后生成最终的width和height.
+
+比较规则: 
+1. 如果mode是EXACTLY, 使用spec的size.
+2. 如果是AT_MOST, 选择spec的size和子view中size中的小值.
+*** mAutoMeasure
+这个变量标志measure过程由谁完成.
+1. true, measure过程由RV完成.
+2. false, 由LayoutManager完成.
+*** onLayoutChildren
+代码注释笔记:
+1. 如果mAutoMeasure为true. 该函数会被调用两次:
+   1. 第一次确认items的位置.
+   2. 第二次做实际的layout.
+** ChildHelper
+1. 该类用于管理子view, 它使用一个bitmap来表示目前的
+   view, bitmap的长度表示子view的数量. 如果某个bit被
+   设为 *1*, 则表示该view不可见.
+2. addView(index)
+   添加一个view, 传入的index参数是"视觉"上的要添加
+   的位置(从0开始), 但是因为可能存在"隐藏"的view, 所以
+   真实的添加位置是大于等于index的.
+3. <<removeAllViewsUnfiltered()>>
+   1. 重置bucket.
+   2. 清空mHiddenViews列表. 并对每个要清除的view调用
+      callback的onLeftHiddenState()函数. 这里的callback是
+      在RV里实现的. 他的onLeftHiddenState()接口实现为调用
+      [[ViewHolder]]的onLeftHiddenState()函数.
+   3. 调用callback的removeAllViews()函数. 在RV中, 这个
+      函数被定义为.
+      1. 对每个子view调用dispatchChildDetached.
+      2. 调用RV的removeAllViews().
+** State
+记录RV的一些信息, 例如
+1. 可以被layout的item数量.
+   该值可能不等于adapter的size.
+** LinearLayoutManager
+** Recycler
+1. "scrapped" view值被标记了的view. 可能会被移除或复用.
+2. Recycler包含两层缓存, "缓存"view和RVP, 如果缓存满的话
+   会将其放入到RVP中.
+3. <<clear()>>
+   1. 清空mAttachedScrap.
+   2. 将mCachedViews里的元素移到RVP中.
+** RecycledViewPool
+1. 提供了在多个RV之间共享view的功能.
+2. 如果不为RV设置一个Pool, RV会自己创建一个.
+** AdapterHelper
+1. 
+** UpdateOp
+一直操作的命令类.
+** OpRecorderer
+1. reorderOps
+   操作重排序.
+   1. MOVE后面是REMOVE:
+      + MOVE可能分两种情况: 前面的元素移动到后面, 或者
+	后面的元素移动到前面.
+      + 如果MOVE的元素最后落到了REMOVE的区间内, 则表示
+	这个元素最终会被REMOVE掉, 则可以将MOVE命令改为
+	REMOVE命令. 之前的REMOVE命令可以少remove一个元素.
+	如果减少之后之前的REMOVE命令要remove的数量为0, 
+	怎直接从这个list中把其删除即可.
+** RecyclerViewAccessibilityDelegate
+** DefaultItemAnimator
+** ItemAnimator
+** RV
+1. mTouchSlop表示多长的距离就可以认为是scroll.
+2. mMinFlingVelocity和mMax...是滑动的最大/最小速度.
+3. 构造函数流程:
+   1. 设置scroll和focus配置.
+   2. 判断SDK是不是大于等于16, 16及以上版本才支持post animation.
+   3. 获取系统的ViewConfiguration, 通过vc获取
+      被认为是scrolling的一些参数. 例如初始化一个fling的
+      最大/最小速度.
+   4. 设置mItemAnimator的listener为mItemAnimatorListener.
+      1. mItemAnimator被初始化为[[DefaultItemAnimator]]对象.
+	 DefaultItemAnimator继承自SimpleItemAnimator, 后者继承自
+	 [[ItemAnimator]].
+   5. 初始化AdapterManager, 生成一个新的[[AdapterHelper]]类.
+   6. 初始化ChildHelper, 生成一个新的[[ChildHelper]]对象.
+   7. 获取AccessibilityMananger.
+   8. 如果在xml里设置了layoutManager, 则创建LayoutManager.
+   9. 创建一个NestedScrollingChildHelper实例.
+   10. 设置上一步的helper的nested scroll为true.
+4. onMeasure.
+   1. 如果mLayout为Null, 调用 defaultOnMeasure().
+      该函数没有设置layoutmanager的默认"测量"函数.
+   2. 如果mLayout不为null,即为RV设置了LayoutManager.
+      1. 如果mLayout的mAutoMeasure被设置.
+	 (LinearLayoutManager里设置了该变量为true).
+	 1. 如果是EXACTLY, 那么设置skipMeasure为true.
+	 2. 调用mLayout的onMeasure函数.该函数就是调用defaultMeasure()函数.
+	    该函数只会处理 EXACTLY 的mode.
+      2. 否则.
+5. onLayout.
+   1. 直接调用dispatchLayout().
+      1. 如果adapter和layoutMananger有任何一个没有设置
+	 返回.
+6. onDraw.
+   调用父类的onDraw, 如果mItemDecorations不为空,
+   调用每个元素的onDraw.
+7. setLayoutManager. 设置RV的layoutManager.
+   1. 调用[[stopScroll()]]函数停止当前的scroll.
+   2. 如果之前有layoutmanager, 调用其dispatchDetachedFromWindow()函数.
+   3. 调用recycler的[[clear()]]函数.
+   4. 调用childHelper的[[removeAllViewsUnfiltered()]]函数.
+   5. 将RV的mLayout设置为传入的参数.并调用其dispatchAttachedToWindow()函数.
+   6. 调用requestLayout()函数.
+8. <<stopScroll()>>
+   停止当前的scroll. 
+   1. 将当前的setScrollState()设置当前state为为SCROLL_STATE_IDLE.
+      1. 调用stopScrollersInternal().
+	 1. 调用mViewFlinger的stop()函数. 该函数会调用
+	    removeCallbacks()将mViewFlinger从RV中删除.
+	    并调用mScroller的abortAnimation()函数.
+	 2. 如果mLayout不为null, 调用其stopSmoothScroller()函数.
+	    (第一次初始化LM时不会走到这里.)
+      2. 调用dispatchOnScrollStateChanged()函数.
+	 1. 如果mLayout不为null,调用其onScrollStateChanged()函数.
+	 2. 调用onScrollStateChanged()函数, 这个函数在RV中为空, 
+	    RV的子view可以重写这个函数.
+	 3. 如果有scrollListener, 调用其`onScrollStateChanged()
+	 4. 如果mScrollListeners不为空, 对每个listener调用onScrollStateChanged()
+9. setAdapter. 设置Adapter.
+   1. 调用setLayoutFrozen(), 参数为false. 
+      即重新enable layout跟scroll.
+      1. 调用setAdapterInternal()设置adapter.
+	 1. 如果之前有adpater, 调用相关的unregister函数.
+	 2. 如果与之前的不兼容, 或者需要recycle view.
+	    1. 如果有animator, 调用endAnimation.
+	    2. 如果layoutManager不为null, 调用其相关的remove函数.
+	    3. 调用recycler的clear函数.
+	 3. 调用新adapter的注册函数.
+	 4. 调用layoutmanager的onAdapterChange函数.
+	 5. 调用markKnowViewsInvalid()函数标记所有view invalid.
+10. setHasFixedSize()设为true表示RV的size不会受adapter内容的影响.
+11.
+** ItemDecoration
+** Home页"卡片"源码学习笔记
+*** 自定义控件TwoWayView
+1. 继承自RecyclerView.
+2. 构造函数默认使用了[[RV]]的构造函数.
+3. 重写setLayoutManager()函数, 必须为[[TwoWayLayoutManager]]的子类.
+*** TwoWayLayoutManager
+1. 继承自LayoutManager.
+2. 可以设置orientation, 即横还是竖.
+3. 可以设置direction. 即从前向后还是从后向前.
+4. getTotalSpace()
+   获取RV的"有效空间", 有效空间指:
+   1. 高度 - paddingTop - paddingBottom. (vertical)
+   2. 宽度- pR - pL (horizontal)
+   LayoutManager提供了一系列的API来获取RV的参数.
+5. getChildStart(child)
+   获取child的"开始"位置. 这个位置包含的内容部分: 
+   开始margin --> 修饰 --> child的实际开始位置(getTop()返回值)
+6. recycleChildrenFromStart()
+   当RV向底部滚动时, "前面"的view有可能就不在"视线"之内,
+   这时候可以调用该函数移除"前面"的view. 移除原则:
+   1. 记录在RV的paddingTop之前的子view的数量.
+   2. 对所有的子view调用removeAndRecyleView()函数.
+   3. 每做一次第2步就更新一下mLayoutStart值,该值用于记录layout的起始位置.
+*** DividerItemDecoration
+该类继承自[[ItemDecoration]], 用于修饰每个view. 
+支持水平和竖直方向的分割drawable设置.
+1. 该类实现了onDrawOver(), 用于在item之后draw "修饰".
+   1. 
+** 文章阅读笔记
+1. [[http://www.birbit.com/recyclerview-animations-part-1-how-animations-work/][RV动画详解]]
+   1. LayoutTransition是Framework用于进行动画转化的.由于根据
+      layout之前和之后的状态进行动画. 但不适用于RV.
+   2. prelayout阶段, RV会让layoutManager layout之前的状态, 但是
+      会提供一些信息. 请求类似这样: layout, 但是, C已经被删除.
+      这样, layoutmanager会layout一个新的view(例如G)来补充C留下的空间.
+      但是:
+      1. RV仍然表现的好想C仍然存在于adapter. 例如调用getViewForPosition(2)
+	 仍然返回C.
+   3. postLayout阶段. layoutmanager重新layout, 这时候,'C'不存在.
+      getViewForPosition()返回正确的
+   4. 每次调用layoutManager的onLayoutChildren()函数. 所有的view都会
+      暂时detach并重新layout, 但是由于未变化的view其"测量数据"不变, 所以
+      不会被重新测量. 这样使整个layout并不复杂.
+   5. LinearLayout在postLayout的完成阶段, layoutManager会调用getScrapList()函数获取
+      没有被layout但仍然在adapter中的数据, 然后layout这些.
+   6. 可以在onLayoutChildren()里调用 addDisappearing() 函数来告知RV这些view
+      可以在动画完成之后删除掉. RV也会把该view加入到 hidden 列表中.
+      这样它就不在layoutmanager的children中了.
+   7. 当child被layoutmananger移除时, RV仍然将其保留, 但是
+      对layoutmanager隐藏.
+      1. 当LM调用其getChildCount()函数时, RV返回的是其children
+	 数量减去隐藏的children数量.
+      2. 当LM调用getChildAt()函数时, RV也会跳过隐藏的view,返回
+	 正确的child.
+      3. 当LM调用addView(view,index), RV同样也会插入到正确的位置.
+      4. 动画完成时, RV会移除并回收隐藏的view.
+* View
+** view的坐标系
+ 1. left, right, top, bottom
+ 2. x, y, translationX, translationY.
+    x = translationX + left; y = top + translationY.
+ 3. scrollX, scrollY.
+    view的左上边缘和view"内容"的左上边缘的距离.
+    scrollX > 0, view的内容在其位置的左边. < 0, view的内容在其位置的右边.
+** 在竖直方向移动view						       :view:
+   offsetTopAndBottom(offset),offset>0, 向下移动. 否则向上移动.
+** 给当前window添加view:					       :view:
+    getWindow().getDecorView().addView(); 会添加到最上层.
+** 设置view在不同状态下的UI展示					       :view:
+   例如设置在点击或可用状态下的背景图片，背景颜色等。
+ 通过设置一个xml文件来实现，使用 *selector* 标签来设置
+ 在不同状态下的UI展示。然后在View的设置中引用这个drawable。
+ #+BEGIN_SRC xml
+ <?xml version="1.0" encoding="utf-8"?>
+ <selector xmlns:android="http://schemas.android.com/apk/res/android">
+     <item android:drawable="@drawable/ic_apk_delete_clicked" android:state_selected="true"/>
+     <item android:drawable="@drawable/ic_apk_delete_clicked" android:state_focused="true"/>
+     <item android:drawable="@drawable/ic_apk_delete_clicked" android:state_pressed="true"/>
+     <item android:drawable="@drawable/ic_apk_delete_nor"/>
+ </selector>
+
+ //layout file
+     <ImageView
+         ...
+         android:src="@drawable/bg_apk_delete_selector"
+         ...
+	 />
+ #+END_SRC
+* 事件分发
+1. 当一个事件过来时, view 的 dispatchTouchEvent(ev)函数会
+   调用, 该函数做以下判断:
+   1. 调用viewgroup 的 onInterceptTouchEvent(ev). 如果返回true, 调用
+      onTouchEvent(ev). 否则, 调用子view的dispatchTouchEvent(ev).
+      重复这个过程.
+2. 如果设置了OnTouchListener, 那么先去判断OnTouchListener是否消耗
+   事件, 如果是则其消耗. 否则再调用onTouchEvent.
+3. 事件传递顺序: Activity -> Window -> View.
+   收到事件会调用Activity的dispatchTouchEvent():
+   1. 分发给Window, 通过window传给所有的子view. 即函数 superDispatchTouchEvent().
+      1. 调用decorView的superDispatchTouchEvent(). decorView是layout的顶层view.
+	 通过 =((ViewGroup)decorView.findViewById(android.R.id.content)).getChildAt(0)= 
+	 可以获得activity通过setContentView()所设置的view.
+   2. 如果没有view处理事件, 调用activity的onTouchEvent.
+4. 如果子view的 onTouchEvent()返回false, 则会调用父view的onTouchEvent.
+   直到传给Activity的onTouchEvent().
+5. 如果onTouchEvent()对于ACTION_DOWN返回false, 那么后续所有事件都不会再
+   传递给他. 而是交给父view.
+6. view没有onInterceptTouchEvent()方法, 事件过来直接调用onTouchEvent.
+* 数据库 :sqlite:
+1. 在 android 中使用 SQLiteOpenHelper 实现数据库的创建和版本管理.
+2. 数据库升级需要将升级版本号传递给 SQLiteHelper,  这样会触发对该类的
+    onUpgrade()函数的调用
+* ormlite库操作数据库 :sqlite:
+ormlite 对比 android 自带数据库 api 的好处是可以基于类创建一个表, 及表中数据和类的映射.
+
+常见用法:
+1. 实现一个类 继承 OrmLiteSqliteOpenHelper(后者继承自 SQLiteOpenHelper), 
+   实现onCreate 和 onUpgrade 逻辑.
+2. 在调用 Orgmlite 的 api 时,传入这个 子类的调用.
+3. 在想要建表的类上,用注解  @DatabaseTable 和 @DatabaseField 类设置表的
+   名称和表项.
+4. 通过 Ormlite 的 api 获取上面类的一个 DAO(Ormlite 会给每个类创建一个 DAO 实例)
+  ,然后使用 DAO 来进行 CRUD 操作.  
+* app 常用库
+** gson操作json字符串
+** okhttp进行网络操作
+** fresco网络图片加载
+** umeng进行统计分析和反馈
+** sharesdk进行统一分享
+** 阿里聚安全进行加密
+** 广点通和百度的广告进行广告投放
+** 小米push和umengpush来推送消息
+* 设置多进程
+1. 方法: 设置 taskAffinity 
+2. 保持锁屏占用的资源变少. 避免被系统应用杀死.
+3. 加快应用的相应速度.
+* 四种启动模式
+1. standard: 标准模式, 建立一个新的栈放入task中, 什么都不判断.
+2. singleTop: 如果当前页面已经是栈顶, 则不新建, 否则新建.
+3. singleTask: 如果当前页面不是栈顶, 弹出所有.
+4. singleInstance: 给当前页面建立一个全新的task, 只有一个实例.
+* 让activity支持scheme
+通过在activity节点中设置 intent-filter 节点. 里面的内容
+1. 设置scheme格式, 包括 host 和 scheme
+2. 设置action为 VIEW. 
+3. 设置category为 DEFAULT. 
+   也可以设置browsable, 这样可以通过浏览器打开activity.
+* home页蒙版指导图
+1. 通过在MainFragment里添加了一个MainFragmentManager.
+2. 在mainfragmet的oncreate里调用该manager的showGuide()函数.
+3. showGuide()函数一次检查是否需要显示权限, 如果需要的话, 
+   依次显示, 所以这几个view是层层网上叠加的.
+* 在别人的页面(例如系统页面)显示指导
+  可以有两种方法:
+1. 先把别人页面调起, 同时设置一个 postDelay 操作推迟一段时间后再启动一个 activity.
+   activity 的背景可以设置为透明, 这样方便看到下面的内容.
+2. 在一个 service 里,通过 WindowManager 给当前的 window(其他页面) 添加 view.   
+* 设置应用可以获取通知权限保持应用不被杀死
+* 通常可以放在Application类的动作
+1. 设置自定义异常捕获类.
+2. 统计, 注册, 反馈, 更新.
+3. 数据库.
+* 可替换库对比
+** recyclerView VS listView
+   CLOSED: [2016-05-27 Fri 22:54]
+ 使用RecyclerView的一些好处:
+ 1. 支持添加/删除的动画
+ 2. 支持item的装饰
+ 3. 支持layoutManager实现多重布局.
+
+ [[http://www.truiton.com/2015/03/android-recyclerview-vs-listview-comparison/][这篇文章]] 比较了这两个控件, 主要包括:
+ 总体来说就是RecyclerView提供了更多的客制化的功能, 尤其是对于
+ 复杂的布局或者list实现. 
+ 具体来说:
+ 1. RecyclerView强制使用ViewHolder, 其ViewHolder与Adapter绑定. 
+    因为ListView并没有强制使用ViewHolder,如果不用时, 查找View会变得
+    麻烦, 可能导致性能下降.
+ 2. RecyclerView通过LayoutManager的方式提供布局的多样化.
+    ListView默认只支持竖直方向(可以通过重写代码实现水平方向, 但是麻烦).
+ 3. ItemDecoration 支持对每个项目进行修饰.
+** startService VS bindService					    :service:
+   CLOSED: [2016-05-27 Fri 23:27]
+ http://codetheory.in/understanding-android-started-bound-services/
+ 1. 如果需要和service进行交互,可以使用bindService.
+ 2. startService的service可以一直运行, 即使创建他的组件挂掉.
+    而bindService不行, 跟组件的生命周期一样.
+* thread with looper and handler :handler:
+** 在其他线程中创建handler
+1. 使用Looper.prepare()给该thread创建一个looper "线程变量"
+2. 创建一个handler.
+3. 调用Looper.loop()函数使线程陷入等待事件状态.
+** 在其他线程中使用UI线程的looper. 
+1. 通过Looper.getMainLooper()获取UI线程的looper.
+   然后使用该Looper创建一个handler.
+2. 使用handler.post()交给主线程执行.如果主线程有Handler, 
+   会调用handler的handleMessage. 
+3. 如果是线程的handler没有覆盖handleMessage()方法.
+   那么调用sendMessage方法默认不处理. 只有重写该方法
+   才会处理.
+4. 调用loop()函数之后就进入死循环, 后面的代码都不会调用到.
+* how to resolve ANR
+  CLOSED: [2016-05-27 Fri 14:26]
+  http://www.programering.com/a/MTMyEDMwATI.html
+1. first analysis log
+2. from the trace.txt file call stack.
+3. see code
+4. check the ANR origin(iowait?block?memoryleak?)
+* touch事件传递机制
+** 实验
+自定义一个relativelayout和view, layout结构是两个relativelayout A/B, 里面放一个view C.
+1. 默认点击行为. onInterceptTouchEvent()都返回false, onTouchEvent()都返回false.
+   ACTIONDOWN的传递过程: 
+   1. A:onInterceptTouchEvent->B:onInterceptTouchEvent->C:onTouchEvent->B:onTouchEvent->A:onTouchEvent
+   2. MOVE和UP的动作都不会被收到.
+2. A拦截DOWN和MOVE. onTouchEvent中DOWN和MOVE都返回true.
+   A的onInterceptTouchEvent()只有在DOWN时被调用. 后续ACTION不会调用. 
+   所有ACTION都会传递给onTouchEvent().
+3. A拦截DOWN, 但是onTouchEvent返回false.
+   后续所有的事件都不会传递给ABC.
+4. A不拦截DOWN, 但是在onTouchEvent()里消耗DOWN(BC都是false, 所以会回传到A的onTouchEvent).
+   这样会导致所有的MOVE和UP都会再传递给A.
+5. A不拦截DOWN, 拦截MOVE. B拦截DOWN.
+   1. DOWN发生时AB的intercept都会被调用.
+   2. 第一次MOVE时只调用A的intercept. 但是会转化成CANCEL传给B的onTouchEvent.
+   3. 后续的MOVE和UP都只传给A.
+6. A拦截UP, B拦截MOVE, C拦截DOWN.
+   1. DOWN会传给C的onTouchEvent.
+   2. 第一次MOVE最终会变成CANCEL, 传给C.
+   3. 后续的MOVE都会先经过A的onInterceptTouchEvent, 然后传给B的onTouchEvent.
+   4. UP会变成CANCEL传给B的onTouchEvent.
+* 使用 Resource 类来获取 resource 资源
+context 的 getResource 会返回一个 Resource 类, 使用该类可以获取定义的资源文件,
+例如 String,Drawable,Integer 等等.
+* 辅助功能
+通过开启辅助功能权限(也称作无障碍)可以模拟用户的点击,滚动等一切行为,
+同时可以监控屏幕的变化, 实现一些"自动化"操作. 比如设置自动设置一些权限.
+** 开启步骤
+1. 实现一个类继承自AccessibilityService类.
+2. 在AndroidManifest.xml里注册这个service, 并需要做如下配置
+   1. 为该service增加permission "android.permission.BIND_ACCESSIBILITY_SERVICE"
+   2. 为该service设置filter. action为android.accessibilityservice.AccessibilityService.
+      这样权限开启后才可以获得回调.
+   3. 如果需要在xml里(也可以在代码里)对service进行配置, 比如要过滤屏幕事件.则需要增加一个meta-data.
+      #+BEGIN_EXAMPLE
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/keyguard_accessibility_service_config"/>
+      #+END_EXAMPLE
+
+通过上面的设置, 就可以在辅助功能设置页面看到app的项,勾选就可以, 或者在程序里直接
+跳转到该页面, 使用如下代码:
+#+BEGIN_EXAMPLE
+Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+#+END_EXAMPLE
+** 自动控制逻辑
+1. 当用户在上一步中把权限开启后, 自定义的Service的onServiceConnected()函数
+   会被调用. 可以在这一步里进行配置. 或者如上一步所述在xml里配置.
+   并可以由此进行设置操作.
+2. 当有事件发生时, 例如窗口变化, 点击等, 会回调 onAccessibilityEvent()函数.
+   并传入事件.
+* 系统的"最近任务"中不现实activity
+可以在Actvivity的配置中加入 ~excludeFromRecents~, 
+或者Intent中设置相应的FLAG.
+* 打开"最近任务"窗口
+#+BEGIN_EXAMPLE
+    private static void openRecentApps() {
+        try {
+            Class serviceManagerClass = Class.forName("android.os.ServiceManager");
+            Method getService = serviceManagerClass.getMethod("getService", String.class);
+            IBinder retbinder = (IBinder) getService.invoke(serviceManagerClass, "statusbar");
+            Class statusBarClass = Class.forName(retbinder.getInterfaceDescriptor());
+            Object statusBarObject = statusBarClass.getClasses()[0].getMethod("asInterface", IBinder.class).invoke(null, new Object[] { retbinder });
+            Method clearAll = statusBarClass.getMethod("toggleRecentApps");
+            clearAll.setAccessible(true);
+            clearAll.invoke(statusBarObject);
+        } catch (Exception e) {
+            Log.d("Licc","Exception "+e.getMessage());
+        }
+    }
+#+END_EXAMPLE
+* 不同机型特殊配置
+** 判断是否为小米及获取小米版本
+ 通过反射 =android.os.SystemProperties= 这个类, 调用其
+ get()函数, 来获取属性"ro.miui.ui.version.name"的值.
+
+ 通过Build.java的BRAND变量来获取品牌名称判断是否为xiaomi.
+ #+BEGIN_SRC java
+     public static int getMIUIVersion() {
+         int versionName = UNKNOWN;
+         try {
+             Class<?> classType = Class.forName("android.os.SystemProperties");
+             Method getStringMethod = classType.getDeclaredMethod("get", String.class, String.class);
+             String version = (String) getStringMethod.invoke(classType, KEY_MIUI_VERSION_NAME, "");
+             if ("v5".equalsIgnoreCase(version)) {
+                 versionName = V5;
+             } else if ("v6".equalsIgnoreCase(version)) {
+                 versionName = V6;
+             } else if ("v7".equalsIgnoreCase(version)) {
+                 versionName = V7;
+             }
+         } catch (Exception e) {
+         }
+         return versionName;
+     }
+    
+     /** The consumer-visible brand with which the product/hardware will be associated, if any. */
+     public static final String BRAND = getString("ro.product.brand");
+ #+END_SRC
+* 获取当前正在运行的应用 :system:
+CH在实现中从三个地方取数据, 因为使用的API都说系统级的api,
+在官方文档中明确支出这些api获取的数据是不可靠的, 
+所以多试几个以保证正确率.
+** getRunningAppProcess()
+   调用了ActivityManager的getRunningAppProcess()函数.获取
+   RunningAppProcessInfo的一个list.
+   
+   *注*: 在 L 及其以后的版本中, 首先会调用该方法, 观察系统的返回值,
+   如果系统返回的值为 null 或只包含 CH 的信息, 那么会设置一个 flag,
+   告知后面的程序需要打开下一步的 UsageStat 权限.
+** queryUsageStats()						       :stat:
+   调用了UsageStatManager的queryUsageStats()函数,
+   该函数返回UsageStats的一个list. UsageStatManager需要在权限中
+   申请 =android.permission.PACKAGE_USAGE_STATS=, 并需要用户
+   在手机中授权才可以使用.
+   
+   *注*:  可以通过 PackageManager 的 queryIntentActivities()  函数来查询是否有
+   响应  "android.settings.USAGE_ACCESS_SETTINGS" 这个 action 的 activity
+    来判断能否打开设置这个权限的页面.
+** getRunningTasks()
+   调用了 ActivityManager 的 getRunningTasks() 函数, 该函数返回正在运行
+   的 Task, 该函数 L 版本之后被抛弃.
+* 使用 native 程序保持进程不死 
+ CH 的思路是 app 开启的时候通过 jni 来启动一个 native 程序
+每次 app 启动的时候,都会去检查这个程序进程是否还在, 如果不在就启动一下. 
+
+而这个 native 的进程会周期性的检查 app 的进程目录(/proc/pid)是否存在,
+如果发现不存在, 就会执行系统命令 "am" 发送 intent 来启动 Service.
+* 版本更新
+一般的版本更新分为两种情况:
+1. 强制更新, 每次启动 app 都弹出更新提示, 不更新进不去.
+2. 非强制更新, 用户可以选择取消更新. 
+
+更新同时也分为"免流量"或"需要流量"更新, "省流量"的伎俩就是在
+ wifi 环境下偷偷把 apk 包下载下来,然后提示用户安装. "需要流量"
+则是在用户确认之后再下载. "需要流量"一般是在移动网络环境下使用.
+只要在 wifi 下测到有新版本就偷偷下载. 
+
+apk包下载中的一些知识:
+1. 何时去服务器检验是否有新包?
+   可以通过下载一个配置文件来获取服务器最新包的所有信息.
+   然后通过当前包的版本信息与配置文件做对比.
+2. 下载下来的包校验.
+   在配置文件中返回新包的 MD5值, 把 apk 下载之后计算新包的 MD5.
+   然后做对比.
+* 与服务器数据传输的加密 
+主要使用了两个东西, u-key 和 us.
+1. u-key:  通过 AESCoder来加密程序获取的一系列手机参数,
+    AESCoder 的 encoder() 函数的 key 放到 jni 层,通过
+    jni 获取.
+2. us:通过阿里聚安全再对上面的 u-key 做进一步加密生成 us.
+   这样传给服务器的加密数据有两个, 一般 us 不会被识破.
+
+*注*:  阿里聚安全还可以识别是否为虚拟机.
+* 通过 intentservice 来执行后台任务			      :intentservice:
+intentService 通过执行一个后台线程来处理接受到的 intent.所以可以让一些繁重的工作通过
+ intentService 来处理. 但是 intentService 只启动一个线程, 对于接受到的 intent 都是
+依次处理的. 可能需要等待较长时间.
+
+*注:* intentService 是一个抽象类, 使用者必须自己实现一个其子类并实现 onHandleIntent() 函数.
+* JobScheduler
+** 一般使用流程
+1. 创建一个自定义JobService
+2. 使用JobInfo的builder基于上面的JobService创建一个JobInfo.
+3. 调用JobScheduler的schedule()函数安排工作.
+* ch
+** 常见的主页展示方式
+ 目前国内主流的主页展示方式是下面一个 tab 栏, 然后
+ 点击每个 tab 项展示不同的页面.
+
+ CH 的实现使用了 TabLayout 和 FragmentPageAdapter.
+** 锁屏上的滑动解锁 view
+ 1. 整个的这块区域就是一个 view, 图标都是通过画布画上去的.
+ 2. 构造函数来获取要绘制的 drawable
+ 3. onMeasure 中计算 view 的实际宽高.
+ 4. onLayout  中确定各个 drawable 的摆放位置
+ 5.  onDraw 中将各个 drawable 画到画布上.
+*** 通过 view 学习的思考自定义 view 的实现
+ 1. 要确定好这个 view 的原型图和动画效果. 
+    控件要怎么布局, 控件支持的动画和控件之间的动画交互.
+ 2. View 支持的自定义属性.
+ 3. 尽量把 view 细分, 一个 view 可能包含多个组件. 每个组件要怎么
+    实现要想好. 组件之间有没有共性, 能否抽象.
+ 4. 耦合性, 在这个例子里, 动画使用 ObjectAnimator, 可以支持
+    View 的封装对象(该对象本身不是 view, 但通过该对象的变化来支持 view).
+ 5. 如果 view UI 有改变要记得调用 invalidate().
+ 6. 要熟练画布的使用.
+    
+* Handler
+** 消息分发流程 dispatchMessage()
+1. 如果消息本身是一个runnable,调用run()函数
+2. 否则如果该handler有callback,调用callback的handleMessage()函数
+3. 否则调用handleMessage()函数(一般自定义handler需要复写该函数)
+** Handler创建
+handler必须创建在一个带有Looper的线程上, 默认UI线程有Looper. 如果不显示指定,
+handler会绑定创建它线程的Looper. 没有Looper则报错.
+** 通过Handler获取消息
+所有的obtain()函数都会从系统全局的消息池中获取一个消息, 并且将该消息的Handler绑定到当前
+Handler中.
+** 会导致内存泄漏的原因?
+* jni
+** jni里分配的内存会算到OOM内存上吗?
+** jni原理
+* AsyncTask支持多任务提交吗?
+* 如何设计网络框架?
+* 前台service的好处?
+* ImageLoader如何同步
+* 单例模式使用volatile
+* thread vs asynctask

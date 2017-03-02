@@ -1,0 +1,1214 @@
+based on Org version 8.2.10 (release_8.2.10-41-g42228a). Emacs version 24.4.1
+
+** cheatsheet 							 :cheatsheet:
+ |                     | 说明                                        |
+ |---------------------+---------------------------------------------|
+ | C-c C-t             | 修改项目状态                                |
+ | S-right/left        | 同上                                        |
+ | C-u C-c C-t         | 选择状态                                    |
+ | C-c / t(T)          | 显示todo 树                                 |
+ | C-c a t             | 显示全局todo                                |
+ | S-M-RET             | 插入TODO                                    |
+ | C-c C-x o           | 打开ORDERED属性                             |
+ | C-u C-u C-u C-c C-t | 强制修改状态                                |
+ | C-c ,               | 设置优先级                                  |
+ | S-up/down           | 更改优先级                                  |
+ | C-c #               | 更新当前标题完成率                          |
+ | C-c C-x C-w         | 剪切树                                      |
+ | C-c C-x C-y         | 粘贴树                                      |
+ | C-c C-q             | 设置 tag                                    |
+ | C-x n s             | # org-narrow-to-subtree (bound in org-mode) |
+ | C-x n d             | # narrow-to-defun                           |
+ | C-x n w             | # widen                                     |
+
+** 文档结构							    :outline:
+*** 大纲模式
+ org mode是建立在大纲视图(outline mode). 大纲可以使笔记和灵感按照层级结构
+ 进行组织, 这种结构有两个好处:
+ 1. 实现对文档的概括性浏览(只看大纲).
+ 2. 只显示当前正在工作的部分.
+ org mode提供了一个"org-cycle"命令来实现大纲的显示/隐藏功能, 这个命令默认
+ 被绑定到了<TAB>键.
+*** 标题
+ org mode采用标题的形势来实现大纲结构, 标题的写法很简单, 在文本的最开始加上1到多个
+ 星号即表示标题.
+**** 标题显示快捷键						   :shortkey:
+
+ | 快捷键            | 功能                              | 对应命令                    |
+ |-------------------+-----------------------------------+-----------------------------|
+ | TAB               | 循环打开关闭当前标题              | org-cycle                   |
+ | S-TAB/C-u TAB     | 循环打开关闭所有标题              | org-global-cycle            |
+ | C-u C-u TAB       | 恢复到最初视图                    | org-set-startup-visibility  |
+ | C-u C-u C-u TAB   | 显示所有                          | show-all                    |
+ | C-c C-r           |                                   | org-reveal                  |
+ | C-c C-k           | 显示当前标题的所有子树标题        | show-branches               |
+ | (C-u N) C-c TAB   | 显示当前标题的(N层)子树           | show-children               |
+ | (C-u N) C-c C-x b | 在新buffer显示(从第N层开始的)子树 | org-tree-to-indirect-buffer |
+ | C-c C-x v         | 复制当前区域内容                  | org-copy-visible            |
+
+**** 初始化"可见性"
+ Emacs打开org文件默认只显示顶层标题, 可以通过 "#+STARTUP" 选项来配置
+ 第一次打开要显示的内容. #+STARTUP的参数包括
+ | overview       | 只显示顶层标题 |
+ | content        | 显示所有标题   |
+ | showall        | 显示所有内容   |
+ | showeverything |                |
+
+**** 编辑"不可见区域"报错
+ 有时候会不小心编辑到"不可见区域", 编辑器默认不会报错, 所以如果想组织这个
+ 行为, 可以在配置文件中设置org-catch-invisible-edits的值为非nil.例如下面
+ 的代码, 这样就可以阻止编辑非可见区域.
+ #+BEGIN_EXAMPLE 
+ (setq-default org-catch-invisible-edits 'error)
+ #+END_EXAMPLE
+
+ org-catch-invisible-edits的更多参数可以参考 C-h v org-catch-invisible-edits 
+**** 标题快捷键
+ | 快捷键         | 功能                       | Note         |
+ |----------------+----------------------------+--------------|
+ |                |                            | <6>          |
+ | M-RET          | 创建同级标题               | 可能会"割断"当前标题内容 |
+ | C-u C-u M-RET  | 在当前树的最后创建同级标题 |              |
+ | C-RET          | 当前标题后面创建同级标题   | 不会"割断"   |
+ | M-S-RET        | 创建TODO标题               | 同M-RET      |
+ | C-S-RET        | 创建TODO标题               | C-RET        |
+ |                |                            |              |
+ | TAB            | 改变空标题的level          |              |
+ | M-left/M-right | 升级/降级                  |              |
+ | M-S-left/right | 所有子树升级/降级          |              |
+ | M-S-up/down    | 上移/下移                  |              |
+ |                |                            |              |
+ | M-h            | 标记当前内容               | 连击会标记更多 |
+ | C-c @          | 标记当前标题及内容         |              |
+ | C-c C-x C-w    | 剪切当前子树               |              |
+ | C-c C-x M-w    | 复制当前子树               |              |
+ | C-y            | 粘贴                       |              |
+ | C-c C-x c      | 复制多次                   |              |
+ | C-c ^          | 排序标题                   |              |
+ | C-x n s        | 让buffer只显示当前子树     |              |
+ | C-x n w        | 恢复buffer显示             |              |
+ | C-c *          | 添加/去掉星星              |              |
+**** 稀疏树显示
+ Org mode的另一个功能就可以只展现你想要的内容, 称之为"稀疏树"展示.
+ 使用快捷键"C-c /"可以调出稀疏树功能, 它会询问你想要显示的内容, 
+ 如下图所示.
+ file:../../static/img/sparsetree.png 
+ 选择 '/' 或 "r" 会显示正则表达式搜索, 输入搜索内容即可以稀疏树方式展示结果, 如果
+ 结果只在标题, 则显示标题, 如果在内容则显示内容, 搜索关键字会高亮. 按 "C-c C-c"会
+ 取消高亮. 如果 C-u N之后输入C-c / r, 之前的N此搜索都会显示.
+ 快捷键 "M-g n/p"用于在搜索结果之间跳转. 命令 "ps-print-buffer-with-faces"用于
+ 打印机打印搜索结果.
+**** 列表
+ org mode可以显示列表, 以下列字符开头的文本都为列表" - + 1. 1) *",
+ 标题的大部分快捷键都可以用于列表, 其他的快捷键包括:
+ | C-c -        | 改变列表展示方式 |
+ | S-left/right | 同上             |
+**** 脚注
+ org mode支持脚注功能, 脚注通常用 =[fn:数字]= 表示, 然后在其他地方写上
+ 脚注说明[fn:1]:
+ #+BEGIN_EXAMPLE
+      The Org homepage[fn:1] now looks a lot better than it used to.
+      ...
+      [fn:1] The link is: http://orgmode.org
+ #+END_EXAMPLE
+[fn:1]脚注示例.
+
+** 表格								      :table:
+ orgmode提供了ascii形式表示的表格, 任何以"|"字符开头的内容都会认为是
+ 表格的一部分. 在表格当前行按TAB或C-c C-c会格式化表格.按RET键会自动创建
+ 下一行. 同时任何以"|-"开头的行都被认为是表格分隔符.
+*** 表格快捷键							   :shortkey:
+  "C-c |"可以创建表格或将选中区域转化为表格, 会询问你创建的表格大小.
+ 如果要转化的区域都含有TAB字符, 会将TAB作为分隔符. 如果为逗号, 会认为是逗号.
+ 否则为空白字符.可以通过前缀强制选择"分隔符":
+ + C-u 强制认为是CSV格式(逗号分割)
+ + C-u C-u 强制TAB
+
+ | 快捷键               | 功能                   |
+ |----------------------+------------------------|
+ | C-c C-c              | 对齐表格               |
+ | TAB                  | 对齐表格, 移到下一格   |
+ | S-TAB                | 对齐表格, 移到上一格   |
+ | RET                  | 对齐表格, 移到下一行   |
+ | M-a/e                | 移到这一格开始/结尾    |
+ | M-left/right/up/down | 左/右/上/下移动该行    |
+ | M-S-left/up/         | 删除当前列/行          |
+ | M-S-right/down       | 添加新列/行            |
+ | C-c -/C-c RET        | 添加新分割行           |
+ | C-c ^                | 排序                   |
+ | C-c C-x M-w/C-w/C-y  | 粘贴/剪切/复制当前区域 |
+ | C-c +                | 计算当前列的和         |
+ | S-RET                | 复制                   |
+ | C-c `                | 新窗口编辑当前区域.    |
+ | M-x org-table-import | 导入文件作为表格       |
+ | C-c                  | 将选中区域表示为表格   |
+ | M-x org-table-export | 到处表格               |
+
+*** 表格宽度和对齐
+**** 设置列宽度
+ 要设置列宽度, 在这一列的任何的一个空白单元格(没有的话可以创建一个空白行)内
+ 加入"<N>", N就是你要设置的宽度.然后按"C-c C-c"即可改变宽度. 
+ 如果该列某一行的宽度大于N, 那么该区域内容会被"压缩", 如果要查看完整内容, 把
+ 鼠标放到上面即可, 如果要编辑该内容, 在区域上按"C-c `". 
+
+ 当第一次打开一个设置了"压缩"的表格时,会看到"压缩"并未发生, 超过宽度的内容
+ 仍然会在表格中显示, 可以在文档中加入 "#+STARTUP:align" 来打开这个功能. 
+**** 设置左右对齐
+ 跟设置宽度一样, 在某一空白区域添加 <r> 或 <l>. 宽度和对齐也可以结合使用:<r10>.
+*** 列组
+ Org导出表格时, 默认是以行为单位, 也可以按列为单位来处理数据.
+ 这需要添加一个特殊行: 该行的第一个区域只包含"/", 其他以"<"表示的区域
+ 表示是一个组的开始, 以">"结束表示组的结束.
+
+*** Orgtbl 模式
+ 如果想在其他的mode下使用org mode的table功能, 可以输入命令 "orgtbl-mode".
+*** 数据表(Spreadsheet)
+ org mode提供了强大的表格计算能力, 通过使用emacs的"calc"或者直接运行
+ lisp程序, 可以对表格的域进行计算.g
+*** 引用表中数据
+ 如果要在公式或其他地方使用表格中的数据, 必须要有一种方法可以表示表格中的
+ 一个或一块区域. Org中区域可以通过名称/坐标/相对地址等方式引用. 可以在
+ 单元格上面使用快捷键"C-c ?"来查看该单元格的坐标. 或使用 "C-c }"来显示一块区域.
+ 1. 引用表格的几种方法
+  | 格式          | 含义             | 补充                     |
+  |---------------+------------------+--------------------------|
+  | letter/number | 某一格           | B3表示第三行第二列       |
+  | @N            | 某一行           |                          |
+  | $N            | 某一列           |                          |
+  | @M$N          | 某一格           |                          |
+  | $+/-N         | 当前列的相对列   | 同样适用于行             |
+  | $< $>         | 第一列和最后一列 | $<<<倒数第三列, 适用于行 |
+  | @I            | high line        | 例如本例第二行           |
+  | @0 $0         | 当前行/列        |                          |
+ 2. 使用".."来表示一个区域, 例如 $1..$3表示第一列到第三列
+ 3. 使用 @# $# 来表示当前行/列的值.
+ 4. 命名. org table支持命名方式, 可以通过 "org-table-formula-constants"来设置一个
+    全局的名字, 或通过 "#+CONSTANTS"单独为一个文件设置名称变量. 也可以在表格中
+    使用emacs的properties功能来使用property变量.
+ 5. 远程引用. 可以通过远程引用的方式引用其他文件或该文件其他表格的内容.
+    远程引用的语法为: remote(NAME-OR-ID, REF). 第一个参数可以是本文件中
+    用 #+NAME 来命名的表格, 或其他文件中的一个entry ID. REF是当前表格的一个区域.
+*** 表格处理计算
+ 表格计算可以在表格底部用"#+TBLFM:"关键字, 后面接计算公式, 目前
+ 表格支持 "Calc" 和 lisp计算公式.
+**** 公式语法. "公式"是指可以被"Calc"包识别的任何代数公式.
+   注: Calc中"/"的优先级低于"*". 
+**** 附加模式. org支持公式后面添加任意数量的附加模式, 公式和
+    附加模式之间用";"隔开. 目前支持的附加模式包括:
+    | 表示        | 意义                              |   |
+    |-------------+-----------------------------------+---|
+    | pN          | 计算精度                          |   |
+    | nN,sN,eN,fN | 普通/科学/工程/固定表示           |   |
+    | D/R         | 度/弧度模式                       |   |
+    | F/S         | 小数模式                          |   |
+    | T/t         | 时间计算模式                      |   |
+    | E           | 控制怎样表示空白格                |   |
+    | N           | 把所有表格表示为数字, 非数字0代替 |   |
+    | L           |                                   |   |
+
+    下面是一些实例程序
+     #+BEGIN_EXAMPLE
+      $1+$2                Sum of first and second field
+      $1+$2;%.2f           Same, format result to two decimals
+      exp($2)+exp($1)      Math functions can be used
+      tan($1);Dp3s1        Compute in degrees, precision 3, display SCI 1
+ #+END_EXAMPLE
+**** lisp代码处理表格.
+    org支持用lisp代码处理表格. 以 '( 开头的表达式会被解析为lisp代码,
+    默认情况下, 表格的内容会被引用为字符串, 如果需要将其处理为数字,
+    需要将其转化为N模式(后面加";N"). 也可以用使用双引号将其表示为字符串.
+    "范围(..)"会被解析为空格分开的域. 下面是一些例子:
+    #+BEGIN_EXAMPLE
+ '(concat (substring $1 1 2) (substring $1 0 1) (substring $1 2))
+     Swap the first two characters of the content of column 1.
+ '(+ $1 $2);N   Add columns 1 and 2, equivalent to Calc's `$1+$2'.
+ '(apply '+ '($1..$4));N   Compute the sum of columns 1 to 4, like Calc's `vsum($1..$4)'.
+    #+END_EXAMPLE
+**** 时间计算.
+   前面讲过表格支持时间计算.表格支持的时间格式为 HH:MM[:SS], 
+   其中SS是可选, 如果公式后面接";T", 计算结果会展示为 HH:MM:SS.
+   如果为";t", 计算结果为小时的小数表示. 下面的例子展示了这一点:
+   #+BEGIN_EXAMPLE
+       |  Task 1 |   Task 2 |    Total |
+       |---------+----------+----------|
+       |    2:12 |     1:47 | 03:59:00 |
+       | 3:02:20 | -2:07:00 |     0.92 |
+       #+TBLFM: @2$3=$1+$2;T::@3$3=$1+$2;t
+   #+END_EXAMPLE
+**** 直接在域中输入公式. 
+   可以直接在域中输入公式. 在域中输入":="并后面接公式. 也可以
+   在当前域中输入 "C-u C-c ="命令在提示框中输入公式.
+**** 查找功能
+ orgmode提供了三个查找函数用于在表中进行查找:
+ + (org-lookup-first VAL S-LIST R-LIST &optional PREDICATE)
+   在S-LIST中查找第一个 (PREDICATE VAL S)值为t的S. 并返回R-LIST与S位置相同的
+   值. PREDICATE的默认值为 equal, 如果R-LIST为nil, 则返回S.
+ + (org-lookup-first VAL S-LIST R-LIST &optional PREDICATE)
+   与上一个函数意义相同, 不过是先查找最后一个.
+ + (org-lookup-first VAL S-LIST R-LIST &optional PREDICATE)
+   相似函数. 不过返回的是一个列表.
+
+ 下面是一个示例, 更多示例看这篇文章: http://orgmode.org/worg/org-tutorials/org-lookups.html
+  #+TBLNAME: rates
+ | currency        | abbreviation | euros |
+ |-----------------+--------------+-------|
+ | euro            | eur          |     1 |
+ | Norwegian krone | nok          |  0.14 |
+ | Swedish krona   | sek          |  0.12 |
+ | US dollar       | usd          |  0.77 |
+
+ #+TBLNAME: cost
+ |  date | expense          |  sum | currency |   rate |  euros |   |
+ |-------+------------------+------+----------+--------+--------+---|
+ |  1.3. | flights          |  324 | eur      |      1 |    324 |   |
+ |  4.6. | books and maps   |  243 | usd      |   0.77 | 187.11 |   |
+ | 30.7. | rental car       | 8300 | sek      |   0.12 |   996. |   |
+ |  2.7. | hotel            | 1150 | sek      |   0.12 |   138. |   |
+ |  2.7. | lunch            |  190 | sek      |   0.12 |   22.8 |   |
+ |  3.7. | fishing licenses | 1400 | nok      |   0.14 |   196. |   |
+ |  3.7. | gasoline         |  340 |          | #ERROR | #ERROR |   |
+  #+TBLFM: $5='(org-lookup-first $4 '(remote(rates,@2$2..@>$2)) '(remote(rates,@2$3..@>$3)))::$6=$5*$3
+ 第一个函数查找cost表的第四列和rates表的第二列相同的值, 并将查找结果对应的
+ rates表的第三列填充到cost表的第五列, 然后计算第六列的值.
+ #+TBLFM: $7
+**** 调试公式
+ org mode提供了下列用于调试公式的快捷键:
+ | 快捷键            | 功能                   |
+ |-------------------+------------------------|
+ | C-c = / C-u C-c = | 在当前格写入公式       |
+ | C-u C-u C-c =     | 重新插入公式           |
+ | C-c ?             | 当前格信息             |
+ | C-c }             | 表信息                 |
+ | C-c {             | 打开/关闭调试          |
+ | C-c '             | 在buffer中编辑所有公式 |
+ |                   |                        |
+
+** 超链接							       :link:
+   Org 支持如下链接方式: 文件内部, 外部文件, Usenet文章, 邮件及其他.
+*** 链接快捷键							   :shortkey:
+ |             | 功能                    |
+ |-------------+-------------------------|
+ | C-c l       | 将当前位置存为一个link  |
+ | C-c C-l     | 编辑/插入链接           |
+ | C-c C-o     | 打开(跳转)              |
+ | C-u C-c C-l | 插入文件                |
+ | C-c C-x C-v | 开关图片显示            |
+ | C-c %       | 将当前位置放入mark ring |
+ | C-c &       | 返回mark ring           |
+ | C-c C-x C-n | next link               |
+ | C-c C-x C-p | 上一个link              |
+
+*** 链接格式
+ Org的链接格式为:
+ #+BEGIN_EXAMPLE
+ [[链接地址][描述]] 或 [[链接地址]]
+ #+END_EXAMPLE
+ 当最后一个"]"写完时, org会将该链接显示为"[[%E5%8F%8C%E4%B8%B0%E6%94%B6][描述]]"(该显示格式对应face "org-link"),
+ 如果想要编辑链接, 可以在链接上使用快捷键 "C-c C-l", 在显示内容前后使用"delete"键
+ 会破坏链接的语法(也可以这样编辑链接).
+*** 内部链接
+ 如果一个链接不是一该URL, org会将其看做内部链接, org寻找内部链接的方式为:
+ 1) 跳转到被 "<<>>"定义的地方. 如下面的例子,在第一个链接上用C-c C-o 会
+   跳转到test出现的地方. 
+   #+BEGIN_EXAMPLE
+   loc1: [[test]] 
+   loc2  this is a <<test>>
+   #+END_EXAMPLE
+ 2) 如果1)不存在, 会跳转到 "#+NAME" 命名和链接相同的地方.
+ 3) 前两步都失败, 会尝试寻找精确匹配的标题.
+*** 外表链接
+ org mode支持的外部链接包括:
+ #+BEGIN_EXAMPLE
+ |                             | 描述                  |
+ |-----------------------------+-----------------------|
+ | http://web                  | 网站                  |
+ | doi:10.1000/182             | doi链接               |
+ | file://path                 | 文件相对/绝对地址     |
+ | file:/a@b:x/y.pdf           | 远程文件地址          |
+ | file:orgmode-learn.org::111 | 跳转到文件NNN行       |
+ | file:org-file::key/*title   | 支持org文件的标题搜索 |
+ | file+sys:/path              | 使用系统打开          |
+ | docview:path::NNN           | 使用docview模式打开   |
+ | news:comp.emacs             | Usenet 链接           |
+ | mailto:a@b                  | mail                  |
+ | gnus:group                  | gnus链接              |
+ | irc:/irc.com/#emacs         | irc链接               |
+ | shell:cmd                   | shell 命令            |
+ | elisp:cmd                   | elisp cmd             |
+ #+END_EXAMPLE
+*** 短链接
+ 如果链接太长且在文件中经常使用, 可以将其设置为"链接关键字",
+ 可以用 "#+LINK"关键字来实现这个功能, 或者设置"org-link-abbrev-alist"变量:
+ #+BEGIN_EXAMPLE
+      (setq org-link-abbrev-alist
+	'(("bugzilla"  . "http://10.1.2.9/bugzilla/show_bug.cgi?id=")
+          ("url-to-ja" . "http://translate.google.fr/translate?sl=en&tl=ja&u=%h")
+          ("google"    . "http://www.google.com/search?q=")
+          ("gmap"      . "http://maps.google.com/maps?q=%s")
+          ("omap"      . "http://nominatim.openstreetmap.org/search?q=%s&polygon=1")
+          ("ads"       . "http://adsabs.harvard.edu/cgi-bin/nph-abs_connect?author=%s&db_key=AST")))
+ #+END_EXAMPLE
+
+ 短链接的格式为, 如果链接中有"%s", 会被tag替代, "%h"则会将tag进行url编码.
+ %(function)会调用函数并将结果添加. 什么都没有的话直接在尾部添加.
+ #+BEGIN_EXAMPLE
+ [[word:tag][description]]
+ #+END_EXAMPLE
+** "TODO"项目							       :todo:
+*** "TODO"快捷键						   :shortkey:
+ |                     | 说明               |
+ |---------------------+--------------------|
+ | C-c C-t             | 修改项目状态       |
+ | S-right/left        | 同上               |
+ | C-u C-c C-t         | 选择状态           |
+ | C-c / t(T)          | 显示todo 树        |
+ | C-c a t             | 显示全局todo       |
+ | S-M-RET             | 插入TODO           |
+ | C-c C-x o           | 打开ORDERED属性    |
+ | C-u C-u C-u C-c C-t | 强制修改状态       |
+ | C-c ,               | 设置优先级         |
+ | S-up/down           | 更改优先级         |
+ | C-c #               | 更新当前标题完成率 |
+ | C-c C-q /C-c        | 添加tag            |
+ |                     |                    |
+
+*** 拓展TODO关键字
+**** keywords.
+ 通过设置 org-mode-keywords来扩展TODO关键字, 如下例, 通过 "|"来区分TODO状态
+    和DONE状态.
+    #+BEGIN_EXAMPLE
+     (setq org-todo-keywords
+	'((sequence "TODO" "FEEDBACK" "VERIFY" "|" "DONE" "DELEGATED")))
+    #+END_EXAMPLE
+**** 使用type.
+    来将TODO设置为不同的类型, 如下例, 可以将TODO任务分配给不同的人, 
+    这样按C-c C-t修改状态时不会在这三个type之间滚动.而是直接设为done
+    #+BEGIN_EXAMPLE
+    (setq org-todo-keywords '((type "Fred" "Sara" "Lucy" "|" "DONE")))
+    #+END_EXAMPLE
+**** 使用sequence设置多组关键字
+ 如示例 
+ #+BEGIN_EXAMPLE
+     (setq org-todo-keywords
+            '((sequence "TODO(t)" "|" "DONE(d)")
+              (sequence "REPORT" "BUG" "KNOWNCAUSE" "|" "FIXED")
+              (sequence "|" "CANCELED")))
+
+ #+END_EXAMPLE
+**** 在当前文件使用TOD
+ 上面的例子都可以只在当前文件中设置, 如下例:
+ #+BEGIN_EXAMPLE
+      #+TODO: TODO FEEDBACK VERIFY | DONE CANCELED
+      #+TYP_TODO: Fred Sara Lucy Mike | DONE
+
+      #+TODO: TODO | DONE
+      #+TODO: REPORT BUG KNOWNCAUSE | FIXED
+      #+TODO: | CANCELED
+
+ #+END_EXAMPLE
+**** 关键字主题
+ 通过设置"org-todo-keyword-faces"变量可以设置不同关键字的表现形式,例如:
+ #+BEGIN_EXAMPLE
+      (setq org-todo-keyword-faces
+            '(("TODO" . org-warning) ("STARTED" . "yellow")
+              ("CANCELED" . (:foreground "blue" :weight bold))))
+
+
+ #+END_EXAMPLE
+**** 设置依赖
+ 有时候一个TODO可能依赖其他的TODO, 例如一个系列项目, 可能前面的项目完成
+ 之前, 后面的项目都不能将状态改成DONE, 或者子项目完成之前, 父项目不能将
+ 状态改成DONE.
+ 1. org-enforce-todo-dependencies.
+    通过设置该变量, 可以设置在所有的子标题都完成之前, 父标题不能将状态设置为DONE.
+    #+BEGIN_EXAMPLE
+    (setq org-enforce-todo-dependencies t)
+    #+END_EXAMPLE
+ 2. 按顺序修改状态.
+    通过设置属性"ORDERED"来控制同级标题之前按顺序修改状态, 在前面的标题完成之前
+    后面的标题不能将属性设为DONE.
+    #+BEGIN_EXAMPLE
+      * Parent
+	:PROPERTIES:
+	:ORDERED: t
+	:END:
+      ** TODO a
+      ** TODO b, needs to wait for (a)
+      ** TODO c, needs to wait for (a) and (b)
+    #+END_EXAMPLE
+*** 时间戳
+**** 设置完成时间
+ 可以加入设置下面两个配置之一来自动在状态改成DONE的时候加入当前时间戳:
+ 其中第二个配置还会要求你写一段完成的note.
+ #+BEGIN_EXAMPLE
+ (setq org-log-done 'time)
+ (setq org-log-done 'note)
+ #+END_EXAMPLE
+**** 记录状态变化
+ 下面的配置用于记录状态之间的变化, 可以通过设置带"附加属性"的keywords来实现
+ 这一个. 在keyword后面的括号中与状态记录相关字符为:
+ + "!" 表示记录时间
+ + "@" 表示带时间的note
+ + "/!" 当跳转到一个没有附加属性的状态时, 记录时间或note
+ #+BEGIN_EXAMPLE
+      (setq org-todo-keywords
+	'((sequence "TODO(t)" "WAIT(w@/!)" "|" "DONE(d!)" "CANCELED(c@)")))
+ #+END_EXAMPLE
+
+ 也可以使用PROPERTIES属性 "LOGGING" 来修改某个标题的TODO附加属性, 
+ 如果LOGGING为nil,表示没有附加记录. 也可以使用 "logrepeat" 或 
+ "lognotedone" 使用默认属性, 例如下例, 这个配置会修改TODO只添加时间戳,
+ WAIT需要note, 其他的属性使用STARTUP的默认值.
+ #+BEGIN_EXAMPLE
+      * TODO Log each state with only a time
+	:PROPERTIES:
+	:LOGGING: TODO(!) WAIT(@) logrepeat
+	:END:
+ #+END_EXAMPLE
+**** 追踪行为
+ 使用属性STYLE habit来设置持久性行为, 如下例, 表示至少4天或至多2天
+ *刮一次胡子*.
+ #+BEGIN_EXAMPLE
+   ** TODO Shave
+    'S CHEDULEd: <2015-12-08 Tue .+2d/4d>
+   :PROPERTIES:
+   :STYLE:    habit
+   :END:
+ #+END_EXAMPLE
+*** 优先级
+ Org支持TODO项目的优先级, 默认支持的优先级有三个:A, B, C. A最高.
+ 如下所示, 无优先级表示的项目优先级是B.
+ #+BEGIN_EXAMPLE 
+   ** TODO [#A] 
+ #+END_EXAMPLE
+*** 显示任务完成比
+ 可以在标题中加入 "[/]" 或 "[%]" 来显示子任务的完成数.
+ 默认只显示子标题, 如果要递归显示整个树, 需要设置
+ "org-hierarchical-todo-statistics", 或者在PROPERTIES中设置
+ "COOKIE_DATA", 如下所示;
+ #+BEGIN_EXAMPLE
+      * Parent capturing statistics [2/20]
+	:PROPERTIES:
+	:COOKIE_DATA: todo recursive
+	:END:
+ #+END_EXAMPLE
+
+ 如果当子任务都完成时, 父任务自动标记为DONE, 可以在.emacs中加入
+ 如下代码:
+ #+BEGIN_EXAMPLE
+ (defun org-summary-todo (n-done n-not-done)
+   "Switch entry to DONE when all subentries are done, to TODO otherwise."
+   (let (org-log-done org-log-states)   ; turn off logging
+     (org-todo (if (= n-not-done 0) "DONE" "TODO"))))
+ (add-hook 'org-after-todo-statistics-hook 'org-summary-todo)
+ #+END_EXAMPLE
+** 标签功能								:tag:
+   标签用":tag:"表示, 放在标题后面
+*** 继承性
+ 标签具有继承性, 子标题会继承所有父标题的标签. 也可以定义一个全局文件的
+ 标签让所有标题继承.例如
+ #+BEGIN_EXAMPLE
+  #+FILETAGS: :org:
+ #+END_EXAMPLE
+
+ 可以设置 org-tags-exclude-from-inheritance 来排除不继承的tag.
+ 设置org-use-tag-inheritance来关掉整个继承功能.
+** 日期和时间							  :timestamp:
+*** 日期快捷键							   :shortkey:
+    |                       | 功能                           |
+    |-----------------------+--------------------------------|
+    | C-c .                 | 创建时间戳, 连续使用创建时间段 |
+    | C-c !                 | 创建不激活时间                 |
+    | C-u C-c . / C-u C-c ! | 带时间的时间戳                 |
+    | C-c C-c               | 重置时间戳如果有错             |
+    | C-c <                 | 插入当前日期                   |
+    | C-c >                 | 进入calendar                   |
+    | C-c C-o               | 进入org agendar                |
+    | S-left/right          | 改为前/后一天                  |
+    | S-up/down             | 改为后/前一个单位              |
+    | C-c C-y               | 计算时间段                     |
+   
+ + 日历快捷键
+ |                | 功能       |
+ |----------------+------------|
+ | RET            | 选择       |
+ | S-right/left   | 移动day    |
+ | S-down/up      | 移动week   |
+ | M-S-right/left | 移动month  |
+ | M-S-up/down    | 移动Year   |
+ | > <            | 移动month  |
+ | M-v / C-v      | 移动3month |
+ |                |            |
+
+*** Org识别的日期格式
+ #+BEGIN_EXAMPLE
+ Assume today is June 13, 2006
+
+      3-2-5         => 2003-02-05
+      2/5/3         => 2003-02-05
+      14            => 2006-06-14
+      12            => 2006-07-12
+      2/5           => 2007-02-05
+      Fri           => nearest Friday after the default date
+      sep 15        => 2006-09-15
+      feb 15        => 2007-02-15
+      sep 12 9      => 2009-09-12
+      12:45         => 2006-06-13 12:45
+      22 sept 0:34  => 2006-09-22 0:34
+      w4            => ISO week for of the current year 2006
+      2012 w4 fri   => Friday of ISO week 4 in 2012
+      2012-w04-5    => Same as above
+      +0            => today
+      .             => today
+      +4d           => four days from today
+      +4            => same as above
+      +2w           => two weeks from today
+      ++5           => five days from default date
+      +2tue         => second Tuesday from now
+      -wed          => last Wednesday
+      11am-1:15pm    => 11:00-13:15
+      11am--1:15pm   => same as above
+      11am+2:15      => same as above
+ #+END_EXAMPLE
+*** 安排时间
+**** DEADLINE设置
+ #+BEGIN_EXAMPLE
+    *** TODO write article about the Earth for the Guide
+	       DEADLINE <2004-02-29 Sun>
+	       The editor in charge is [[bbdb:Ford Prefect]]
+ #+END_EXAMPLE 
+***  SCHEDULED设置
+ #+BEGIN_EXAMPLE
+           *** TODO Call Trillian for a date on New Years Eve.
+	       SCHEDULED <2004-12-25 Sat>
+ #+END_EXAMPLE
+*** TODO 计时器
+** Capture捕获和存档
+*** capture快捷键						   :shortkey:
+ |                     | 功能                            |
+ |---------------------+---------------------------------|
+ | C-u capture         | 打开capture模板                 |
+ | C-u C-u capture     | 打开capture项目                 |
+ | C-0  capture        | 在当前org buffer插入capture项目 |
+ | C-c C-x C-a         | 默认存档                        |
+ | C-c C-x C-s / C-c $ | 存档到org_archive               |
+ | C-u C-c C-x C-s     | 只存档完成的任务                |
+ | C-c C-x a           | 设置 ARCHIVE 标签               |
+ | C-u C-c C-x a       | 检查是否需要设置 ARCHIVE        |
+ | C-c C-x A           | 将标题移到ARCHIVE标题下面       |
+ |                     |                                 |
+*** Capture
+ Capture的特性就是在尽量不打搅你现有工作的情况下记录其他的事情.
+
+**** 设置capture
+ 在emacs配置文件中加入如下代码, 这样, 当你在emacs的任何地方按"C-c c"都会打开
+ capture缓冲区让你设置任务, 设置完成后会自动保存到notes.org文件. 然后回到之前的
+ 工作窗口.
+ #+BEGIN_EXAMPLE
+      (setq org-default-notes-file (concat org-directory "/notes.org"))
+      (define-key global-map "\C-cc" 'org-capture)
+ #+END_EXAMPLE
+**** 设置Capture模板
+ 下面是一个capture模板的例子, 会基于这个例子介绍Capture模板的组成,
+ 当使用快捷键(C-c c)进入到capture窗口时, 会显示"t"和"j"两个选项,
+ 按下t会将任务分配到gtd.org下的Tasks里.
+ j会将任务分配到journal.org中.
+ #+BEGIN_EXAMPLE
+
+      (setq org-capture-templates
+       '(("t" "Todo" entry (file+headline "~/org/gtd.org" "Tasks")
+              "* TODO %?\n  %i\n  %a")
+         ("j" "Journal" entry (file+datetree "~/org/journal.org")
+              "* %?\nEntered on %U\n  %i\n  %a")))
+
+ #+END_EXAMPLE
+
+ caputre模板主要有下面几部分组成:
+ 1) KEYS. 
+    选择模板的快捷键. 如"t"和"j". 只能为字符, 也可以为多个字符.
+    实现二级目录.
+ 2) DESCRIPTION. 模板描述.
+ 3) 目录类型. 目前支持的目录类型包括:
+    |            | 功能                                                                      |
+    |------------+---------------------------------------------------------------------------|
+    | entry      | 一个org mode节点, 会被放在指定标题下面(或成为一级标题), 目标文件是org文件 |
+    | item       | 同上, 但是为list节点                                                      |
+    | checkbox   | checkbox节点                                                              |
+    | table-line | 表行                                                                      |
+    | plain      | 文本文字                                                                  |
+ 4) 条目格式.
+    #+BEGIN_EXAMPLE
+       %[FILE]     Insert the contents of the file given by FILE.
+      %(SEXP)     Evaluate Elisp SEXP and replace with the result.
+			For convenience, %:keyword (see below) placeholders
+			within the expression will be expanded prior to this.
+			The sexp must return a string.
+      %<...>      The result of format-time-string on the ... format specification.
+      %t          Timestamp, date only.
+      %T          Timestamp, with date and time.
+      %u, %U      Like the above, but inactive timestamps.
+      %i          Initial content, the region when capture is called while the
+                  region is active.
+                  The entire text will be indented like `%i' itself.
+      %a          Annotation, normally the link created with `org-store-link'.
+      %A          Like `%a', but prompt for the description part.
+      %l          Like %a, but only insert the literal link.
+      %c          Current kill ring head.
+      %x          Content of the X clipboard.
+      %k          Title of the currently clocked task.
+      %K          Link to the currently clocked task.
+      %n          User name (taken from `user-full-name').
+      %f          File visited by current buffer when org-capture was called.
+      %F          Full path of the file or directory visited by current buffer.
+      %:keyword   Specific information for certain link types, see below.
+      %^g         Prompt for tags, with completion on tags in target file.
+      %^G         Prompt for tags, with completion all tags in all agenda files.
+      %^t         Like `%t', but prompt for date.  Similarly `%^T', `%^u', `%^U'.
+                  You may define a prompt like `%^{Birthday}t'.
+      %^C         Interactive selection of which kill or clip to use.
+      %^L         Like `%^C', but insert as link.
+      %^{PROP}p   Prompt the user for a value for property PROP.
+      %^{PROMPT}  prompt the user for a string and replace this sequence with it.
+                  You may specify a default value and a completion table with
+                  %^{prompt|default|completion2|completion3...}.
+                  The arrow keys access a prompt-specific history.
+      %\\n        Insert the text entered at the nth %^{PROMPT}, where `n' is
+                  a number, starting from 1.
+      %?          After completing the template, position cursor here.
+    #+END_EXAMPLE
+ 5) 属性
+*** TODO 添加附件
+*** 添加RSS
+ #+BEGIN_EXAMPLE
+      (setq org-feed-alist
+           '(("Slashdot"
+	       "http://rss.slashdot.org/Slashdot/slashdot"
+	       "~/txt/org/feeds.org" "Slashdot Entries")))
+
+ #+END_EXAMPLE
+*** 整理capture数据
+ 快捷键:
+ |         | 功能         |
+ |---------+--------------|
+ | C-c M-w | 复制但不删除 |
+ | C-c C-w | 复制并删除   |
+
+*** 存档
+ 默认的存档文件是当前文件加上"_archive"后缀, 可以设置 *org-archive-location*,
+ 或者在文件中设置"#+ARCHIVE:%s", 或者在某个标题下使用 ":ARCHIVE:".
+** 行程
+*** agenda快捷键
+ |           | 功能                        |
+ |-----------+-----------------------------|
+ | C-c [     | 将当前文件添加到agenda list |
+ | C-c ]     | 已出文件                    |
+ | C-,       | 遍历agenda文件              |
+ | C-c C-x < | 将agendar锁定到当前树       |
+ | C-c C-x > | 解锁                        |
+
+ agendar模式((C-u N) C-c a)的快捷键
+ |       | 功能                          |
+ |-------+-------------------------------|
+ | a     | 显示日历                      |
+ | t/T   | 显示所有的TODO                |
+ | m/M   | 显示匹配TAG的标题             |
+ | L     | 当前buffer的时间线            |
+ | s     | 搜索关键字                    |
+ | '/    | 正则表达式搜索                |
+ | # / ! |                               |
+ | <     | 锁定buffer                    |
+ | < <   |                               |
+ | '*    | 打开/关闭 sticky agenda views |
+
+*** 设置要显示的文件
+ 通过配置"org-agenda-files"来设置要显示的文件
+*** 配置日历显示
+ 设置org-agenda-span为要显示的天数, 或"day", "week", "month", "year".
+ 设置org-agenda-start-day显示开始的日期.
+** 富文本标记							     
+ org mode支持将文本到处成其他的格式,例如HTML/PDF/LaTex/Markdown等等, 
+ 为了支持这些文本丰富的格式要求, org mode定义了一系列的标记, 第一部分就先
+ 来看一下这些标记规则.
+*** 标记
+**** 结构化标记元素
+***** 标题.
+     使用关键字 *#+TITLE* 来设置导出文本的标题, 如果没有设置, 会以文件名
+     作为标题. 如果只是到处一个子树, 则使用子树的标题作为导出文本的标题.
+     或者也可以在子树中设置属性 *EXPORT_TITLE*.
+***** 修改导出层级.
+     org mode默认只导出三层标题, 举例来说, 导出为HTML时, 只会导出到H3, 而
+     四层及以下的标题都生成为列表. 如果想要修改导出的层级, 可以设置全局变量
+     *org-export-headline-levels*, 或者在文本内设置OPTIONS设置 *H* 配置: 
+     #+BEGIN_EXAMPLE 
+       #+OPTIONS: H:4
+     #+END_EXAMPLE
+***** 目录.
+     org mode默认会导出目录, 将其放在第一个标题的前面,目录深度与标题层级相同,
+     不过可以通过设置 *org-export-with-toc* 或修改OPTIONS的 *toc* 来修改目录
+     深度或将其关闭. 例如
+     #+BEGIN_EXAMPLE
+       #+OPTIONS: toc:2 (两层目录)
+       #+OPTIONS: toc:nil (关掉目录)
+     #+END_EXAMPLE
+    
+     如果想改变目录的导出位置, 先将默认导出关闭, 然后使用 *#+TOC: headlines N*
+     配置到想插入的地方. 例如:
+     #+BEGIN_EXAMPLE
+       #+OPTIONS: toc:nil        (no default TOC)
+       ...
+       #+TOC: headlines 2        (insert TOC here, with two headline levels)
+     #+END_EXAMPLE
+    
+     同时, org mode还支持列表和表格的导出.
+     #+BEGIN_EXAMPLE 
+       #+TOC: listings           (build a list of listings)
+       #+TOC: tables             (build a list of tables)
+     #+END_EXAMPLE
+***** 换行, 引用
+ orgmode中,段落之间用空白行来分割,如果需要段落内换行, 在该行结尾使用 *\\* 关键字.
+
+ 如果想在该段落部分内容保持换行, 可以使用 =#+BEGIN_VERSE= 关键字, 写诗的人肯定需要这个功能, 
+ 例如:
+ #+BEGIN_EXAMPLE
+ #+BEGIN_VERSE
+       Great clouds overhead
+       Tiny black birds rise and fall
+       Snow covers Emacs
+
+           -- AlexSchroeder
+ #+END_VERSE
+ #+END_EXAMPLE
+
+ 引用他人内容可以使用 =#+BEGIN_QUOTE=, 这样可以保持缩进
+ #+BEGIN_EXAMPLE
+ #+BEGIN_QUOTE
+      Everything should be made as simple as possible,
+      but not any simpler -- Albert Einstein
+ #+END_QUOTE
+ #+END_EXAMPLE
+
+ 想要内容居中可以使用 =#+BEGIN_CENTER=
+ #+BEGIN_EXAMPLE
+ #+BEGIN_CENTER
+ Keep me in the center!!!!
+ #+END_CENTER
+ #+END_EXAMPLE
+
+***** 修饰符
+ org mode提供了一些字符串的修饰符号, 这些修饰符都是成对出现, 
+ 用于修饰其包含的内容.\\
+ 包括以下几种:
+ #+BEGIN_EXAMPLE
+ *粗体*, /斜体/, _下划线_, =原文=, ~代码~, +删除线+. 
+ #+END_EXAMPLE
+
+ 其中==常用于org mode的特殊字符, 比如 ==#+OPTIONS:== 就可以保证
+ 在导出时不解析#+OPTIONS, 只是原文输出.
+
+ 如果一行只包含且包含5个以上 "-" 那么会被导出为横线.
+***** 注释
+ 注释可以用三中方式表示, 注释永远不会被导出.
+ + 以零个或多个空格开始, 并跟着#号, 然后后面在接一个空格的行被认为是
+   注释行, 该行永远不会被导出. 
+ + 以 *COMMENT* 开始的整个子树
+ + 被 =#+BEGIN_COMMENT= 和 =#+END_COMMENT= 包裹的内容.
+
+ 下面是示例, 下面的内容不会被导出
+ #+BEGIN_EXAMPLE
+   # 注释
+
+   * COMMENT 注释子树
+   ** 二级目录
+
+   #+BEGIN_COMMENT
+    test
+   #+END_COMMENT
+ #+END_EXAMPLE
+**** "字面"内容
+ Orgmode提供了几种方式, 可以使位子内容不受org mode的处理, 即使文字中
+ 有org mode的特殊字符, 主要的方式包括:
+ + #+BEGIN_EXAMPLE..#+END_EXAMPLE \\
+   例如:
+   #+BEGIN_EXAMPLE 
+   #+BEGIN_EXAMPLE 
+   This is an example, *nothing works* 
+   `#+END_EXAMPLE 
+   #+END_EXAMPLE 
+   如果内容特别短, 也可以使用"空格:空格"字符串修饰
+ + #+BEGIN_SRC..#+END_SRC \\
+   如果示例是一段程序, 可以使用这对关键字, 例如
+   #+BEGIN_EXAMPLE  -r -n
+     ,#+BEGIN_SRC elisp
+     (+ 1 1)
+     (concat "helo" "wold") (ref:lxxtest)
+     ,#+END_SRC
+   #+END_EXAMPLE
+
+ 上面两种方式都可以添加一些配置:
+ + "-n/+n" 显示行号, "+n"会接着前面的block行号继续.
+ + (ref:name) 定义block内的引用.可以在block之外引用block里面的内容.
+   例如可以使用[[(lxxtest)][代码块链接]]来引用代码内容.
+ + "-r", 在导出的文件中移除引用.
+
+ 可以使用快捷键 "C-c '"打开一个buffer编辑block中的内容.
+**** 引用其他文件
+ 使用 *#+INCLUDE:* 来在org文件中引用其他文件, 被引用文件的内容会被放在当前
+ 部分 如果被引用文件也有标题的话, 这些标题会被设置为当前章节的子标题. 
+ 如果你想修改这种设置, 修改被引用文件的标题级别, 可以通过设置 minlevel参数.
+ #+BEGIN_EXAMPLE
+  #+INCLUDE: file :minlevel N
+ #+END_EXAMPLE
+
+ 也可以通过 *:lines* 来引用该文件的一部分, 例如:
+ #+BEGIN_EXAMPLE
+  #+INCLUDE: file :minlevel N :lines "5-10" ;; 5到10行
+  #+INCLUDE: file :minlevel N :lines "5-" ;; 5到结尾
+  #+INCLUDE: file :minlevel N :lines "-10" ;; 1到9行
+ #+END_EXAMPLE
+
+ 也可以通过在后面使用 *src language* 或 *example* 来将被引用内容转化为
+ src或example结构. 
+
+**** 宏
+ #+BEGIN_CENTER
+ MACRO is everywhere.
+ #+END_CENTER
+
+ orgmode同样支持宏定义, 使用关键字 *#+MACRO* 来定义你自己的宏, 然后以
+ *{{{}}}* 的方式调用宏, 可以在宏定义中使用 "$N" 定义多个参数. 
+ #+BEGIN_EXAMPLE
+ #+MACRO: awesome Hi, $, you are an awesome guy.
+
+ {{{awesome(Jake Wharton)}}}
+ #+END_EXAMPLE
+ 系统也提供了一些预定义的宏, 同样可以调用, 例如 ={{{title}}}= , ={{{author}}}= ,
+ ={{{time(FORMAT)}}}= 等.
+**** LaTex
+ As i never use LaTex, I dont read this part. \\
+ It will be catched up when I have some experience with LaTex someday.
+** 导出 
+*** 分配器
+ 导出任务的主要入口称为分配器, 分配器是一个层级目录, 可以在里面
+ 选择导出的格式, 还可以开/关各种导出选项, 使用快捷键 *C-c C-e* 
+ 可以打开分配器. 分配器的界面如下.
+
+ file:../../../../public/img/org-export.png
+
+ 从该图可以看到分配器里面有很多的功能可以通过快捷键的方式操作,
+ 下面介绍几个主要的开/关项:
+ + C-a: 开/关异步导出功能, 异步导出使用了一个外部的Emacs程序, 当使用
+   异步导出时, 输出不会展示, 而是存放到"导出栈"中, 可以通过 "C-u" 前缀
+   或分配器中使用 "&" 来展现内容.
+ + C-b: 开/关只导出body.
+ + C-s: 开/关只导出当前子树. 顶层标题会成为文本标题.
+ + C-v: 开/关只导出可见内容.
+*** 导出后端
+ 导出后端一般为一个库, 用于将Org语法转化为目标文件格式. 目前默认加载的后端
+ 包括: ascii, html, iCanlendar, latex. Orgmode内部集成的后端包括:
+    1. ascii (ASCII format)
+    2. beamer (LaTeX Beamer format)
+    3. html (HTML format)
+    4. icalendar (iCalendar format)
+    5. latex (LaTeX format)
+    6. man (Man page format)
+    7. md (Markdown format)
+    8. odt (OpenDocument Text format)
+    9. org (Org format)
+    10. texinfo (Texinfo format)
+
+*** 导出设置 
+ org mode支持以下范围的导出设置, 更小范围的配置会覆盖"大"范围配置.
+ + 全局范围: 通过设置全局变量.
+ + 文件范围: 有以下几种方式
+   - 设置in-buffer setting
+   - 设置关键字
+   - 通过 "#+OPTIONS" 配置
+ + 子树范围: 通过设置property.
+
+ 1. 常用的导出关键词:
+  | 名称         | 对应变量                    |              |
+  |--------------+-----------------------------+--------------|
+  |              |                             | <6>          |
+  | AUTHOR       | user-full-name              |              |
+  | CREATOR      | org-export-creator-string   |              |
+  | DATE         |                             |              |
+  | DESCRITION   |                             |              |
+  | EMAIL        | user-mail-address           |              |
+  | KEYWORDS     |                             |              |
+  | LANGUAGE     | org-export-default-language |              |
+  | SELECT_TAGS  | org-export-select-tags      | 设置可以导出的tags, 默认为:export:, 可以设置:noexport:不导出该树, 当:export: 被设置时, 其前面的标题导出时都会被隐藏. |
+  | EXCLUDE_TAGS | org-export-exclude-tags     | 设置不被导出的tags |
+  | TITLE        | 题目                        | 可以设置多个 |
+  |              |                             |              |
+ 2. #+OPTIONS缩写配置, 该关键字后面可以接多个"简写"配置.包括
+ 
+  |            | 变量   | note             |
+  |------------+--------+------------------|
+  |            | <6>    | <8>              |
+  | ':         | org-export-with-smart-quotes | 智能quote.       |
+  | *:         | org-export-with-emphasize | 强调文本,例如正常 *x* 可以设置粗体, 但将该配置设为nil后粗体失效 |
+  | ::         | org-export-with-fixed-width | 固定宽度         |
+  | <:         | org-export-with-timestamps |                  |
+  | \n:        | org-export-preserve-breaks | 设为t, 导出的内容分行会按倒org文件的分行. 相当于 "\\" |
+  | ^:         | org-export-with-sub-superscripts | 设为t, a_b导出时b会成为a的下脚注, 可以设为nil, 也可以设为{}, 使a_{b}成为下脚注格式,a_b则不变. |
+  | arch:      | org-export-with-archived-trees | 是否导出存档内容, 可以设为headline只导出存档的标题 |
+  | author:    | org-export-with-author | 是否导出作者信息 |
+  | c:         | org-export-with-clocks | 是否导出CLOCK    |
+  | creator:   | org-export-with-creator | 是否导出CREATOR  |
+  | d:         | org-export-with-drawers | 是否导出drawer   |
+  | e:         | org-export-with-entities |                  |
+  | email:     | ..with-email |                  |
+  | inline:    | ..with-inlinetasks |                  |
+  | num:       | ..with-section-numbers | 是否显示节数, 也可以设置为n, <=n的标题显示节数 |
+  | p:         | ..with-planning | 是否显示SCHEDULED/DEADLINE/CLOSED时间戳 |
+  | pri:       | ..with-priority |                  |
+  | stat:      | ..with-statistic-cookies |                  |
+  | tasks:     | ..with-tasks | TODO项的导出设置, nil不导出所有, todo移除DONE项, 或是一系列关键字 |
+  | tex:       | ..with-latex |                  |
+  | timestamp: | org-export-time-stamp-file | 是否显示创建时间 |
+  | toc:       | ..with-toc | 是否显示, 或设置显示level |
+  | todo:      | ..with-todo-keywords | 是否包含todo     |
+ 
+  |       | <4>  |                |
+  | -:    | org-export-with-special-strings | 特殊字符串转化 |
+  | H:N   | org-export-headline-levels | 导出的标题层级 |
+  | tags: | ..with-tags | 导出的标签     |
+  | f:    | ..with-footnotes | 是否导出脚注   |
+ 
+  | 竖线: | 是否包含目录 |   |
+ 3. 子树范围内的导出可以设置property "EXPORT_"
+
+*** ASCII/Latin-1/UTF-8导出
+ 1. 导出快捷键, C-c C-e t a/l/u
+ 2. 设置只在导出为ascii导出的文本
+    + @@ascii: 只导出为ascii时导出@@
+    + =#+ASCII: text=
+    + =#+BEGIN_ASCII= .. =#+END_ASCII=
+ 3. 只支持的属性: =#+ATTR_ASCII: :width N=
+
+*** 导出为HTML
+ 导出HTML的快捷键为 'C-c C-e h h' 和 'C-c C-e h H'.
+**** 支持的HTML文档类型
+ "html4-strict","html4-transitional","html4-frameset",
+ "xhtml-strict","xhtml-transitional","xhtml-frameset",
+ "xhtml-11","html5","xhtml5"
+
+ org mode默认不支持HTML5的一些元素, 如果要使org mode支持,
+ 可以设置org-html-html5-fancy变量为t. 例如 =#+BEGIN_ASIDE=, =#+BEGIN_VIDEO= 例如 =#+BEGIN_ASIDE=, =#+BEGIN_VIDEO=.
+
+**** 前缀和后缀
+ 可以设置导出文本的前缀和后缀内容, 前缀内容通过设置变量 "org-html-preamble", 
+ 该值默认为t, 也可以将其改为字符串或生成字符串的函数. 
+ 后缀内容为"org-html-postamble", 默认会生成作者,邮箱等信息.
+**** 引用HTML文本
+ 使用 =#+HTML= 或 =#+BEGIN_HTML ... #+END_HTML=
+**** 设置导出表格样式
+ 可以设置"org-html-table-default-attributes", 或者 "#+ATTR_HTML".
+ 也可为设置"org-html-table-row-tags"设置每行属性.
+**** 图片设置
+ "[ [link][file:img] ]"可以设置点击图片时打开链接. 
+ 也可以使用"#+ATTR_HTML"属性.
+
+**** 设置block属性
+ 也可以使用#+ATTR_HTML设置block块的样式.
+**** CSS属性
+ orgmode默认导出的html文件中元素的类和对应信息为:
+ |                     |                                     |
+ |---------------------+-------------------------------------|
+ | p.author            | AUTHOR和EMAIL信息                   |
+ | p.date              | 发布日期                            |
+ | p.creator           | CREATOR                             |
+ | .title              | title                               |
+ | .todo               | TODO状态关键字                      |
+ | .done               | DONE状态关键字                      |
+ | .WAITING            | 精确关键字匹配                      |
+ | .timestamp          | timestampe                          |
+ | .timestamp-kwd      | 和timestamp有关的关键字,如SCHEDULED |
+ | .timestamp-wrapper  | 前两者的span                        |
+ | .tag                | tag                                 |
+ | ._HOME              | 精确匹配tag                         |
+ | .target             | 链接目标                            |
+ | .linenr             | 代码行号                            |
+ | .code-highlighted   | 代码高亮                            |
+ | div.outline-N       | outline level N                     |
+ | dive.outline-text-N |                                     |
+ | .section-number-N   | section number                      |
+ | .figure-number      | Figure N:                           |
+ | .table-number       | Table N:                            |
+ | .listing-number     | Listing N:                          |
+ | div.figure          | 内嵌图片                            |
+ | pre.src             | 代码                                |
+ | pre.example         | example                             |
+ | p.verse             | verse段落                           |
+ | div.footnotes       | footnote标题                        |
+ | p.footnote          | footnote每一行                      |
+ | .footref            | footnote引用号                      |
+ | .footnum            | footnote号                          |
+
+ 可以设置变量"org-html-head"和"org-html-head-extra"来改变上面的默认配置. 
+ 可以使用 #+HTML_HEAD 来设置单文件:
+ #+BEGIN_EXAMPLE
+      #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="style1.css" />
+      #+HTML_HEAD_EXTRA: <link rel="alternate stylesheet" type="text/css" href="style2.css" />
+ #+END_EXAMPLE
+**** JS支持
+** 发布
+*** 配置
+**** org-publish-project-alist
+ 通过设置该变量来配置要发布的工程, 该变量的值可以为以下两种形式:
+ 1. ("name" :property value :property value...)
+ 2. ("name" :components ("project-name" "project-name" ...))
+*** 属性
+ | name                               | desp                                  |
+ |------------------------------------+---------------------------------------|
+ | :base-directory                    | 源目录                                |
+ | :publishing-directory              | 目标目录(可设为web server)            |
+ | :preparation-function              | 发布前调用的函数                      |
+ | :completion-function               | 发布后调用的函数                      |
+ | :base-extension                    | 支持的原文件后缀                      |
+ | :exclude                           | 排除的文件                            |
+ | :include                           | 包含的文件                            |
+ | :recursive                         | 递归检查文件                          |
+ | :publishing-function               | 发布函数, 可以为多个                  |
+ | :htmliszed-source                  |                                       |
+ |------------------------------------+---------------------------------------|
+ | `:archived-trees'                  | `org-export-with-archived-trees'      |
+ | `:exclude-tags'                    | `org-export-exclude-tags'             |
+ | `:headline-levels'                 | `org-export-headline-levels'          |
+ | `:language'                        | `org-export-default-language'         |
+ | `:preserve-breaks'                 | `org-export-preserve-breaks'          |
+ | `:section-numbers'                 | `org-export-with-section-numbers'     |
+ | `:select-tags'                     | `org-export-select-tags'              |
+ | `:with-author'                     | `org-export-with-author'              |
+ | `:with-creator'                    | `org-export-with-creator'             |
+ | `:with-drawers'                    | `org-export-with-drawers'             |
+ | `:with-email'                      | `org-export-with-email'               |
+ | `:with-emphasize'                  | `org-export-with-emphasize'           |
+ | `:with-fixed-width'                | `org-export-with-fixed-width'         |
+ | `:with-footnotes'                  | `org-export-with-footnotes'           |
+ | `:with-latex'                      | `org-export-with-latex'               |
+ | `:with-planning'                   | `org-export-with-planning'            |
+ | `:with-priority'                   | `org-export-with-priority'            |
+ | `:with-special-strings'            | `org-export-with-special-strings'     |
+ | `:with-sub-superscript'            | `org-export-with-sub-superscripts'    |
+ | `:with-tables'                     | `org-export-with-tables'              |
+ | `:with-tags'                       | `org-export-with-tags'                |
+ | `:with-tasks'                      | `org-export-with-tasks'               |
+ | `:with-timestamps'                 | `org-export-with-timestamps'          |
+ | `:with-toc'                        | `org-export-with-toc'                 |
+ | `:with-todo-keywords'              | `org-export-with-todo-keywords'       |
+ |------------------------------------+---------------------------------------|
+ | `:html-doctype'                    | `org-html-doctype'                    |
+ | `:html-container'                  | `org-html-container-element'          |
+ | `:html-html5-fancy'                | `org-html-html5-fancy'                |
+ | `:html-xml-declaration'            | `org-html-xml-declaration'            |
+ | `:html-link-up'                    | `org-html-link-up'                    |
+ | `:html-link-home'                  | `org-html-link-home'                  |
+ | `:html-link-org-as-html'           | `org-html-link-org-files-as-html'     |
+ | `:html-link-use-abs-url'           | `org-html-link-use-abs-url'           |
+ | `:html-head'                       | `org-html-head'                       |
+ | `:html-head-extra'                 | `org-html-head-extra'                 |
+ | `:html-inline-images'              | `org-html-inline-images'              |
+ | `:html-extension'                  | `org-html-extension'                  |
+ | `:html-preamble'                   | `org-html-preamble'                   |
+ | `:html-postamble'                  | `org-html-postamble'                  |
+ | `:html-table-attributes'           | `org-html-table-default-attributes'   |
+ | `:html-table-row-tags'             | `org-html-table-row-tags'             |
+ | `:html-head-include-default-style' | `org-html-head-include-default-style' |
+ | `:html-head-include-scripts'       | `org-html-head-include-scripts'       |
+ |------------------------------------+---------------------------------------|
+ | :auto-sitemap                      |                                       |
+ |------------------------------------+---------------------------------------|
+ | :makeindex                         |                                       |
+ |                                    |                                       |
+ |                                    |                                       |
+ |                                    |                                       |
+ |                                    |                                       |
+ |                                    |                                       |
+ |                                    |                                       |
+ 
+*** 命令
+ | 快捷键      | 命令                        |
+ |-------------+-----------------------------|
+ | C-c C-e P x | org-publish                 |
+ | C-c C-e P p | org-publish-current-project |
+ | C-c C-e P f | org-publish-current-file    |
+ | C-c C-e P a | org-publish-all             |
+
+** org中使用代码						     :export:
+*** 添加代码
+   orgmode中支持添加代码, 运行代码并获取结果. 代码格式为
+ #+BEGIN_VERSE
+ #+NAME: <name>
+ #+BEGIN_SRC <language> <switches> <header arguments>
+  <body>
+ #+END_SRC
+ #+END_VERSE
+
+ =#+NAME= 代表当前代码, 可以在其他地方引用. 也可以使用 =src_<language>{body}= 
+ 的方式.
+*** 编辑代码
+ 可以直接在org文件中编辑代码, 也可以使用快捷键"C-c '"打开另一个buffer来
+ 编辑文件,编辑完成后用"C-x C-s"保存.
+*** 导出代码
+ orgmode支持以下方式的代码导出
+ 1. 只导出代码, 默认形式.
+ 2. 导出代码和结果.
+ 3. 只导出结果.
+ 4. 都不导出
+   
+ 可以通过设置header argument的":export"属性来实现上述的特性, 该属性的
+ 值可以为:
+ | code    | 代码 |
+ | results | 结果 |
+ | both    | 都   |
+ | none    | 都不   |
+
+*** 提取代码
+ orgmode支持将org文件中的代码块提取到代码原文件中, 
+ 使用快捷键 "C-c C-v t" 或命令"org-babel-tangle"可以
+ 实现该功能, 该命令默认在当前目录创建一个源码文件, 文件
+ 名与org文件名相同, 后缀为该类型语言的后缀. 
+
+ 该功能默认是关闭的, 可以通过设置 header argument的":tangle"
+ 属性来打开, 将其设置为"yes"即可打开. 
+ 也可以将其设置为文件名,这样可以将代码导出到该文件,
+ 使用命令"org-babel-tangle-file"或"C-c C-v f"也可以.
+ #+BEGIN_VERSE
+   :PROPERTIES:
+   :header-args: :exports results :tangle yes
+   :END:
+ #+END_VERSE
+*** 运行代码
+ C-c C-c
+** indexes
+*** [[标题显示快捷键]] 
+*** [[标题快捷键]]
+*** [[表格快捷键]]
+*** [[链接快捷键]]
+*** [["TODO"快捷键]]
+*** [[日期快捷键]]
+*** [[capture快捷键]]
+*** [[agenda快捷键]]
+
+** test								     :export:
+ #+BEGIN_SRC emacs-lisp :exports both
+ (print "S")
+ #+END_SRC
+
+ #+lxx:
+ : S
+
+ #+NAME: df
+ #+BEGIN_SRC elisp  :exports code
+ (+ 1 3)
+ #+END_SRC
+
+ #+lxx: df
+ : 4
+** 只显示当前标题
+accepted
+Use narrow-to-defun or org-narrow-to-subtree command with point in task. (widen to move back to whole buffer content).
+
+Default shortcuts:
+

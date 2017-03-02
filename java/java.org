@@ -1,0 +1,21 @@
+* 注释 :javadoc:
+1. 引用函数.
+   Use the {@link #getComponentAt(int, int) getComponentAt} method.
+* enum :enum:
+1. values(): 返回所有的实例数组
+* abstract class VS interface :interface:
+1. 只能继承一个abstract 类, 可以实现多个interface.
+2. 实现interface必须实现所有接口. 实现abstract类则不一定需要实现抽象接口(这个类是abstract).
+3. abstract类可以实现函数. interface不行.
+* static inner class VS inner class :inner:
+** why use inner class
+1. 架构明晰. 使用一个内部类可以使代码可读性更好, 更方便维护.
+   尤其是内部类不会在其他的context中使用.
+2. 内部类可以访问外部类的private变量. 这也是一个便利性.
+** static inner class
+1. 不能访问外部类的 non-static 成员变量.
+2. 可以访问外部类的 static 成员变量. 尤其是可以访问private的.
+3. 可以在其他类中直接被使用, 用来创建对象.
+** non-static inner class
+1. 可以访问所有outer class 的变量.
+2. 不能直接用来创建实例. 必须在outer 类的一个实例里创建实例.
