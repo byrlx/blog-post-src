@@ -5,7 +5,6 @@
 #+EMAIL: xuzhengchaojob@gmail.com
 
 #+TITLE: Android Gradle Plugin User Guide 文档翻译
-(持续更新)
 
 原文地址 [[http://tools.android.com/tech-docs/new-build-system/user-guide#TOC-Introduction]].
 

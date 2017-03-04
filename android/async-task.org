@@ -3,7 +3,7 @@
 #+EMAIL: xuzhengchaojob@gmail.com
 #+DATE: <2015-02-20 Thu 23:25>
 
-#+TITLE: AsyncTask笔记
+#+TITLE: AsyncTask源码阅读笔记
 
 /update: 2017-02-27, comprehend more/
 

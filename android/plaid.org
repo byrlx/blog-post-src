@@ -1,3 +1,376 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2017-01-01 Thu 23:25>
+
+#+TITLE: Plaid源码阅读笔记
+
+源码地址:https://github.com/nickbutcher/plaid 
+
+* 如何写一个compile阶段注解
+主要包含两部分:
+** 注解定义
+1. 定义要提供的注解, Retention为"CLASS".
+2. 编译打包该部分代码, 并在项目中引用
+   (通过jar或gradle), 并在代码中使用注解.
+   #+BEGIN_EXAMPLE
+    compile 'com.jakewharton:butterknife:8.0.1'
+   #+END_EXAMPLE
+** 注解解析
+1. 定义注解解析类, 该类继承自Processor(一般是继承自
+   AbstractProcessor). 在process()函数中获取被注解的
+   修饰的代码变量.
+2. 打包, 并在"META-INF"目录下建立"services"目录,
+   在目录下创建文件 "javax.annotation.processing.Processor", 
+   文件中写入你定义的注解处理器的全包名.
+   #+BEGIN_EXAMPLE
+   //cat javax.annotation.processing.Processor
+   butterknife.compiler.ButterKnifeProcessor
+   #+END_EXAMPLE
+3. 引用jar包, 有两种方法:
+   + gradle插件<2.2之前, 使用 "com.neenbedankt.gradle.plugins:android-apt:1.8"
+     在gradle文件中加入如下代码
+     #+BEGIN_EXAMPLE
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.neenbedankt.gradle.plugins:android-apt:1.8'
+    }
+}
+dependencies {
+...
+    apt 'com.jakewharton:butterknife-compiler:8.0.1'
+}
+     #+END_EXAMPLE
+   + 2.2之后, 使用"annotationProcessor"
+     #+BEGIN_EXAMPLE
+     dependencies{
+       annotationProcessor 'com.jakewharton:butterknife-compiler:8.4.0'
+     }
+     #+END_EXAMPLE
+* 工程架构
+** settings.gradle
+配置要包含的module,还可以定义rootProject.name
+** gradle.properties
+该文件可以定义一些配置, 可以在所有的gradle脚本中使用.
+** checkstyle.xml
+自定义的代码风格检查.
+BK在[[顶层build.gradle]]的subprojects中定义了对
+checkstyle.xml配置的使用, 把其与"check"任务hook
+起来. 对java文件进行检查. 
+#+BEGIN_EXAMPLE
+  if (!project.name.equals('butterknife-gradle-plugin')) {
+    apply plugin: 'checkstyle'
+
+    task checkstyle(type: Checkstyle) {
+      configFile rootProject.file('checkstyle.xml')
+      source 'src/main/java'
+      ignoreFailures false
+      showViolations true
+      include '**/*.java'
+
+      classpath = files()
+    }
+
+    afterEvaluate {
+      if (project.tasks.findByName('check')) {
+        check.dependsOn('checkstyle')
+      }
+    }
+  }
+#+END_EXAMPLE
+** 顶层build.gradle
+做一些公共属性的配置,常见的包括
+1. 各工程共享的一些配置, 例如maven地址
+   插件等等. 一般使用"allprojects"或"subprojects".
+   然后在里面配置属性. 
+   #+BEGIN_EXAMPLE
+   allprojects {
+    repositories {
+        mavenCentral()
+        maven {
+            credentials {
+                username localMavenUserName
+                password localMavenPasswd
+            }
+            url "${localMavenAddr}releases"
+        }
+
+        flatDir {
+            dirs 'libs'
+        }
+    }
+    dependencies {
+      classpath 'com.android.tools.build:gradle:2.2.2'
+      classpath 'gradle.plugin.com.kageiit:lintrules:1.1.2'
+    }
+}
+   #+END_EXAMPLE
+2. 配置项目中用到的依赖的别名.
+   这样做的好处是集中了依赖的管理.
+   #+BEGIN_EXAMPLE
+ext {
+  minSdkVersion = 9
+  targetSdkVersion = 25
+  compileSdkVersion = 25
+}
+def androidToolsVersion = '25.2.0'
+ext.deps = [
+    // Android
+    android: 'com.google.android:android:4.1.1.4',
+    supportCompat: "com.android.support:support-compat:$supportLibraryVersion",
+   #+END_EXAMPLE
+** module层build.gradle
+定义本模块的各种配置.
+笔记:
+1. BK的BG中.
+   + dependencies中针对androidTest和test细分依赖.
+     #+BEGIN_EXAMPLE
+  androidTestCompile deps.supportTestRunner
+  testCompile deps.junit
+     #+END_EXAMPLE
+   + dependecies中使用"linRules"依赖lintProject.
+   + 使用"apply from"引用自定义gradle脚本.
+   + 使用了开源插件"com.kageiit.lintrules", 
+     这样可以在dependency中使用自定义的lint模块.
+     #+BEGIN_EXAMPLE
+       lintRules project(':butterknife-lint')
+     #+END_EXAMPLE
+** 自动上传到maven
+一个单独的gradle文件, 在所有的需要上传的build.gradle中引用. 
+单独project的独立配置放到其module下的 gradle.properties 中.
+#+BEGIN_EXAMPLE
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+version = VERSION_NAME
+group = GROUP
+
+def isReleaseBuild() {
+  return VERSION_NAME.contains("SNAPSHOT") == false
+}
+
+def getReleaseRepositoryUrl() {
+  return hasProperty('RELEASE_REPOSITORY_URL') ? RELEASE_REPOSITORY_URL
+      : "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+}
+
+def getSnapshotRepositoryUrl() {
+  return hasProperty('SNAPSHOT_REPOSITORY_URL') ? SNAPSHOT_REPOSITORY_URL
+      : "https://oss.sonatype.org/content/repositories/snapshots/"
+}
+
+def getRepositoryUsername() {
+  return hasProperty('SONATYPE_NEXUS_USERNAME') ? SONATYPE_NEXUS_USERNAME : ""
+}
+
+def getRepositoryPassword() {
+  return hasProperty('SONATYPE_NEXUS_PASSWORD') ? SONATYPE_NEXUS_PASSWORD : ""
+}
+
+afterEvaluate { project ->
+  uploadArchives {
+    repositories {
+      mavenDeployer {
+        beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+        pom.groupId = GROUP
+        pom.artifactId = POM_ARTIFACT_ID
+        pom.version = VERSION_NAME
+
+        repository(url: getReleaseRepositoryUrl()) {
+          authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
+        }
+        snapshotRepository(url: getSnapshotRepositoryUrl()) {
+          authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
+        }
+
+        pom.project {
+          name POM_NAME
+          packaging POM_PACKAGING
+          description POM_DESCRIPTION
+          url POM_URL
+
+          scm {
+            url POM_SCM_URL
+            connection POM_SCM_CONNECTION
+            developerConnection POM_SCM_DEV_CONNECTION
+          }
+
+          licenses {
+            license {
+              name POM_LICENCE_NAME
+              url POM_LICENCE_URL
+              distribution POM_LICENCE_DIST
+            }
+          }
+
+          developers {
+            developer {
+              id POM_DEVELOPER_ID
+              name POM_DEVELOPER_NAME
+            }
+          }
+        }
+      }
+    }
+  }
+
+  signing {
+    required { isReleaseBuild() && gradle.taskGraph.hasTask("uploadArchives") }
+    sign configurations.archives
+  }
+
+  if (project.getPlugins().hasPlugin('com.android.application') ||
+      project.getPlugins().hasPlugin('com.android.library')) {
+    task install(type: Upload, dependsOn: assemble) {
+      repositories.mavenInstaller {
+        configuration = configurations.archives
+
+        pom.groupId = GROUP
+        pom.artifactId = POM_ARTIFACT_ID
+        pom.version = VERSION_NAME
+
+        pom.project {
+          name POM_NAME
+          packaging POM_PACKAGING
+          description POM_DESCRIPTION
+          url POM_URL
+
+          scm {
+            url POM_SCM_URL
+            connection POM_SCM_CONNECTION
+            developerConnection POM_SCM_DEV_CONNECTION
+          }
+
+          licenses {
+            license {
+              name POM_LICENCE_NAME
+              url POM_LICENCE_URL
+              distribution POM_LICENCE_DIST
+            }
+          }
+
+          developers {
+            developer {
+              id POM_DEVELOPER_ID
+              name POM_DEVELOPER_NAME
+            }
+          }
+        }
+      }
+    }
+
+    task androidJavadocs(type: Javadoc) {
+      source = android.sourceSets.main.java.source
+      classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    }
+
+    task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+      classifier = 'javadoc'
+      from androidJavadocs.destinationDir
+    }
+
+    task androidSourcesJar(type: Jar) {
+      classifier = 'sources'
+      from android.sourceSets.main.java.source
+    }
+  } else {
+    install {
+      repositories.mavenInstaller {
+        pom.groupId = GROUP
+        pom.artifactId = POM_ARTIFACT_ID
+        pom.version = VERSION_NAME
+
+        pom.project {
+          name POM_NAME
+          packaging POM_PACKAGING
+          description POM_DESCRIPTION
+          url POM_URL
+
+          scm {
+            url POM_SCM_URL
+            connection POM_SCM_CONNECTION
+            developerConnection POM_SCM_DEV_CONNECTION
+          }
+
+          licenses {
+            license {
+              name POM_LICENCE_NAME
+              url POM_LICENCE_URL
+              distribution POM_LICENCE_DIST
+            }
+          }
+
+          developers {
+            developer {
+              id POM_DEVELOPER_ID
+              name POM_DEVELOPER_NAME
+            }
+          }
+        }
+      }
+    }
+
+    task sourcesJar(type: Jar, dependsOn:classes) {
+      classifier = 'sources'
+      from sourceSets.main.allSource
+    }
+
+    task javadocJar(type: Jar, dependsOn:javadoc) {
+      classifier = 'javadoc'
+      from javadoc.destinationDir
+    }
+  }
+
+  if (JavaVersion.current().isJava8Compatible()) {
+    allprojects {
+      tasks.withType(Javadoc) {
+        options.addStringOption('Xdoclint:none', '-quiet')
+      }
+    }
+  }
+
+  artifacts {
+    if (project.getPlugins().hasPlugin('com.android.application') ||
+        project.getPlugins().hasPlugin('com.android.library')) {
+      archives androidSourcesJar
+      archives androidJavadocsJar
+    } else {
+      archives sourcesJar
+      archives javadocJar
+    }
+  }
+}
+
+#+END_EXAMPLE
+#+BEGIN_EXAMPLE
+POM_NAME=Butterknife Gradle Plugin
+POM_ARTIFACT_ID=butterknife-gradle-plugin
+POM_PACKAGING=jar
+#+END_EXAMPLE
+* 注解处理过程用到的系统api
+1. 注解处理的入口函数是 "boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv);". 
+   RoundEnviroment中包含了注解处理的信息. 
+   通过调用其 ~getElementsAnnotatedWith(Class<? extends Annotation> a)~ 接口, 
+   可以获取被参数注解修饰的所有元素. 该函数返回 [[Element]] 类.
+** Element
+Element代表了一个程序元素, 例如"包/类/方法"等.
+其几个主要接口:
+1. ~TypeMirror asType()~
+   返回这个Element的类型, 例如基本类型/类/接口等.
+2. ~ElementKind getKind();~
+   返回元素的[[ElementKind]]
+** TypeElement
+代表一个类或一个接口
+** ElementKind
+详细的对Element做了分类, 包括:
+PACKAGE/ENUM/CLASS/ANNOTATION_TYPE/INTERFACE/ENUM_CONSTANT/FIELD/PARAMETER/LOCAL_VARIABLE/EXCEPTION_PARAMETER/METHOD/CONSTRUCTOR/STATIC_INIT/INSTANCE_INIT/TYPE_PARAMETER/OTHER/RESOURCE_VARIABLE.
+其中,
+1. CLASS和ENUM被认为是class.
+2. INTERFACE和ANNOTATION_TYPE被认为是interface.
 * style
 ** 定义应用的整体style
  并在AndroidMainifest.xml的"application"中使用, 常用字段
