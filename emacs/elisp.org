@@ -3,7 +3,10 @@
 #+EMAIL: xuzhengchaojob@gmail.com
 #+DATE: <2016-01-23 Thu 23:25>
 
-#+TITLE: Elisp 文档笔记
+#+TITLE: Elisp 大笔记
+
+/Elisp的各种平时笔记, 琐碎, 自用/
+
 * Elisp 基本数据结构
 对Lisp而言, 所有不是cons cell的结构都成为atom.
 
@@ -233,3 +236,153 @@ Emacs lisp中最常见的函数调用即为List方式调用, 其形式为(name a
  ;;example
  (mapconcat 'car '(("a" "b") ("c" "d")) "-") ==> "a-c"
  #+END_SRC
+
+* 自动添加跑步记录
+正在慢慢培养[[http://xuzhengchao.com/Running-Record.html][跑步]]的习惯, 每次跑完之后都会记录到一个org文件中. 
+用org table进行管理. 
+
+为了省略打开文件填入数据的麻烦, 写了一个lisp命令自动添加, 顺便
+熟悉一下elisp[[http://xuzhengchao.com/lisp/elisp-%E6%96%87%E6%9C%AC%E5%A4%84%E7%90%86%E5%87%BD%E6%95%B0.html][文本操作]]相关的函数.
+
+** 命令实现
+*** 核心函数
+    下面是自动填充命令的核心函数代码, 该函数接受三个参数: 日期, 跑步km数,
+ 跑步地点. 该函数的主要步骤:
+ + 定义局部变量record-file, 存放跑步记录文件的位置.
+ + 调用(find-file)将该文件加载到buffer中
+ + 通过(with-current-buffer)来将该buffer作为当前buffer,在里面进行各种动作:
+   - 调用(search-forward)函数定位到今年的记录处.
+   - 向前移动三行, 越过表头和分割行
+   - 通过org table的相关函数创建新行, 并将参数填充到相关的列.
+   - 保存, 关闭buffer.
+ + 发布blog
+ + 通过执行shell命令上传到github
+
+ #+BEGIN_SRC elisp
+ (defun lx-add-running-record (day km loc)
+   (let  ((record-file (concat LXBLOGORG "Other/2015-01-19-Running-Record.org")))
+     (find-file record-file)
+     (with-current-buffer "2015-01-19-Running-Record.org"
+       (search-forward (format-time-string "%Y"))
+       (forward-line 3)
+       (org-table-insert-row)
+       (insert day)
+       (org-table-next-field)
+       (insert (message "%.1f" (string-to-number km)))
+       (org-table-next-field)
+       (insert loc)
+       (org-table-align)
+       (save-buffer)
+       (kill-this-buffer)))
+   (org-publish "github-blog")
+   (shell-command (concat "cd " LXBLOG " && git add -u && git ci -m 'update running record' && git push")))
+ #+END_SRC
+
+*** 命令
+ 基于[[核心函数]]写了两个emacs交互命令来让输入跑步记录.
+**** (lx-add-running day km loc)
+ 该函数会提示用户输入跑步的日期,距离和地点.然后调用(lx-add-running-record)
+ #+BEGIN_SRC elisp
+ (defun lx-add-running (day km loc)
+   (interactive "sInput day: \nsInput distance: \nsInput location: ")
+   (lx-add-running-record  day km loc))
+ #+END_SRC
+**** (lx-add-running-today km loc)
+ 该函数接受距离和地点两个参数, 并通过elisp的 (format-time-string)自动
+ 生成今天的日期.
+ #+BEGIN_SRC elisp
+ (defun lx-add-running-today (km loc)
+   (interactive "sInput distance: \nsInput location: ")
+   (lx-add-running-record (format-time-string "%m.%d") km loc))
+ #+END_SRC
+
+ 存放跑步记录的org文件如下, 还不错, 可以通过[[http://xuzhengchao.com/orgmode/orgmode-table.html][这篇文章]] 来了解org mode的表格的更多知识.
+ file:../../../../public/img/running.png
+* 自动创建文章并设置Header
+用org mode写Jekyll博客需要在文章开头设置一些HTML export的配置,
+每次写文章都写一遍, 很繁琐, 故写了一个elisp 程序自动实现
+这个步骤. 
+
+** header配置模板
+ 下面是博客文章开头的设置模板,
+ 将模板插入到文章头部后, 要根据命令参数自动
+ 生成title和category.
+
+ #+BEGIN_VERSE
+
+  #+AUTHOR: Luis Xu
+  #+EMAIL: xuzhengchaojob@gmail.com
+  #+TITLE: :
+ #+END_VERSE
+
+** 编程实现
+ 定义了两个函数来实现这个功能, 并将其设置为命令, 
+ 可以通过"M-x"来调用. 这两个函数为:
+ lx-create-post-today, lx-creat-post. 第一个函数需要
+ 输入"title"和"category". 第二个函数需要输入"date",
+ "title"和"category"三个函数. 
+*** lx-create-post-today (title category)
+ 该函数实际上调用了lx-create-post这个函数, 所以其代码比较简单:
+ #+BEGIN_SRC elisp
+ (defun lx-create-post-today (title category)
+   (interactive "sInput title:\nsInput category: ")
+   (lx-create-post (format-time-string "%Y-%m-%d") title category))
+ #+END_SRC
+
+ 执行"M-x", 输入命令 [[file:../img/cmd.png]]
+
+ 提示输入title [[file:../img/title.png]]
+
+ 提示输入category. [[file:../img/category.png]]
+
+ 输入完成后, 会基于当前的日期, 创建文件名为"date-title.org"的文件,
+ 并将参数插入到模板的title和category的对应位置.  
+
+ [[file:../img/header.png]]
+
+*** lx-create-post (date title category)
+ 该函数的代码实现如下,
+
+ #+BEGIN_SRC elisp
+ (defun lx-create-post (date title category)
+   (interactive "Input date title and category: %s %s %s")
+   ;; 组装文件名
+   (setq whole-filename (concat ORG-PATH "blog/" date "-" title ".org"))
+   ;; 创建文件, 打开文件
+   (setq filebuf (find-file-other-window whole-filename))
+   ;; 插入通用头部
+   (lx-create-post-head title category)
+   ;; 光标定位在头部下边的空白行
+   )
+ #+END_SRC
+
+ 代码解释:
+ + 首先提示输入"date", "title"和"category".
+ + 将日期和tilte组装成文件名
+ + 调用file-file-other-window创建并在新窗口打开文件
+ + 调用lx-create-post-head插入head模板
+
+*** lx-create-post-head (title category)
+ 该函数用于插入和修改head模板
+ #+BEGIN_SRC  elisp
+ ;; 根据title和category生成头部
+ (defun lx-create-post-head (title category)
+   ;;读取头部文件内容并插入到文件开始
+   (insert-file-contents "~/lx/GoogleDrive/lxorg/blog/header")
+   ;;移动光标, 填写标题和category
+   (goto-char (point-max))
+   (forward-line -3)
+   (end-of-line)
+   (insert (concat "[" category "]"))
+   (forward-line -1)
+   (end-of-line)
+   (insert title)
+   )
+
+ #+END_SRC
+ 代码解释:
+ + 调用insert-file-contents 插入header模板
+ + 移动光标到最后一行
+ + 移动光标到前三行: category的那一行
+ + 移动到该行尾部并插入category参数
+ + 同样的方法插入title

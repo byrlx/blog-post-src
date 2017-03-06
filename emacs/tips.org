@@ -1,8 +1,0 @@
-#+OPTIONS: toc:t H:3
-#+AUTHOR: Luis Xu
-#+EMAIL: xuzhengchaojob@gmail.com
-
-#+TITLE: Emacs Little Tips
-* Tips
-1. 绑定快捷键 (global-set-key (kbd "<f9>") '函数名) 
-** org mode 求一列的和: C-c + 

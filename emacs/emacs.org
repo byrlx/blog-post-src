@@ -1,0 +1,237 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-01-15 Thu 23:25>
+#+SETUPFILE: macros.setupfile
+
+#+TITLE: Emacs大笔记
+/Emacs使用过程的笔记/
+
+* 打造开发环境
+** Elisp开发环境
+*** 使用[[paredit]]写代码
+*** 运行代码
+ 1. 在*scratch*里可以使用 "C-x C-e"运行表达式.
+ 2. 使用 "C-M-x" 运行函数.
+ 2. 可以在buffer中使用eval-buffer使当前代码生效, 然后在eshell或ielm中调用.
+*** 调试代码
+**** Edebug
+ Edebug是Emacs自带的代码级的调试器. 可以在想要调试的代码上使用
+ "C-u C-M-x", 就会进入调试模式, 此时运行程序, 就会在函数头停留.
+
+ 使用快捷键n可以一步一步的调试. 
+** Clojure开发环境
+*** 安装相关包
+ 1. cider. Cider是clojure的emacs开发环境, 通过包管理工具安装cider.
+ 2. clojure-mode. 
+ 3. ac-cider. Clojure mode的自动补全插件.
+ 4. Leiningen.  非Emacs插件, shell程序.
+ 5. projectile
+*** emacs配置
+ 1. 在clojure mode下使用paredit.
+    #+BEGIN_SRC elisp
+    (add-hook 'clojure-mode-hook 'paredit-mode)
+    #+END_SRC
+ 2. 配置lein, 使用cider, 在.lein/profiles.clj中加入如下
+    #+BEGIN_SRC elisp
+    {:repl {:plugins [[cider/cider-nrepl "0.10.1"]]}}
+    #+END_SRC
+*** 示例程序
+**** 使用lein new name命令创建一个名称为name的工程.
+**** 在emacs中运行 cider-jack-in进入nREPL
+** paredit
+ 该插件用于括号/引号的自动补全.
+ 如果担心evil mode破坏括号的完整, 编写时先暂停掉evil mode 
+*** 常用函数/快捷键
+ | 快捷键        | 函数         | 功能          |
+ |---------------+--------------+---------------|
+ |               | <12>         | <12>          |
+ | (             | paredit-open-round | 生成对括号    |
+ | [             | paredit-open-sqaure | 生成中括号对  |
+ | {             | paredit-open-curly | 生成大括号对  |
+ | )/]/}         | paredit-close-[round/squre/curly] | 跳转到对应的结尾 |
+ | "             | paredit-doublequote | 生成双引号对  |
+ | M-(           | paredit-wrap-round | 将当前内容括起来 |
+ | M-"           | paredit-meta-doublequote | 将当前内容用引号括起来 |
+ | C-d           |              | 删除后面一个字符 |
+ | M-d           |              | 删除后面的word |
+ | DEL           |              | 删除前面的字符 |
+ | M-DEL         |              | 删除前面的word |
+ | C-k           |              | 删除到结尾    |
+ | C-)           |              | 把当前右括号尾部的内容放到括号内 |
+ | C-(           |              | 把当前左括号尾部的内容放入括号 |
+ | C-}/{         |              | 把当前左右括号的内容挤出括号 |
+ | C-M-f/b       |              | 跳跃式前进/后退 |
+ | C-M-d/p       |              | 降级前进/后退 |
+ | C-M-u/n       |              | 升级前进/后退 |
+ | M-<up>/<down> |              | 升级/降级括号 |
+ | M-s           |              | 去除引号      |
+ | M-S/J         |              | 分割/合并     |
+ |               |              |               |
+
+* Magit文档笔记
+项目官网: https://magit.vc/
+** version 2.6.1
+ Elpa升级magit到2.x版本之后, 发现快捷键变化太大, 所以重新读了2.6.1版本的文档.
+ 在Emacs中使用"C-h i"之后选择 magit 即可打开文档.
+
+ 下面的内容基于该版本的文档:
+*** sections
+  所有的Magit buffer都是通过 sections 的形式组织的, 每个section还可以包含子section.在一个magit buffer中, 这些
+  sections可以独立的被显示和隐藏.当一个section被隐藏的时候,只会显示该section的
+  第一行.
+
+  section操作的快捷键:
+  | Short Keys | Notes                                                                                               |
+  |------------+-----------------------------------------------------------------------------------------------------|
+  | p          | 移动到上一个section                                                                                 |
+  | n          | 移动到下一个section                                                                                 |
+  |            |                                                                                                     |
+  | C-TAB      | 循环隐藏/显示当前section的子section                                                                 |
+  | TAB        | 快速显示/隐藏当前 section                                                                           |
+  | S-TAB      | 快速显示/隐藏所有 section                                                                           |
+  | 1/2/3/4    | 显示 <=N 的section, 例如按2,会显示 *当前* level 1和 level 2的section,隐藏level 3, level 4 的section |
+  | M-1/2/3/4  | 同上, 但是显示所有相关section                                                                       |
+  | M-h        | 隐藏(有些buffer功能跟2相同, 有些不一定)                                                             |
+  | M-H        | 隐藏 *所有* (同上)                                                                                  |
+  | M-s        | 显示(有些buffer功能跟4相同, 有些不一定)                                                             |
+  | M-S        | 显示所有(同上)                                                                                      |
+
+***** 其他快捷键/配置
+
+   注: /当快捷键操作于section头部时, 会影响所有的文件./
+
+   | Buffer  | Short Keys      | Note                                                              |
+   |---------+-----------------+-------------------------------------------------------------------|
+   | Status  |                 |                                                                   |
+   |         | magit-repo-dirs | 可以在.emacs文件中配置此变量, 设置调用magit-status命令打开的git库 |
+   |         | g               | refresh buffer                                                    |
+   |         | s/S             | 把文件加入到stage area/只把所有changes加入到stage area            |
+   |         | C-u S           | 把所有文件加入到stage area                                        |
+   |         | i               | 添加该文件到 .gitignore                                           |
+   |         | C-u i           | 手写添加到 .gitignore的文件名                                     |
+   |         | k               | discard                                                           |
+   |         | u/U             | unstage file/all file                                             |
+   |         | c c + C-c C-c   | 提交                                                              |
+   |         | C-c C-k         | 放弃提交                                                          |
+   |         | l l             | show history                                                      |
+   |         | l r l           | 显示范围                                                          |
+   |         | t t             | create tag                                                        |
+   |         | x/X             | 重置head/重置head(清空working area和stage area)                   |
+   |         | z + z/a/A       | 创建/应用/弹出 stash                                              |
+   |         | z -k z          | 创建stash,但是保留working area和stage area                        |
+   |         | b               | branch related                                                    |
+   |         | w               | 显示所有branch和当前branch的关系                                  |
+   |         | m               | merge                                                             |
+   |         | R               | Rebase                                                            |
+   |         | P               | push                                                              |
+   |         | f               | fetch                                                             |
+   | history |                 |                                                                   |
+   |         | RET/SPC/DEL     | show commit detail in new buffer(commit buffer)                   |
+   |         | a               | 将当前提交应用到当前branch, 需手动提交                            |
+   |         | A               | ...自动提交                                                       |
+   |         | v               | revert commit                                                     |
+   |         | .               | mark a commit                                                     |
+   |         | =               | show diff from current commit to marked                           |
+   |         | l h             | reflog                                                            |
+   | commit  |                 |                                                                   |
+   |         | a               | 把当前section应用到当前branch                                     |
+   |         | v               | reverse the patch                                                 |
+   | diff    |                 |                                                                   |
+   |         | e               |                                                                   |
+   |         |                 |                                                                   |
+*** status buffer
+ 通过"magit-status"创建会显示当前的status. 这是magit最主要的一个buffer.
+ 下面的操作都是在该buffer里的操作:
+*** stage相关操作
+ 1. 使用快捷键z, 会弹出选项框, 再按一次z会保存创建一个新的stage保存内容.
+ 2. 使用快捷键z+p, 会弹出以stage内容.
+ 3. "z+Z", 会创建stage并将修改的内容仍然保持在工作区.
+ 4. stage多个文件, 使用 C-SPC 结合 n/p 快捷键选择多个文件, 然后按s.
+*** 提交commit
+ 1. 使用 c-c 快捷键.
+ 2. P快捷键调出push buffer. 
+*** 回滚提交
+ 1. 使用l-l快捷键显示提交记录. 通过 n 将光标移动到想回滚到的
+    提交上, 然后使用 'C-u x' 命令.
+* Gnus使用
+** 读取Gmail邮件
+   主要架构: offlineimap同步邮件, gnus读邮件
+*** offlineimap配置
+  1. mac安装:  brew install offlineimap
+  2. 配置 ~/.offlineimaprc
+  #+BEGIN_SRC elisp
+  [general]
+  ui = ttyui
+  accounts = Gmail
+
+  [Account Gmail]
+  localrepository = Gmail-Local
+  remoterepository = Gmail-Remote
+
+  [Repository Gmail-Local]
+  type = Maildir
+  localfolders = ~/lx/Gmail
+
+  [Repository Gmail-Remote]
+  type = Gmail
+  remoteuser = 邮箱
+  remotepass = 密码
+  realdelete = no
+  maxconnections = 3
+  # 下面这行使用与OS X系统
+  sslcacertfile = /usr/local/etc/openssl/cert.pem
+  #+END_SRC
+  3. 同步命令: offlineimap -o
+     第一次运行这个命令有可能会报错, 显示 "Gmail SMTP debug: error “please log in via your web browser" 这样的内容,
+     可以去https://www.google.com/settings/security/lesssecureapps 打开enable on这个选项, 就可以了.
+     第一次同步可能很长时间, 尤其是对国人来说. 耐心等候啦.
+*** 配置
+     #+BEGIN_SRC elisp
+     ;; Gnus配置
+   (setq gnus-select-method
+      '(nnmaildir "Gmail" (directory "~/lx/Gmail")))
+     #+END_SRC
+** 订阅RSS
+ 在Gnus页面可以使用快捷键"G R"来订阅RSS.通过"u"取消订阅.
+*** 订阅atom文件
+ gnus对于atom类型的RSS支持不好, 可以通过在以下方式解决
+ 1. Install xsltproc (Debian: apt-get install xsltproc)
+ 2. Get the file atom2rss.xsl from http://atom.geekhood.net/ and save it.
+ 3. Put the following code into your .gnus:
+    #+BEGIN_SRC elisp
+ (require 'mm-url)
+ (defadvice mm-url-insert 
+    (after DE-convert-atom-to-rss () )  
+    "Converts atom to RSS by calling xsltproc."  
+    (when 
+       (re-search-forward
+          "xmlns=\"http://www.w3.org/.*/Atom\"" 
+           nil t)
+       (goto-char (point-min))    
+       (message "Converting Atom to RSS... ")    
+       (call-process-region 
+          (point-min) 
+          (point-max) 
+          "xsltproc" 
+          t t nil 
+          (expand-file-name 
+             "~/.emacs.d/atom2rss.xsl") "-")    
+       (goto-char (point-min))    
+       (message 
+          "Converting Atom to RSS... done")))
+ (ad-activate 'mm-url-insert)
+    #+END_SRC
+** gnus 快捷键
+ |             | 说明                               |
+ |-------------+------------------------------------|
+ | C-u N ret   | 在目录上使用,显示目录(N封)所有邮件 |
+ | c           | 标记未读为已读                     |
+ | C           | 标记所有为已读                     |
+ | l           | 只显示有未读邮件的group            |
+ | L           | 显示所有group                      |
+ | B DEL       | 永久删除                           |
+ | B m         | 移动邮件                           |
+ | E           | 设置邮件为Expirable                |
+ | u           | 标记重要邮件                       |
+ | u放到link上 | 复制链接地址                             |
