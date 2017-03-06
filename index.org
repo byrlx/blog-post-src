@@ -1,9 +1,9 @@
 #+TITLE: Luis's Blog
 
    + android
-     + [[file:android/android.org][Android 大笔记]]
      + [[file:android/gradle.org][Android Gradle Plugin User Guide 文档翻译]]
      + [[file:android/log-system.org][Android Log 系统]]
+     + [[file:android/android.org][Android 大笔记]]
      + [[file:android/message.org][Android 消息机制源码笔记]]
      + [[file:android/async-task.org][AsyncTask源码阅读笔记]]
      + [[file:android/butterknife.org][ButterKnife源码阅读笔记]]
