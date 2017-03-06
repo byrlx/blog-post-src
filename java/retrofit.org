@@ -16,311 +16,648 @@
 /注: 在编程语言的语法中, type-safe通常指编译器在编译时检查变量的类型, 如果试图向/
 /变量分配一个错误的类型,编译器就会报错./
 
-* 在项目中使用retrofit
-retrofit库可以在[[http://search.maven.org/#search%7Cga%7C1%7Cretrofit][maven.org]] 找到. 可以直接添加到maven或gradle工程中.
-+ Maven
-  #+BEGIN_SRC java xml
-<dependency>
-  <groupId>com.squareup.retrofit</groupId>
-  <artifactId>retrofit</artifactId>
-  <version>2.0.0-beta2</version>
-</dependency>
-  #+END_SRC
-+ Gradle. 如果与服务端的请求和结果都是json的话,需要gson converter进行转化, 因为要把该库也添加上.
-  #+BEGIN_SRC java  xml
- compile 'com.squareup.retrofit:retrofit:2.0.0-beta2'
- compile 'com.squareup.retrofit:converter-gson:2.0.0-beta2' 
-  #+END_SRC
-+ 混淆配置
-  如果项目中使用混淆的话, 需要在混淆文件中假如如下配置
-  #+BEGIN_SRC java 
--dontwarn retrofit.**
--keep class retrofit.** { *; }
--keepattributes Signature
--keepattributes Exceptions
-  
-  #+END_SRC
-* 程序示例
-这部分从一个简单的程序开始, 展示retrofit的使用,并通过对这个程序的进一步介绍retrofit的各种功能.
-这部分内容大多参考自 [[https://futurestud.io/blog/retrofit-getting-started-and-android-client/]].
-** 一个简单的retrofit程序
-场景:通过GET请求向服务器返回用户信息, 服务器通过Json格式返回一个或多个用户的信息.
-基于这个例子介绍一下retrofit的使用步骤:
-1. 用户类. 这段代码定义了用户类User, 每个用户包含三个基本信息:id, name, age; 
-   通过retrofit请求用户信息时, 客户端返回用户的json信息, retrofit可以直接将json信息转化为用户类.
-   #+BEGIN_SRC java
-public class User {
-    private int id;
-    private String name;
-    private int age;
-}
-#+END_SRC
-2. 定义Client和GET请求接口
-   #+BEGIN_SRC java
-public interface Client {
-    @GET("users")
-    Call<List<User>>  getUsers();
-}
-#+END_SRC
-   这段代码定义了一个接口Client, 并定义了一个GET函数getUsers(), 该函数用户向服务器发送get请求获取所有的
-   用户信息. 定义GET请求需要用GET注解来修饰函数, 注解的参数为uri的相对路径, 下一部分会定义URL的地址, 在
-   发送GET请求时, retrofit会将GET的参数和服务器拼接.
-   后面会在该接口中实现其他的POST和GET函数.
-
-   *注:* 在retrofit2.0中,要注意GET和POST注解的参数,如果参数以"/"开头,那么在跟base地址拼接时,会将base地址中
-   的相对地址全部覆盖掉. 举例: base地址为"http://a/b", GET参数为"/c/d", 那么最后的请求地址为"http://a/c/d",
-   因此,如果base地址本身已经是相对地址, 那么GET/POST的参数不能以"/"开头.
-3. <<主程序中实现get请求>>
-   #+BEGIN_SRC java  
-public class MainActivity {
-    ....
-    public static final String SERVER_URL = "http://10.10.10.10/account";
-    private OkHttpClient okHttpClient = new OkHttpClient();
-    private Retrofit.Builder builder = new Retrofit.Builder()
-	.base_url(SERVER_URL)
-	.client(okHttpClient)
-	.addConvertFactory(GsonConvertFactory.create());
-
-    Retrofit retrofit = builder.build();
-    Client client = retrofit.create(Client.class);
-    Call<List<Users>> call = client.getUsers();
-    List<Users> result = call.execute().body();
-    ....
-}
-   
-   #+END_SRC
-   上述代码用来做实际的请求动作, 首先通过Retrofit Builder来基于各种参数(服务器地址, httpclient, converter)
-   生成一个builder对象, 让后调用builder的build()函数生成一个retrofit对象.
-   
-   接着,调用retrofit的create()函数,传入上一步中定义的接口作为参数来实例化一个具体的接口对象, 然后调用
-   该对象的具体http请求函数(这里为getUsers())来实现http请求. 请求的结果是Json数据,会通过GsonConverter转化为具体的
-   对象(即User). 由于是多个对象,所以需要放到一个List中.
-上述三步即为retrofit的基本使用方法.
-** 创建一个Service generator类
-如果项目中 *针对同一个server地址* 需要创建多个Retrofit Interface service,那么可以创建一个通用的ServiceGenerator类
-来生成service实例.
-
-#+BEGIN_SRC java
-public class ServiceGenerator {
-    public static final String BASE_URL = "";
-
-    private static OkHttpClient httpClient = new OkHttpClient();
-    private static Retrofit.Builder builder =
-	new Retrofit.Builder()
-	.baseUrl(BASE_URL)
-	.addConverterFactory(GsonConverterFactory.create());
-
-    public static <T> T createService(Class<T> serviceClass){
-        //把设置client放到这里是因为后续有对client进行配置的需求
-	Retrofit retrofit = builder.client(httpClient).build(); 
-	return retrofit.create(serviceClass);
-    }
-				      
-}
-
-#+END_SRC
-
-这样在上一节的MainActivity中,可以直接使用ServiceGenerator来创建Client实例
-
-#+BEGIN_SRC java
-
-    Client client = ServiceGenerator.create(Client.class);
-    Client call = client.getUsers();
-    List<Users> result = call.execute().body();
-
-#+END_SRC
-** 帐号密码认证的ServiceGenerator类
-帐号密码是一种常见的认证方式, 通常将其加密后以放入到http头部的Authorization中
-进行请求认证.通过对OkHttpClient进行配置可以在retrofit中实现该方式. 
-
-#+BEGIN_SRC java
-    public static <T> T createService(Class<T> serviceClass){
-	createService(serviceClass, null, null);
-    }
-
-    pubic static <T> T createService(Class<T> serviceCls, String userName, String passWord)  {
-	if (userName != null && passWord != null) {
-	    //对用户名和密码进行加密(不同的需求加密方式不一样, 这里只提供参考)
-	    String credentials = userName + ":" + passWord;
-	    final String base64Str = Base64.encodeToString(credentials.getBytes(), Base64.NO_WRAP);
-
-	    httpClient.interceptors().clear();
-	    httpClient.interceptors().add(new Interceptor() {
-		    @Override
-		    public Response intercept(Interceptor.Chain chain) throws IOException {
-			Request original = chain.request();
-
-			Request.Builder requestBuilder = original.newBuilder()
-			    .header("Authorization", basic);
-                        .header("Accept", "applicaton/json");
-                        .method(original.method(), original.body());
-
-			Request request = requestBuilder.build();
-			return chain.proceed(request);
-		    }
-		});
-	}
-
-	Retrofit retrofit = builder.client(httpClient).build();
-	return retrofit.create(serverClass);
-    }
-#+END_SRC
-
-上述代码通过修改OkHttpClient的相关参数来修改API请求的头部, 讲加密后的帐号和密码放入到
-Authorization中实现验证.
-
-注: Interceptors是属于OkHttp的相关内容, 这部分在后面学习OkHttp时会介绍.
-
-** OAuth认证接口的ServiceGenerator类
-整合过第三方API的同学肯定对OAuth接口不陌生, 大部分情况下你都需要去第三方开发者
-平台注册你的app去获取一个id和secret, 这样才可以访问第三方的接口.
-
-注: 关于oauth的介绍可以参考阮一峰老师的文章 [[http://www.ruanyifeng.com/blog/2014/05/oauth_2_0.html][理解OAuth2.0]].
-
-基于前面的代码, 重新写一个OAuth相关的createService()函数.
-#+BEGIN_SRC java
-public static <T> T createService(Class<T> serviceClass, AccessToken token) {
-    if (token != null) {
-	httpClient.interceptors().clear();
-	httpClient.interceptors().add(new Interceptor() {
-		@Override
-		public Response intercept(Interceptor.Chain chain) throws IOException {
-		    Request original = chain.request();
-		    Request.Builder builder2 = original.newBuilder()
-			.header("Accept", "application/json")
-			.header("Authorization", token.getTokenType()+ " " + token.getAccessToken())
-			.method(original.method(), original.body());
-		    Request request = builder2.build();
-		    return chain.proceed(request);
-		}
-	    });
-
-	Retrofit retrofit = builder.client(httpClient).build();
-	return retrofit.create(serverClass);
-    }
-}
-#+END_SRC
-
-上面的代码通过创建一个定制的 *RequestInterceptor* 对象来配置httpClient, 在定制的对象中将token信息
-添加到Http表头的Authorization域. 不过一般情况下, Access Token并不是直接可以从服务器获取的, 
-下面就会讲解一下获取Access Token的常用方法. 
-
-场景: 假设你已经在第三方网站注册了你的app, 获取了一个clientId 和 secret, 你使用这个帐号来想注册服务器获取
-授权码(一般是跳转到一个网页, 点击允许操作), 然后再通过授权码获取Access Token, 下面是主要流程.
-
-1. 获取授权码
-   授权码的获取一般需要跳转到第三方api的一个相关的网页,网页中会询问用户是否允许用户
-   app获取其在该网站的信息.如果用户点击允许, 第三方服务器就会生成一个授权码返回给用户.
-   第一步先创建程序主界面:
-   #+BEGIN_SRC java
-public class LoginActivity extends Activity {
-    //在第三方平台注册应用获取的clientId和secret
-    private final String clientId = "your-client-id";
-    private final String clientSecret = "your-client-secret";
-    //获取跳转码后的跳转url, 在申请授权码时需要一并传给第三方服务器
-    private final String redirectUri = "your://redirecturi";
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
-
-        Button loginButton (Button) findViewById(R.id.loginbutton);
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse(ServiceGenerator.API_BASE_URL + "/login" + "?client_id=" + clientId + "&redirect_uri=" + redirectUri));
-                startActivity(intent);
-            }
-        });
-    }
-}
-   #+END_SRC
-
-   上述代码定义了一个基本的Android界面, 界面只有一个按钮, 点击按钮会请求授权码(一般会跳转到一个授权界面).
-   在请求中传入一个了回调地址, 如果用户授权一般第三方服务器带着授权码会跳到这个地址, 所以必须在请求授权码
-   时传入回调地址. 这在Android中会表现发送回调Uri的广播,并将授权码通过intent传递出去.
-   所以app中需要在注册一个可以接受该intent的界面,这里还是使用主界面. 在AndroidMainfest.xml中设置intent-filter
+** 在项目中使用retrofit
+ retrofit库可以在[[http://search.maven.org/#search%7Cga%7C1%7Cretrofit][maven.org]] 找到. 可以直接添加到maven或gradle工程中.
+ + Maven
    #+BEGIN_SRC java xml
-<activity  
-    android:name="com.futurestudio.oauthexample.LoginActivity"
-    android:label="@string/app_name"
-    android:configChanges="keyboard|orientation|screenSize">
-    <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data
-            android:host="redirecturi"
-            android:scheme="your" />
-    </intent-filter>
-</activity>  
+ <dependency>
+   <groupId>com.squareup.retrofit</groupId>
+   <artifactId>retrofit</artifactId>
+   <version>2.0.0-beta2</version>
+ </dependency>
    #+END_SRC
-
-   在onResume处理接受到的Intent.
-   这里假设授权码在intent中传递并且key值为code(第三方平台的回调方式需要参考他们的文档).
-   #+BEGIN_SRC java
-@Override
-protected void onResume() {  
-    super.onResume();
-
-    Uri uri = getIntent().getData();
-    if (uri != null && uri.toString().startsWith(redirectUri)) {
-        String code = uri.getQueryParameter("code");
-        if (code != null) {
-            //处理授权码
-        } else if (uri.getQueryParameter("error") != null) {
-            //处理错误
-        }
-    }
-} 
+ + Gradle. 如果与服务端的请求和结果都是json的话,需要gson converter进行转化, 因为要把该库也添加上.
+   #+BEGIN_SRC java  xml
+  compile 'com.squareup.retrofit:retrofit:2.0.0-beta2'
+  compile 'com.squareup.retrofit:converter-gson:2.0.0-beta2' 
    #+END_SRC
-
-   好, 到此为止,我们就已经获取到了授权码,下一步就是通过授权码获取Access Token. 
-2. 获取Access Token
-   上一步获取到授权码后, 就可以向第三方的Access Token服务器发送请求获取token. 我们可以写一个retrofit服务
-   来实现这个功能. 
-   #+BEGIN_SRC java
-   public interface LoginService {  
-    @POST("/token")
-    Call<AccessToken> getAccessToken(
-            @Query("code") String code,
-            @Query("grant_type") String grantType);
-}
+ + 混淆配置
+   如果项目中使用混淆的话, 需要在混淆文件中假如如下配置
+   #+BEGIN_SRC java 
+ -dontwarn retrofit.**
+ -keep class retrofit.** { *; }
+ -keepattributes Signature
+ -keepattributes Exceptions
+  
    #+END_SRC
+** 程序示例
+ 这部分从一个简单的程序开始, 展示retrofit的使用,并通过对这个程序的进一步介绍retrofit的各种功能.
+ 这部分内容大多参考自 [[https://futurestud.io/blog/retrofit-getting-started-and-android-client/]].
+*** 一个简单的retrofit程序
+ 场景:通过GET请求向服务器返回用户信息, 服务器通过Json格式返回一个或多个用户的信息.
+ 基于这个例子介绍一下retrofit的使用步骤:
+ 1. 用户类. 这段代码定义了用户类User, 每个用户包含三个基本信息:id, name, age; 
+    通过retrofit请求用户信息时, 客户端返回用户的json信息, retrofit可以直接将json信息转化为用户类.
+    #+BEGIN_SRC java
+ public class User {
+     private int id;
+     private String name;
+     private int age;
+ }
+ #+END_SRC
+ 2. 定义Client和GET请求接口
+    #+BEGIN_SRC java
+ public interface Client {
+     @GET("users")
+     Call<List<User>>  getUsers();
+ }
+ #+END_SRC
+    这段代码定义了一个接口Client, 并定义了一个GET函数getUsers(), 该函数用户向服务器发送get请求获取所有的
+    用户信息. 定义GET请求需要用GET注解来修饰函数, 注解的参数为uri的相对路径, 下一部分会定义URL的地址, 在
+    发送GET请求时, retrofit会将GET的参数和服务器拼接.
+    后面会在该接口中实现其他的POST和GET函数.
 
-   这里的code就是上一步获取的授权码, grantType是授权类型. 然后用下面的代码加入到onResume获取成功的代码段中
-   #+BEGIN_SRC java
-   if (code != null) {
-            // get access token
-            LoginService loginService = 
-                ServiceGenerator.createService(LoginService.class, clientId, clientSecret);
-            Call<AccessToken> call = loginService.getAccessToken(code, "authorization_code");
-            AccessToken accessToken = call.execute().body();
-   } 
-   #+END_SRC
+    *注:* 在retrofit2.0中,要注意GET和POST注解的参数,如果参数以"/"开头,那么在跟base地址拼接时,会将base地址中
+    的相对地址全部覆盖掉. 举例: base地址为"http://a/b", GET参数为"/c/d", 那么最后的请求地址为"http://a/c/d",
+    因此,如果base地址本身已经是相对地址, 那么GET/POST的参数不能以"/"开头.
+ 3. <<主程序中实现get请求>>
+    #+BEGIN_SRC java  
+ public class MainActivity {
+     ....
+     public static final String SERVER_URL = "http://10.10.10.10/account";
+     private OkHttpClient okHttpClient = new OkHttpClient();
+     private Retrofit.Builder builder = new Retrofit.Builder()
+	 .base_url(SERVER_URL)
+	 .client(okHttpClient)
+	 .addConvertFactory(GsonConvertFactory.create());
 
-以上都是示例, 代码具体写法请参考相关第三方文档.
+     Retrofit retrofit = builder.build();
+     Client client = retrofit.create(Client.class);
+     Call<List<Users>> call = client.getUsers();
+     List<Users> result = call.execute().body();
+     ....
+ }
    
-** 同步请求 vs 异步请求
-Retrofit支持同步和异步请求, 不过Retrofit2的同步/异步架构功能与1有
-很大不同, 具体请参考相关文档.
-1. 同步请求
-   直接调用execute()函数, 本文中的实例就是同步请求的例子.
+    #+END_SRC
+    上述代码用来做实际的请求动作, 首先通过Retrofit Builder来基于各种参数(服务器地址, httpclient, converter)
+    生成一个builder对象, 让后调用builder的build()函数生成一个retrofit对象.
+   
+    接着,调用retrofit的create()函数,传入上一步中定义的接口作为参数来实例化一个具体的接口对象, 然后调用
+    该对象的具体http请求函数(这里为getUsers())来实现http请求. 请求的结果是Json数据,会通过GsonConverter转化为具体的
+    对象(即User). 由于是多个对象,所以需要放到一个List中.
+ 上述三步即为retrofit的基本使用方法.
+*** 创建一个Service generator类
+ 如果项目中 *针对同一个server地址* 需要创建多个Retrofit Interface service,那么可以创建一个通用的ServiceGenerator类
+ 来生成service实例.
 
-   注意事项:
-   + 不要在Android的主线程中调用execute(),有可能报错或导致ANR.
-2. 异步请求
-   异步请求的话调用enque()函数, 并向enque()传入一个Callback的参数.
-   并需要要实现Callback的onSuccess和onFailure函数.
-** 请求结果Response类
-当调用execute()或enqueue()函数时, 会返回一个Reponse对象表示请求结果.
-该请求结果包含了以下信息:
-+ 结果码: 调用code()函数获得
-+ 结果对象: 调用body()函数获得, 如[[主程序中实现get请求][示例]]所示.
-+ 头部: 调用headers
-+ 原始返回结果: 调用rawResponse()函数, 返回一个OkHttp的Response对象.
-* Tips
-1. 请求失败, body()返回值为null
+ #+BEGIN_SRC java
+ public class ServiceGenerator {
+     public static final String BASE_URL = "";
+
+     private static OkHttpClient httpClient = new OkHttpClient();
+     private static Retrofit.Builder builder =
+	 new Retrofit.Builder()
+	 .baseUrl(BASE_URL)
+	 .addConverterFactory(GsonConverterFactory.create());
+
+     public static <T> T createService(Class<T> serviceClass){
+         //把设置client放到这里是因为后续有对client进行配置的需求
+	 Retrofit retrofit = builder.client(httpClient).build(); 
+	 return retrofit.create(serviceClass);
+     }
+				      
+ }
+
+ #+END_SRC
+
+ 这样在上一节的MainActivity中,可以直接使用ServiceGenerator来创建Client实例
+
+ #+BEGIN_SRC java
+
+     Client client = ServiceGenerator.create(Client.class);
+     Client call = client.getUsers();
+     List<Users> result = call.execute().body();
+
+ #+END_SRC
+*** 帐号密码认证的ServiceGenerator类
+ 帐号密码是一种常见的认证方式, 通常将其加密后以放入到http头部的Authorization中
+ 进行请求认证.通过对OkHttpClient进行配置可以在retrofit中实现该方式. 
+
+ #+BEGIN_SRC java
+     public static <T> T createService(Class<T> serviceClass){
+	 createService(serviceClass, null, null);
+     }
+
+     pubic static <T> T createService(Class<T> serviceCls, String userName, String passWord)  {
+	 if (userName != null && passWord != null) {
+	     //对用户名和密码进行加密(不同的需求加密方式不一样, 这里只提供参考)
+	     String credentials = userName + ":" + passWord;
+	     final String base64Str = Base64.encodeToString(credentials.getBytes(), Base64.NO_WRAP);
+
+	     httpClient.interceptors().clear();
+	     httpClient.interceptors().add(new Interceptor() {
+		     @Override
+		     public Response intercept(Interceptor.Chain chain) throws IOException {
+			 Request original = chain.request();
+
+			 Request.Builder requestBuilder = original.newBuilder()
+			     .header("Authorization", basic);
+                         .header("Accept", "applicaton/json");
+                         .method(original.method(), original.body());
+
+			 Request request = requestBuilder.build();
+			 return chain.proceed(request);
+		     }
+		 });
+	 }
+
+	 Retrofit retrofit = builder.client(httpClient).build();
+	 return retrofit.create(serverClass);
+     }
+ #+END_SRC
+
+ 上述代码通过修改OkHttpClient的相关参数来修改API请求的头部, 讲加密后的帐号和密码放入到
+ Authorization中实现验证.
+
+ 注: Interceptors是属于OkHttp的相关内容, 这部分在后面学习OkHttp时会介绍.
+
+*** OAuth认证接口的ServiceGenerator类
+ 整合过第三方API的同学肯定对OAuth接口不陌生, 大部分情况下你都需要去第三方开发者
+ 平台注册你的app去获取一个id和secret, 这样才可以访问第三方的接口.
+
+ 注: 关于oauth的介绍可以参考阮一峰老师的文章 [[http://www.ruanyifeng.com/blog/2014/05/oauth_2_0.html][理解OAuth2.0]].
+
+ 基于前面的代码, 重新写一个OAuth相关的createService()函数.
+ #+BEGIN_SRC java
+ public static <T> T createService(Class<T> serviceClass, AccessToken token) {
+     if (token != null) {
+	 httpClient.interceptors().clear();
+	 httpClient.interceptors().add(new Interceptor() {
+		 @Override
+		 public Response intercept(Interceptor.Chain chain) throws IOException {
+		     Request original = chain.request();
+		     Request.Builder builder2 = original.newBuilder()
+			 .header("Accept", "application/json")
+			 .header("Authorization", token.getTokenType()+ " " + token.getAccessToken())
+			 .method(original.method(), original.body());
+		     Request request = builder2.build();
+		     return chain.proceed(request);
+		 }
+	     });
+
+	 Retrofit retrofit = builder.client(httpClient).build();
+	 return retrofit.create(serverClass);
+     }
+ }
+ #+END_SRC
+
+ 上面的代码通过创建一个定制的 *RequestInterceptor* 对象来配置httpClient, 在定制的对象中将token信息
+ 添加到Http表头的Authorization域. 不过一般情况下, Access Token并不是直接可以从服务器获取的, 
+ 下面就会讲解一下获取Access Token的常用方法. 
+
+ 场景: 假设你已经在第三方网站注册了你的app, 获取了一个clientId 和 secret, 你使用这个帐号来想注册服务器获取
+ 授权码(一般是跳转到一个网页, 点击允许操作), 然后再通过授权码获取Access Token, 下面是主要流程.
+
+ 1. 获取授权码
+    授权码的获取一般需要跳转到第三方api的一个相关的网页,网页中会询问用户是否允许用户
+    app获取其在该网站的信息.如果用户点击允许, 第三方服务器就会生成一个授权码返回给用户.
+    第一步先创建程序主界面:
+    #+BEGIN_SRC java
+ public class LoginActivity extends Activity {
+     //在第三方平台注册应用获取的clientId和secret
+     private final String clientId = "your-client-id";
+     private final String clientSecret = "your-client-secret";
+     //获取跳转码后的跳转url, 在申请授权码时需要一并传给第三方服务器
+     private final String redirectUri = "your://redirecturi";
+
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+         setContentView(R.layout.activity_login);
+
+         Button loginButton (Button) findViewById(R.id.loginbutton);
+         loginButton.setOnClickListener(new View.OnClickListener() {
+             @Override
+             public void onClick(View v) {
+                 Intent intent = new Intent(
+                     Intent.ACTION_VIEW,
+                     Uri.parse(ServiceGenerator.API_BASE_URL + "/login" + "?client_id=" + clientId + "&redirect_uri=" + redirectUri));
+                 startActivity(intent);
+             }
+         });
+     }
+ }
+    #+END_SRC
+
+    上述代码定义了一个基本的Android界面, 界面只有一个按钮, 点击按钮会请求授权码(一般会跳转到一个授权界面).
+    在请求中传入一个了回调地址, 如果用户授权一般第三方服务器带着授权码会跳到这个地址, 所以必须在请求授权码
+    时传入回调地址. 这在Android中会表现发送回调Uri的广播,并将授权码通过intent传递出去.
+    所以app中需要在注册一个可以接受该intent的界面,这里还是使用主界面. 在AndroidMainfest.xml中设置intent-filter
+    #+BEGIN_SRC java xml
+ <activity  
+     android:name="com.futurestudio.oauthexample.LoginActivity"
+     android:label="@string/app_name"
+     android:configChanges="keyboard|orientation|screenSize">
+     <intent-filter>
+         <action android:name="android.intent.action.VIEW" />
+         <category android:name="android.intent.category.DEFAULT" />
+         <category android:name="android.intent.category.BROWSABLE" />
+         <data
+             android:host="redirecturi"
+             android:scheme="your" />
+     </intent-filter>
+ </activity>  
+    #+END_SRC
+
+    在onResume处理接受到的Intent.
+    这里假设授权码在intent中传递并且key值为code(第三方平台的回调方式需要参考他们的文档).
+    #+BEGIN_SRC java
+ @Override
+ protected void onResume() {  
+     super.onResume();
+
+     Uri uri = getIntent().getData();
+     if (uri != null && uri.toString().startsWith(redirectUri)) {
+         String code = uri.getQueryParameter("code");
+         if (code != null) {
+             //处理授权码
+         } else if (uri.getQueryParameter("error") != null) {
+             //处理错误
+         }
+     }
+ } 
+    #+END_SRC
+
+    好, 到此为止,我们就已经获取到了授权码,下一步就是通过授权码获取Access Token. 
+ 2. 获取Access Token
+    上一步获取到授权码后, 就可以向第三方的Access Token服务器发送请求获取token. 我们可以写一个retrofit服务
+    来实现这个功能. 
+    #+BEGIN_SRC java
+    public interface LoginService {  
+     @POST("/token")
+     Call<AccessToken> getAccessToken(
+             @Query("code") String code,
+             @Query("grant_type") String grantType);
+ }
+    #+END_SRC
+
+    这里的code就是上一步获取的授权码, grantType是授权类型. 然后用下面的代码加入到onResume获取成功的代码段中
+    #+BEGIN_SRC java
+    if (code != null) {
+             // get access token
+             LoginService loginService = 
+                 ServiceGenerator.createService(LoginService.class, clientId, clientSecret);
+             Call<AccessToken> call = loginService.getAccessToken(code, "authorization_code");
+             AccessToken accessToken = call.execute().body();
+    } 
+    #+END_SRC
+
+ 以上都是示例, 代码具体写法请参考相关第三方文档.
+   
+*** 同步请求 vs 异步请求
+ Retrofit支持同步和异步请求, 不过Retrofit2的同步/异步架构功能与1有
+ 很大不同, 具体请参考相关文档.
+ 1. 同步请求
+    直接调用execute()函数, 本文中的实例就是同步请求的例子.
+
+    注意事项:
+    + 不要在Android的主线程中调用execute(),有可能报错或导致ANR.
+ 2. 异步请求
+    异步请求的话调用enque()函数, 并向enque()传入一个Callback的参数.
+    并需要要实现Callback的onSuccess和onFailure函数.
+*** 请求结果Response类
+ 当调用execute()或enqueue()函数时, 会返回一个Reponse对象表示请求结果.
+ 该请求结果包含了以下信息:
+ + 结果码: 调用code()函数获得
+ + 结果对象: 调用body()函数获得, 如[[主程序中实现get请求][示例]]所示.
+ + 头部: 调用headers
+ + 原始返回结果: 调用rawResponse()函数, 返回一个OkHttp的Response对象.
+* 源码学习
+本文学习的retrofit源码版本号: parent-2.0.0.
+
+** 代码示例
+   不了解Retrofit的人可以先参考这篇介绍文章[[http://xuzhengchao.com/java/retrofit.html][Retrofit介绍]], 文章介绍了
+   如何通过写一个简单的接口, 就可以实现一个http请求. 
+
+   本文主要的内容就是介绍retrofit是如何实现的这个功能, 即只实现一个接口
+   及一些接口api(这些api都被retrofit的注解"修饰"), 没有实现任何具体代码,
+   就可以完成我们想要的http功能, retrofit到底在后面做了什么?
+
+   下面的示例代码是揭开retrofit面纱的入口代码, 通过该代码可以从服务器获取用户列表
+   #+BEGIN_SRC java
+ //自定义接口
+ public interface Client {
+     @GET("users")
+     Call<List<User>>  getUsers();
+ }
+
+ //使用retrofit来使用自己定义接口实现http请求
+ public class MainActivity {
+     ....
+     public static final String SERVER_URL = "http://10.10.10.10/account";
+     private OkHttpClient okHttpClient = new OkHttpClient();
+     private Retrofit.Builder builder = new Retrofit.Builder()
+	 .base_url(SERVER_URL)
+	 .client(okHttpClient)
+	 .addConvertFactory(GsonConvertFactory.create());
+
+     Retrofit retrofit = builder.build();
+     Client client = retrofit.create(Client.class);
+     Call<List<Users>> call = client.getUsers();
+     List<Users> result = call.execute().body();
+     ....
+ }
+
+   #+END_SRC
+ 
+** 使用builder去创建一个retrofit实例
+   Retrofit类的源码使用了Builder设计模式, 该类只有一个私有的构造函数, 并且"几乎"没有
+   任何的setter方法, 这样可以最大程序的保证retrofit对象的"不可变性".
+
+   下面是通过builder类可以设置的Retrofit成员变量:
+   | 变量名             | 默认值                     | note                                                           |
+   |--------------------+----------------------------+----------------------------------------------------------------|
+   |                    |                            |                                                                |
+   | platform           | 当前平台                   | 当前运行平台:java/android/..                                   |
+   | callFactory        | OkHttpClient               | 定义构建Call对象的组件                                         |
+   | baseUrl            | N/A                        | 服务器基本地址                                                 |
+   | converterFactories | N/A                        | 对象的序列号/反序列化组件(例如Gson)                            |
+   | adapterFactories   | 该平台的默认adapterFactory | 结果的适配类型(例如RxJava的Observable)(默认为OkHttp的Call类型) |
+   | callbackExecutor   | 该平台的executor           | 执行实际请求                                                   |
+    
+** 当前运行平台
+   在[[使用builder去创建一个retrofit实例][上一节]]可以看到, builder的参数默认是使用了"platform"相关的变量. 
+   "platform"在retrofit中代表当前的运行平台, 例如Java8或者Android平台.
+   代码为与Platform.java. Retrofit的builder类的无参构造函数中, 会调用
+   ~Platform.get()~ 获取当前平台, 对于运行在那个平台的判断, 主要是基于
+   该平台的一些独特性质, 例如如果系统存在 *android.os.Build* 类,
+   则代表这是android平台.
+   #+BEGIN_SRC java
+   private static final Platform PLATFORM = findPlatform();
+
+   static Platform get() {
+     return PLATFORM;
+   }
+
+   private static Platform findPlatform() {
+     try {
+       Class.forName("android.os.Build");
+       if (Build.VERSION.SDK_INT != 0) {
+	 return new Android();
+       }
+     } catch (ClassNotFoundException ignored) {
+     }
+     try {
+       Class.forName("java.util.Optional");
+       return new Java8();
+     } catch (ClassNotFoundException ignored) {
+     }
+     try {
+       Class.forName("org.robovm.apple.foundation.NSObject");
+       return new IOS();
+     } catch (ClassNotFoundException ignored) {
+     }
+     return new Platform();
+   }
+   #+END_SRC
+   下面是Android平台的实现代码,其重写了父类的两个函数. 另外, 该类还有个
+   继承了Executor的子类 *MainThreadExecutor*, 该类包含了android的 UI
+   线程的handler, 从而保证工作都会在UI线程完成. 至于其重写的函数的意义, 
+   会在后面介绍.
+   #+BEGIN_SRC java
+   static class Android extends Platform {
+     @Override public Executor defaultCallbackExecutor() {
+       return new MainThreadExecutor();
+     }
+
+     @Override CallAdapter.Factory defaultCallAdapterFactory(Executor callbackExecutor) {
+       return new ExecutorCallAdapterFactory(callbackExecutor);
+     }
+
+     static class MainThreadExecutor implements Executor {
+       private final Handler handler = new Handler(Looper.getMainLooper());
+
+       @Override public void execute(Runnable r) {
+	 handler.post(r);
+       }
+     }
+   }
+   #+END_SRC
+** 基于自定义interface创建实例
+   前两部分主要介绍了一下retrofit的builder类, 通过builder的build()函数就可以构造
+   一个retrofit实例. 接下来就是retrofit很神奇的一步:通过create()函数创建一个自定义
+   接口的对象实例:
+   #+BEGIN_SRC java
+   Client client = retrofit.create(Client.class);
+   #+END_SRC
+
+   在前面的示例代码中, Client是我们创建的一个接口, 并没有任何的"实体"代码(实现类),
+   但是这里通过create()函数就可以生成一个"有血有肉"的对象实例. 通过create()函数的
+   源码看一下这个过程是怎么实现的. 
+   #+BEGIN_SRC java
+     public <T> T create(final Class<T> service) {
+     Utils.validateServiceInterface(service);
+     if (validateEagerly) {
+       eagerlyValidateMethods(service);
+     }
+     return (T) Proxy.newProxyInstance(service.getClassLoader(), new Class<?>[] { service },
+	 new InvocationHandler() {
+	   private final Platform platform = Platform.get();
+
+	   @Override public Object invoke(Object proxy, Method method, Object... args)
+	       throws Throwable {
+	     // If the method is a method from Object then defer to normal invocation.
+	     if (method.getDeclaringClass() == Object.class) {
+	       return method.invoke(this, args);
+	     }
+	     if (platform.isDefaultMethod(method)) {
+	       return platform.invokeDefaultMethod(method, service, proxy, args);
+	     }
+	     ServiceMethod serviceMethod = loadServiceMethod(method);
+	     OkHttpCall okHttpCall = new OkHttpCall<>(serviceMethod, args);
+	     return serviceMethod.callAdapter.adapt(okHttpCall);
+	   }
+	 });
+   }
+   #+END_SRC
+
+   前面的"if"语句暂时先不管, 最后的 "return" 返回了一个 ~Proxy.newProxyInstance()~
+   函数的结果, 这里使用到了java的 [[动态代理介绍][动态代理]] 的编程技巧. 通过该函数, 我们可以拿到一个
+   前面自定义的 "Client" 的一个 *代理类*, 其功能就相当于一个Client对象, 即我们可以通过
+   它调用Client里的各个成员函数. 
+  
+   这里最重要的是其第三个参数, 该参数是一个匿名的 *InvocationHandler()*,
+   该类的意义在于: 当我们通过代理类调用成员函数时, 最后调用的其实是该匿名类的
+   invoke()函数, 该函数的参数method就是Client类的方法, 参数就是Client类的参数.
+   这就是我们可以通过retrofit实现一个interface实例的核心代码. 至于怎么通过调用
+   具体的函数实现实际的http请求, 则需要看一下 invoke() 的具体实现. 在该函数的实现里,
+   最重要的就是这几行. 
+   #+BEGIN_SRC java
+   ServiceMethod serviceMethod = loadServiceMethod(method);
+   OkHttpCall okHttpCall = new OkHttpCall<>(serviceMethod, args);
+   return serviceMethod.callAdapter.adapt(okHttpCall);
+   #+END_SRC
+** 通过invoke()执行函数, 返回一个Call
+*** 函数的封装类:ServiceMethod
+    在[[基于自定义interface创建实例][上一节]]的最后,提到了具体自定义service 的成员函数调用与invoke()函数
+    的后几行有关, 这里先看一下第一行代码 ~ServiceMethod serviceMethod = loadServiceMethod(method);~ .
+
+    ServiceMethod类是函数的封装类, 它保存了我们在接口中定义的函数的所有信息(前面例子中我们定义了函数 *getUsers()* ),
+    包括如下内容:
+    | 内容       | note                                                      |
+    |------------+-----------------------------------------------------------|
+    | 请求方法   | 如POST/GET                                                |
+    | 请求体     |                                                           |
+    | 请求的url  | base + 相对地址                                           |
+    | 请求头部   |                                                           |
+    | 函数参数   | 参数也会被"注解"修饰                                      |
+    | 函数返回值 | 一般为Call                                                   |
+    | other      | 一些具体的http协议相关的内容, 例如是否为multipart, form等 |
+ 
+    当调用 loadServiceMethod()函数时, 实际就是基于处理这个函数的所有信息, 
+    这些信息是可以通过java的Method类拿到的. 
+
+    对于ServiceMethod类的具体处理过程, 会在下一篇文章讲述.
+
+*** 执行函数, 获取返回值(Call)
+    在invoke()函数的最后两行, 首先基于通过分析函数生成的ServiceMethod实例来
+    创建一个OkHttpClient对象, 然后调用代码 ~return serviceMethod.callAdapter.adapt(okHttpCall);~
+    来完成"代理"的作用, 这个invoke()的返回值"等同于"我们调用自定义函数的返回值. 
+    invoke()的返回值总是Object类型, 将其转换为自定义函数的返回值类型即可.
+    一般这个返回值都为Call类型. 
+
+    这里主要看一下最后一行代码. 这行代码可以分成两部分讲解:
+    1. serviceMethod的callAdapter变量.
+    2. callAdapter变量的adapt()函数
+*** ServiceMethod的callAdapter变量
+    CallAdapter是Call的适配器类, 在将一个自定义函数解析成ServiceMethod实例时, 
+    会生成这个ServiceMethod的callAdapter变量. 下面的代码展示了创建过程.
+    #+BEGIN_SRC java
+    //SeviceMethod.java
+     private CallAdapter<?> createCallAdapter() {
+       Type returnType = method.getGenericReturnType();
+       if (Utils.hasUnresolvableType(returnType)) {
+	 throw methodError(
+	     "Method return type must not include a type variable or wildcard: %s", returnType);
+       }
+       if (returnType == void.class) {
+	 throw methodError("Service methods cannot return void.");
+       }
+       Annotation[] annotations = method.getAnnotations();
+       try {
+	 return retrofit.callAdapter(returnType, annotations);
+       } catch (RuntimeException e) { // Wide exception range because factories are user code.
+	 throw methodError(e, "Unable to create call adapter for %s", returnType);
+       }
+     }
+   //Retrofit.java 
+   public CallAdapter<?> nextCallAdapter(CallAdapter.Factory skipPast, Type returnType,
+       Annotation[] annotations) {
+     checkNotNull(returnType, "returnType == null");
+     checkNotNull(annotations, "annotations == null");
+
+     int start = adapterFactories.indexOf(skipPast) + 1;
+     for (int i = start, count = adapterFactories.size(); i < count; i++) {
+       CallAdapter<?> adapter = adapterFactories.get(i).get(returnType, annotations, this);
+       if (adapter != null) {
+	 return adapter;
+       }
+     }
+    #+END_SRC
+   
+    上面的代码是callAdapter变量的创建过程, 第一个函数 ~createCallAdapter()~ 首先
+    获取了函数的"返回类型"和"注解", 并基于这两个内容调用Retrofit的 ~callAdapter()~
+    函数, 并最终调用了 ~nextCallAdapter()~ 函数. 后者会检查retrofit的adapterFactories
+    变量中是否包含能够匹配这个返回值类型和注解的CallAdapter, 并返回. 
+    那么问题来了: 这个adapterFactories中到底有没有匹配能够匹配返回类型和注解的CallAdapter呢?
+    这就要看一下这个 factory 的具体实现过程.
+** Retrofit的adapterFactories的真实面目
+ 注:这里只解释了Android平台的情况.
+
+ adapterFactories变量是在retrofit的builder中初始化的,
+ builder提供了一个 ~addCallAdapterFactory()~
+ 函数可以让使用者向factories添加自定义CallAdapter, *同时* ,
+ 在最后的build()阶段,会将该[[当前运行平台]]的默认CallAdapterFactory
+ 添加到fatories里. 这里假设我们没有添加任何自定义CallAdapter, 
+ 那么factories里只有平台的默认CallAdapterFacotry了. 
+
+ 对于Android 平台来说, 这个"默认"的CallAdapterFactory代码如下,
+ 该函数返回一个ExecutorCallAdapterFactory实例. 
+ #+BEGIN_SRC java
+ //Android platform
+     @Override CallAdapter.Factory defaultCallAdapterFactory(Executor callbackExecutor) {
+       return new ExecutorCallAdapterFactory(callbackExecutor);
+     }
+ #+END_SRC
+ 根据[[ServiceMethod的callAdapter变量][前面]]的内容,当对该实例调用 ~get()~ 函数时, 如何返回一个
+ 可以适配"返回类型"和"函数注解"的CallAdapter实例, 这就要看下
+ *ExecutorCallAdapterFactory* 的具体实现, 其代码如下. 
+ 从代码可以看出, 对于任何自定义函数, 只要其返回类型为"Call"类,
+ 那么都会生成一个匿名的"CallAdapter"实例.该实例实现了 ~adapter()~
+ 方法, 使其可以返回一个具体的Call的子类, 即 ExecutorCallbackCall(). 
+ #+BEGIN_SRC java
+   @Override
+   public CallAdapter<Call<?>> get(Type returnType, Annotation[] annotations, Retrofit retrofit) {
+     if (getRawType(returnType) != Call.class) {
+       return null;
+     }
+     final Type responseType = Utils.getCallResponseType(returnType);
+     return new CallAdapter<Call<?>>() {
+       @Override public Type responseType() {
+         return responseType;
+       }
+
+       @Override public <R> Call<R> adapt(Call<R> call) {
+         return new ExecutorCallbackCall<>(callbackExecutor, call);
+       }
+     };
+   }
+ #+END_SRC
+
+ 以上就是调用自定义interface的具体某个函数的过程, 以Android平台为例, 通过调用函数,
+ 最终会获得一个ExecutorCallbackCall实例. 通过这个Call实例, 我们就可以实现具体的Http请求.
+** 执行具体的Http请求
+ 通过前面的内容, 已经知道调用函数可以获得一个ExecutorCallbackCall实例, 
+ 那么就可以通过执行该实例的execute()或enqueue()函数执行具体的http请求了.
+ 这一部分是OkHttp相关的内容, 会在后面文章陆续说明.
+ #+BEGIN_SRC java
+ //具体请求代码
+ List<Users> result = call.execute().body();
+ #+END_SRC
+
+ 这里想补充一下ExecutorCallbackCall类的一个变量: callbackExecutor. 
+
+ 在Retrofit的设计中,通过Call进行http请求有两种方法: execute()和enqueue().
+ 前者是同步请求, 后者是异步请求. 对于异步请求, 需要传递一个callback参数进行
+ 回调, 处理返回结果. 在ExecutorCallbackCall中, 回调的具体处理过程就是通过
+ 变量 *callbackExecutor* 完成的. 因为ExecutorCallbackCall对应的是Android平台,
+ 所以我们来看一下这个 callbackExecutor 有什么特殊之处. 
+ 下面的代码追溯了这个变量的最终出处.
+ #+BEGIN_SRC java
+ //Android平台通过该函数创建factory
+     @Override CallAdapter.Factory defaultCallAdapterFactory(Executor callbackExecutor) {
+       return new ExecutorCallAdapterFactory(callbackExecutor);
+     }
+
+ //Retrofit在builder中调用了上面的函数, 并传入了executor参数
+ adapterFactories.add(platform.defaultCallAdapterFactory(callbackExecutor));
+
+ //builder的callbackExecutor的创建, 调用了平台的相关函数
+ callbackExecutor = platform.defaultCallbackExecutor();
+
+ //平台相关函数的实现
+     @Override public Executor defaultCallbackExecutor() {
+       return new MainThreadExecutor();
+     }
+     static class MainThreadExecutor implements Executor {
+       private final Handler handler = new Handler(Looper.getMainLooper());
+
+       @Override public void execute(Runnable r) {
+         handler.post(r);
+       }
+     }
+ #+END_SRC
+ 通过上面代码可以看出, Android平台的这个executor其实是一个带有UI线程handler的
+ executor, 所以最后执行execute时, 会将runnable传给UI线程执行. 即,当调用enqueue()
+ 函数时, 回调是在UI线程中执行的.
+
+ over.
+** 附注:
+*** 动态代理介绍
+    动态代理机制是Java的一个高级特性, 其主要功能就是可以为委托类对象生成代理类,
+    代理类可以将所有的方法调用分派到委托对象上反射执行. 动态代理的相关知识可参考
+    相关的Java书籍. 这里传入newProxyInstance()有三个参数: 1, 接口的classLoader. 2, 
+    只包含接口的class数组. 3, 自定义的InvocationHandler()对象, 该对象实现了invoke()
+    函数, 通常在该函数中实现对委托类函数的访问. 所以从create函数可以看出, *其实该函数
+    返回的是一个动态代理类对象(被转化成了我们自定义的接口), 当我们调用该接口的自定义
+    函数时, 我们调用的实际是invoke()函数.* 而要执行的方法被当作参数传给了invoke.

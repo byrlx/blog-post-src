@@ -1,16 +1,10 @@
-#+OPTIONS: ^:nil
-#+OPTIONS: toc:t H:2
-#+AUTHOR: Luis Xu
-#+EMAIL: xuzhengchaojob@gmail.com
-#+TITLE: 搜索利器 -- ack
-/(date:2013-10-31)/
+* 常用linux命令
+1. 查找并删除
+  #+BEGIN_EXAMPLE
+  find . -name "*.orig"  -exec rm -r "{}" \; 
+  #+END_EXAMPLE
 
-有一次跟台湾同事聊天，聊到在代码库里找key word，我就抱怨说find+grep 的时间太长，
-几十G的代码库，往往要找上一个多小时。同事就给我推荐了‘ack’这个工具，说这个tool搜代码比较快一些。
-
-"于是，我抱着试试看的态度,试用了一段时间"...结果就是，我现在几乎不怎么用grep了，而且我决定把它加入到
-我的toolbox当中，就像git一样。
-
+* ack
 ack(ubuntu上叫ack-grep) 是一款搜索工具，就像作者说的那样，*"a tool like grep, optimized for programmers"*，它尤其适用于
 代码库大且层次比较多的地方。作者用perl5实现了ack的全部代码。
 
@@ -27,4 +21,3 @@ ack(ubuntu上叫ack-grep) 是一款搜索工具，就像作者说的那样，*"a
 另外一个比较迷人的地方是会把搜索结果的keyword高亮，也可以通过这三个选项“--color-filename=COLOR, --color-match=COLOR, --color-lineno=COLOR” 定制化自己的颜色主题。
 
 OK,常用的功能基本就是这些了，更多功能可以去[官方网站](http://beyondgrep.com/)查看了。
-

@@ -16,7 +16,6 @@
      + [[file:emacs/emacs.org][Emacs大笔记]]
      + [[file:emacs/orgmode.org][OrgMode 手册阅读笔记]]
    + java
-     + [[file:java/retrofit-source-code.org]['Retrofit源码1: 为什么写一个interface就可以实现http请求']]
      + [[file:java/arraylist-linkedlist-note.org][ArrayList, LinkedList源码笔记]]
      + [[file:java/java.org][java]]
      + [[file:java/okio.org][Okio 源码学习]]
@@ -28,10 +27,8 @@
      + [[file:reading/sicp.org][SICP 阅读笔记]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
    + 新桑渡
-     + [[file:新桑渡/twitter.org][twitter消息一览]]
-     + [[file:新桑渡/useful-cmds.org][useful-cmds]]
+     + [[file:新桑渡/tech.org][tech]]
      + [[file:新桑渡/wutaishan.org][五台山]]
-     + [[file:新桑渡/ack.org][搜索利器 -- ack]]
      + [[file:新桑渡/second-marathon.org][第二次北京马拉松]]
      + [[file:新桑渡/food.org][豆渣食谱]]
      + [[file:新桑渡/running.org][跑步日志]]
