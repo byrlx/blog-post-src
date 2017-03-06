@@ -130,12 +130,30 @@ View 在应用中通过"tree"的方式进行管理维护.创建 view 有两种�
     2. 第一次MOVE最终会变成CANCEL, 传给C.
     3. 后续的MOVE都会先经过A的onInterceptTouchEvent, 然后传给B的onTouchEvent.
     4. UP会变成CANCEL传给B的onTouchEvent.
+* [[http://xuzhengchao.com/android/async-task.html][AsyncTask]]
+* [[http://xuzhengchao.com/android/message.html][android消息机制]]
 * 四种启动模式
 1. standard: 标准模式, 建立一个新的栈放入task中, 什么都不判断.
 2. singleTop: 如果当前页面已经是栈顶, 则不新建, 否则新建.
 3. singleTask: 如果当前页面不是栈顶, 弹出所有.
 4. singleInstance: 给当前页面建立一个全新的task, 只有一个实例.
 
+* 一些性能技巧
+性能优化(最佳实践)的一些原则:
+1. 不要做不比要做的事情.
+2. 如果可以, 尽量避免不必要的内存分配.
+
+常用技巧:
+1. 避免创建不必要的对象.
+   例如返回的String直接用于StringBuffer()或StringBuilder,则比较浪费.
+2. 解析String时,使用substring而不是做copy.
+3. 两个数组比一个二维数组快..
+4. 如果函数不访问对象变量, 将其设置为static.
+5. 善用static final.
+6. 尽量使用库函数, 做了很多优化.
+7. 少用layout-weight. 会导致被measure()两次.
+8. 使用 include 和 merge.
+9. 使用ViewStub占位符.
 * Robolectric简单教程
   该项目官网 [[http://robolectric.org/]]. github地址: [[https://github.com/robolectric/robolectric]].
 
@@ -227,6 +245,262 @@ View 在应用中通过"tree"的方式进行管理维护.创建 view 有两种�
      .restoreInstanceState(savedInstanceState)
      .get();
  #+END_SRC
+* 通过反射获取toolbar的title view :view:
+#+BEGIN_EXAMPLE
+  private TextView getActionBarTextView() {
+    TextView titleTextView = null;
+
+    try {
+        Field f = mToolBar.getClass().getDeclaredField("mTitleTextView");
+        f.setAccessible(true);
+        titleTextView = (TextView) f.get(mToolBar);
+    } catch (NoSuchFieldException e) {
+    } catch (IllegalAccessException e) {
+    }
+    return titleTextView;
+}
+#+END_EXAMPLE
+* ormlite库操作数据库 :sqlite:
+ormlite 对比 android 自带数据库 api 的好处是可以基于类创建一个表, 及表中数据和类的映射.
+
+常见用法:
+1. 实现一个类 继承 OrmLiteSqliteOpenHelper(后者继承自 SQLiteOpenHelper), 
+   实现onCreate 和 onUpgrade 逻辑.
+2. 在调用 Orgmlite 的 api 时,传入这个 子类的调用.
+3. 在想要建表的类上,用注解  @DatabaseTable 和 @DatabaseField 类设置表的
+   名称和表项.
+4. 通过 Ormlite 的 api 获取上面类的一个 DAO(Ormlite 会给每个类创建一个 DAO 实例)
+  ,然后使用 DAO 来进行 CRUD 操作.  
+* app 常用库
+** gson操作json字符串
+** okhttp进行网络操作
+** fresco网络图片加载
+** umeng进行统计分析和反馈
+** sharesdk进行统一分享
+** 阿里聚安全进行加密
+** 广点通和百度的广告进行广告投放
+** 小米push和umengpush来推送消息
+* 设置多进程
+1. 方法: 设置 taskAffinity 
+2. 保持锁屏占用的资源变少. 避免被系统应用杀死.
+3. 加快应用的相应速度.
+* 让activity支持scheme
+通过在activity节点中设置 intent-filter 节点. 里面的内容
+1. 设置scheme格式, 包括 host 和 scheme
+2. 设置action为 VIEW. 
+3. 设置category为 DEFAULT. 
+   也可以设置browsable, 这样可以通过浏览器打开activity.
+* 通常可以放在Application类的动作
+1. 设置自定义异常捕获类.
+2. 统计, 注册, 反馈, 更新.
+3. 数据库.
+* 可替换库对比
+** recyclerView VS listView
+   CLOSED: [2016-05-27 Fri 22:54]
+ 使用RecyclerView的一些好处:
+ 1. 支持添加/删除的动画
+ 2. 支持item的装饰
+ 3. 支持layoutManager实现多重布局.
+
+ [[http://www.truiton.com/2015/03/android-recyclerview-vs-listview-comparison/][这篇文章]] 比较了这两个控件, 主要包括:
+ 总体来说就是RecyclerView提供了更多的客制化的功能, 尤其是对于
+ 复杂的布局或者list实现. 
+ 具体来说:
+ 1. RecyclerView强制使用ViewHolder, 其ViewHolder与Adapter绑定. 
+    因为ListView并没有强制使用ViewHolder,如果不用时, 查找View会变得
+    麻烦, 可能导致性能下降.
+ 2. RecyclerView通过LayoutManager的方式提供布局的多样化.
+    ListView默认只支持竖直方向(可以通过重写代码实现水平方向, 但是麻烦).
+ 3. ItemDecoration 支持对每个项目进行修饰.
+** startService VS bindService					    :service:
+   CLOSED: [2016-05-27 Fri 23:27]
+ http://codetheory.in/understanding-android-started-bound-services/
+ 1. 如果需要和service进行交互,可以使用bindService.
+ 2. startService的service可以一直运行, 即使创建他的组件挂掉.
+    而bindService不行, 跟组件的生命周期一样.
+* how to resolve ANR
+  CLOSED: [2016-05-27 Fri 14:26]
+  http://www.programering.com/a/MTMyEDMwATI.html
+1. first analysis log
+2. from the trace.txt file call stack.
+3. see code
+4. check the ANR origin(iowait?block?memoryleak?)
+* 使用 Resource 类来获取 resource 资源
+context 的 getResource 会返回一个 Resource 类, 使用该类可以获取定义的资源文件,
+例如 String,Drawable,Integer 等等.
+* 一些特殊设置技巧
+** 辅助功能
+ 通过开启辅助功能权限(也称作无障碍)可以模拟用户的点击,滚动等一切行为,
+ 同时可以监控屏幕的变化, 实现一些"自动化"操作. 比如设置自动设置一些权限.
+*** 开启步骤
+ 1. 实现一个类继承自AccessibilityService类.
+ 2. 在AndroidManifest.xml里注册这个service, 并需要做如下配置
+    1. 为该service增加permission "android.permission.BIND_ACCESSIBILITY_SERVICE"
+    2. 为该service设置filter. action为android.accessibilityservice.AccessibilityService.
+       这样权限开启后才可以获得回调.
+    3. 如果需要在xml里(也可以在代码里)对service进行配置, 比如要过滤屏幕事件.则需要增加一个meta-data.
+       #+BEGIN_EXAMPLE
+             <meta-data
+                 android:name="android.accessibilityservice"
+                 android:resource="@xml/keyguard_accessibility_service_config"/>
+       #+END_EXAMPLE
+
+ 通过上面的设置, 就可以在辅助功能设置页面看到app的项,勾选就可以, 或者在程序里直接
+ 跳转到该页面, 使用如下代码:
+ #+BEGIN_EXAMPLE
+ Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+ #+END_EXAMPLE
+*** 自动控制逻辑
+ 1. 当用户在上一步中把权限开启后, 自定义的Service的onServiceConnected()函数
+    会被调用. 可以在这一步里进行配置. 或者如上一步所述在xml里配置.
+    并可以由此进行设置操作.
+ 2. 当有事件发生时, 例如窗口变化, 点击等, 会回调 onAccessibilityEvent()函数.
+    并传入事件.
+** 系统的"最近任务"中不现实activity
+ 可以在Actvivity的配置中加入 ~excludeFromRecents~, 
+ 或者Intent中设置相应的FLAG.
+** 打开"最近任务"窗口
+ #+BEGIN_EXAMPLE
+     private static void openRecentApps() {
+         try {
+             Class serviceManagerClass = Class.forName("android.os.ServiceManager");
+             Method getService = serviceManagerClass.getMethod("getService", String.class);
+             IBinder retbinder = (IBinder) getService.invoke(serviceManagerClass, "statusbar");
+             Class statusBarClass = Class.forName(retbinder.getInterfaceDescriptor());
+             Object statusBarObject = statusBarClass.getClasses()[0].getMethod("asInterface", IBinder.class).invoke(null, new Object[] { retbinder });
+             Method clearAll = statusBarClass.getMethod("toggleRecentApps");
+             clearAll.setAccessible(true);
+             clearAll.invoke(statusBarObject);
+         } catch (Exception e) {
+             Log.d("Licc","Exception "+e.getMessage());
+         }
+     }
+ #+END_EXAMPLE
+** 不同机型特殊配置
+*** 判断是否为小米及获取小米版本
+  通过反射 =android.os.SystemProperties= 这个类, 调用其
+  get()函数, 来获取属性"ro.miui.ui.version.name"的值.
+
+  通过Build.java的BRAND变量来获取品牌名称判断是否为xiaomi.
+  #+BEGIN_SRC java
+      public static int getMIUIVersion() {
+          int versionName = UNKNOWN;
+          try {
+              Class<?> classType = Class.forName("android.os.SystemProperties");
+              Method getStringMethod = classType.getDeclaredMethod("get", String.class, String.class);
+              String version = (String) getStringMethod.invoke(classType, KEY_MIUI_VERSION_NAME, "");
+              if ("v5".equalsIgnoreCase(version)) {
+                  versionName = V5;
+              } else if ("v6".equalsIgnoreCase(version)) {
+                  versionName = V6;
+              } else if ("v7".equalsIgnoreCase(version)) {
+                  versionName = V7;
+              }
+          } catch (Exception e) {
+          }
+          return versionName;
+      }
+    
+      /** The consumer-visible brand with which the product/hardware will be associated, if any. */
+      public static final String BRAND = getString("ro.product.brand");
+  #+END_SRC
+** 获取当前正在运行的应用					     :system:
+ 在实现中从三个地方取数据, 因为使用的API都说系统级的api,
+ 在官方文档中明确支出这些api获取的数据是不可靠的, 
+ 所以多试几个以保证正确率.
+*** getRunningAppProcess()
+    调用了ActivityManager的getRunningAppProcess()函数.获取
+    RunningAppProcessInfo的一个list.
+   
+    *注*: 在 L 及其以后的版本中, 首先会调用该方法, 观察系统的返回值,
+    如果系统返回的值为 null 或只包含 CH 的信息, 那么会设置一个 flag,
+    告知后面的程序需要打开下一步的 UsageStat 权限.
+*** queryUsageStats()						       :stat:
+    调用了UsageStatManager的queryUsageStats()函数,
+    该函数返回UsageStats的一个list. UsageStatManager需要在权限中
+    申请 =android.permission.PACKAGE_USAGE_STATS=, 并需要用户
+    在手机中授权才可以使用.
+   
+    *注*:  可以通过 PackageManager 的 queryIntentActivities()  函数来查询是否有
+    响应  "android.settings.USAGE_ACCESS_SETTINGS" 这个 action 的 activity
+     来判断能否打开设置这个权限的页面.
+*** getRunningTasks()
+    调用了 ActivityManager 的 getRunningTasks() 函数, 该函数返回正在运行
+    的 Task, 该函数 L 版本之后被抛弃.
+** 在别人的页面(例如系统页面)显示指导
+   可以有两种方法:
+ 1. 先把别人页面调起, 同时设置一个 postDelay 操作推迟一段时间后再启动一个 activity.
+    activity 的背景可以设置为透明, 这样方便看到下面的内容.
+ 2. 在一个 service 里,通过 WindowManager 给当前的 window(其他页面) 添加 view.   
+* 使用 native 程序保持进程不死 
+ CH 的思路是 app 开启的时候通过 jni 来启动一个 native 程序
+每次 app 启动的时候,都会去检查这个程序进程是否还在, 如果不在就启动一下. 
+
+而这个 native 的进程会周期性的检查 app 的进程目录(/proc/pid)是否存在,
+如果发现不存在, 就会执行系统命令 "am" 发送 intent 来启动 Service.
+* 版本更新
+一般的版本更新分为两种情况:
+1. 强制更新, 每次启动 app 都弹出更新提示, 不更新进不去.
+2. 非强制更新, 用户可以选择取消更新. 
+
+更新同时也分为"免流量"或"需要流量"更新, "省流量"的伎俩就是在
+ wifi 环境下偷偷把 apk 包下载下来,然后提示用户安装. "需要流量"
+则是在用户确认之后再下载. "需要流量"一般是在移动网络环境下使用.
+只要在 wifi 下测到有新版本就偷偷下载. 
+
+apk包下载中的一些知识:
+1. 何时去服务器检验是否有新包?
+   可以通过下载一个配置文件来获取服务器最新包的所有信息.
+   然后通过当前包的版本信息与配置文件做对比.
+2. 下载下来的包校验.
+   在配置文件中返回新包的 MD5值, 把 apk 下载之后计算新包的 MD5.
+   然后做对比.
+* 与服务器数据传输的加密 
+主要使用了两个东西, u-key 和 us.
+1. u-key:  通过 AESCoder来加密程序获取的一系列手机参数,
+    AESCoder 的 encoder() 函数的 key 放到 jni 层,通过
+    jni 获取.
+2. us:通过阿里聚安全再对上面的 u-key 做进一步加密生成 us.
+   这样传给服务器的加密数据有两个, 一般 us 不会被识破.
+
+*注*:  阿里聚安全还可以识别是否为虚拟机.
+* 通过 intentservice 来执行后台任务			      :intentservice:
+intentService 通过执行一个后台线程来处理接受到的 intent.所以可以让一些繁重的工作通过
+ intentService 来处理. 但是 intentService 只启动一个线程, 对于接受到的 intent 都是
+依次处理的. 可能需要等待较长时间.
+
+*注:* intentService 是一个抽象类, 使用者必须自己实现一个其子类并实现 onHandleIntent() 函数.
+* JobScheduler
+** 一般使用流程
+1. 创建一个自定义JobService
+2. 使用JobInfo的builder基于上面的JobService创建一个JobInfo.
+3. 调用JobScheduler的schedule()函数安排工作.
+* ch
+** 常见的主页展示方式
+ 目前国内主流的主页展示方式是下面一个 tab 栏, 然后
+ 点击每个 tab 项展示不同的页面.
+
+ CH 的实现使用了 TabLayout 和 FragmentPageAdapter.
+** 锁屏上的滑动解锁 view
+ 1. 整个的这块区域就是一个 view, 图标都是通过画布画上去的.
+ 2. 构造函数来获取要绘制的 drawable
+ 3. onMeasure 中计算 view 的实际宽高.
+ 4. onLayout  中确定各个 drawable 的摆放位置
+ 5.  onDraw 中将各个 drawable 画到画布上.
+*** 通过 view 学习的思考自定义 view 的实现
+ 1. 要确定好这个 view 的原型图和动画效果. 
+    控件要怎么布局, 控件支持的动画和控件之间的动画交互.
+ 2. View 支持的自定义属性.
+ 3. 尽量把 view 细分, 一个 view 可能包含多个组件. 每个组件要怎么
+    实现要想好. 组件之间有没有共性, 能否抽象.
+ 4. 耦合性, 在这个例子里, 动画使用 ObjectAnimator, 可以支持
+    View 的封装对象(该对象本身不是 view, 但通过该对象的变化来支持 view).
+ 5. 如果 view UI 有改变要记得调用 invalidate().
+ 6. 要熟练画布的使用.
+    
+* jni
+** jni里分配的内存会算到OOM内存上吗?
+** jni原理
 * performace patterns 笔记
 
 视频地址为 [[https://www.youtube.com/playlist?list=PLWz5rJ2EKKc9CBxr3BVjPTPoDPLdPIFCE][https://www.youtube.com/playlist?list=PLWz5rJ2EKKc9CBxr3BVjPTPoDPLdPIFCE]].
@@ -325,21 +599,256 @@ View 在应用中通过"tree"的方式进行管理维护.创建 view 有两种�
  + Canvas.cliprect(): 该函数可以让你定义 boundaries.所以只有 boundaries 区域内的内容会被绘制.
    屏幕上的其他区域会被忽略.在底层实现上,也只有该区域内的数据会传输给 GPU.
  + quickreject: 规划不用 draw 的区域.
-* 通过反射获取toolbar的title view :view:
-#+BEGIN_EXAMPLE
-  private TextView getActionBarTextView() {
-    TextView titleTextView = null;
+* 如何设计网络框架?
+* 前台service的好处?
+* ImageLoader如何同步
+* 单例模式使用volatile
+* MVVM 的一种实现
+原文 https://medium.com/@Miqubel/refactoring-to-mvvm-40ebafff43de#.3pd0ag4sb
+** MVVM 的含义
+1. M: model, 负责提供数据以及跟后台服务交互.
+2. VM: 中间件. 负责将 model 提供的数据进行转化, 方便 view 使用.并将 view
+   的请求发送给 model.
+3. V: 实现用户接口并包含一个 VM.
 
-    try {
-        Field f = mToolBar.getClass().getDeclaredField("mTitleTextView");
-        f.setAccessible(true);
-        titleTextView = (TextView) f.get(mToolBar);
-    } catch (NoSuchFieldException e) {
-    } catch (IllegalAccessException e) {
+** 主流的两种实现方式
+1. RxJava Observables.
+2. Android Data Binding.
+** 常见代码:activity 做所有事情
+    下述代码中, activity 同时负责数据的请求和 UI 的更新.这样做的弊端:
+1. MainActivity 知道的太多, 例如数据的获取方式.
+2. 测试代码不好写.
+#+BEGIN_EXAMPLE
+public class MainActivity extends AppCompatActivity {
+
+    EditText editText;
+    ImageButton imageButton;
+    BooksAdapter adapter;
+    ListView listView;
+    TextView textNoDataFound;
+    GoogleBooksService service;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Configure Retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                // Base URL can change for endpoints (dev, staging, live..)
+                .baseUrl("https://www.googleapis.com")
+                // Takes care of converting the JSON response into java objects
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        // Create the Google Book API Service
+        service = retrofit.create(GoogleBooksService.class);
+
+
+        editText = (EditText) findViewById(R.id.editText);
+        imageButton = (ImageButton) findViewById(R.id.imageButton);
+        textNoDataFound = (TextView) findViewById(R.id.text_no_data_found);
+
+        adapter = new BooksAdapter(this, -1);
+
+        listView = (ListView) findViewById(R.id.listView);
+        listView.setAdapter(adapter);
+
+        imageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                performSearch();
+            }
+        });
     }
-    return titleTextView;
+
+    private void performSearch() {
+        String formatUserInput = getUserInput().trim().replaceAll("\\s+", "+");
+        // Just call the method on the GoogleBooksService
+        service.search("search+" + formatUserInput)
+                // enqueue runs the request on a separate thread
+                .enqueue(new Callback<BookSearchResult>() {
+
+                    // We receive a Response with the content we expect already parsed
+                    @Override
+                    public void onResponse(Call<BookSearchResult> call, Response<BookSearchResult> books) {
+                        updateUi(books.body().getBooks());
+                    }
+
+                    // In case of error, this method gets called
+                    @Override
+                    public void onFailure(Call<BookSearchResult> call, Throwable t) {
+                        t.printStackTrace();
+                    }
+                });
+    }
+
+    private void updateUi(List<Book> books) {
+        if (books.isEmpty()) {
+            // if no books found, show a message
+            textNoDataFound.setVisibility(View.VISIBLE);
+        } else {
+            textNoDataFound.setVisibility(View.GONE);
+        }
+        adapter.clear();
+        adapter.addAll(books);
+    }
+
+    private String getUserInput() {
+        return editText.getText().toString();
+    }
 }
 #+END_EXAMPLE
+** 使用 RxJava 改造
+*** 创建 Model
+顶层的 model 使用接口实现, 接口定义了 model 的行为和返回的结果. 然后提供一个
+实现类. 实现类中使用 Retrofit 的 Observable 取代了 Callable.  返回的 Observable
+ 已经配置为在线程中执行请求.
+#+BEGIN_EXAMPLE
+public interface BooksInteractor {
+    Observable<BookSearchResult> search(String search);
+}
+
+public class BooksInteractorImpl implements BooksInteractor {
+    private GoogleBooksService service;
+
+    public BooksInteractorImpl() {
+        // Configure Retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                // Base URL can change for endpoints (dev, staging, live..)
+                .baseUrl("https://www.googleapis.com")
+                // Takes care of converting the JSON response into java objects
+                .addConverterFactory(GsonConverterFactory.create())
+                // Retrofit Call to RxJava Observable
+                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                .build();
+        // Create the Google Book API Service
+        service = retrofit.create(GoogleBooksService.class);
+    }
+
+    @Override
+    public Observable<BookSearchResult> search(String search) {
+        return service.search("search+" + search).subscribeOn(Schedulers.io());
+    }
+}
+#+END_EXAMPLE
+*** 创建 ViewModel
+ViewModel 的功能比较简单, 配置执行的线程.
+ 如下例设置了返回的搜索结果在 scheduler 中被执行.
+#+BEGIN_EXAMPLE
+public class BooksViewModel {
+
+    private BooksInteractor interactor;
+    private Scheduler scheduler;
+
+    public BooksViewModel(BooksInteractor interactor, Scheduler scheduler) {
+        this.interactor = interactor;
+        this.scheduler = scheduler;
+    }
+
+    public Observable<BookSearchResult> search(String search) {
+        return interactor.search(search).observeOn(scheduler);
+    }
+}
+#+END_EXAMPLE
+*** 改造后的 activity
+#+BEGIN_EXAMPLE
+public class MainActivity extends AppCompatActivity {
+
+    EditText editText;
+    ImageButton imageButton;
+    BooksAdapter adapter;
+    ListView listView;
+    TextView textNoDataFound;
+
+    private CompositeSubscription subscriptions = new CompositeSubscription();
+    private BooksViewModel booksViewModel;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        booksViewModel = new BooksViewModel(new BooksInteractorImpl(), 
+                                            AndroidSchedulers.mainThread());
+
+        editText = (EditText) findViewById(R.id.editText);
+        imageButton = (ImageButton) findViewById(R.id.imageButton);
+        textNoDataFound = (TextView) findViewById(R.id.text_no_data_found);
+
+        adapter = new BooksAdapter(this, -1);
+
+        listView = (ListView) findViewById(R.id.listView);
+        listView.setAdapter(adapter);
+
+        imageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                performSearch();
+            }
+        });
+    }
+  
+    @Override
+    protected void onDestroy() {
+        subscriptions.unsubscribe();
+        super.onDestroy();
+    }
+
+    private void performSearch() {
+        String formatUserInput = getUserInput().trim().replaceAll("\\s+", "+");
+        subscription = booksViewModel.search(formatUserInput)
+                .subscribe(new Observer<BookSearchResult>() {
+                    @Override
+                    public void onCompleted() {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        e.printStackTrace();
+                    }
+
+                    @Override
+                    public void onNext(BookSearchResult bookSearchResult) {
+                        updateUi(bookSearchResult.getBooks());
+                    }
+                });
+    }
+
+    private void updateUi(List<Book> books) {
+        if (books.isEmpty()) {
+            // if no books found, show a message
+            textNoDataFound.setVisibility(View.VISIBLE);
+        } else {
+            textNoDataFound.setVisibility(View.GONE);
+        }
+        adapter.clear();
+        adapter.addAll(books);
+    }
+
+    private String getUserInput() {
+        return editText.getText().toString();
+    }
+}
+#+END_EXAMPLE
+** 好处
+1. 方便写测试用例.
+   #+BEGIN_EXAMPLE
+   public class BooksInteractorMock implements BooksInteractor {
+    @Override
+    public Observable<BookSearchResult> search(String search) {
+        return Observable.just(getMockedBookSearchResult());
+    }
+
+    private BookSearchResult getMockedBookSearchResult() {
+        BookSearchResult bookSearchResult = new BookSearchResult();
+//        bookSearchResult.setBooks(myListOfBooks);
+        return bookSearchResult;
+    }
+}
+   #+END_EXAMPLE
+2. ViewModel 不需要知道 View 的存在(对比 Presenter).
+3. 可以包含多个 ViewModel.
 * AppBarLayout笔记 					  :coordinatorlayout:
 1. 该类的默认behavior是[[Behavior]], 是用标注修饰的.
 2. 定义了OnOffsetChangedListener接口. 可以将该view
@@ -655,495 +1164,3 @@ arraylsit里的[[AdapterDataObserver]]的对应api.
 	 正确的child.
       3. 当LM调用addView(view,index), RV同样也会插入到正确的位置.
       4. 动画完成时, RV会移除并回收隐藏的view.
-* ormlite库操作数据库 :sqlite:
-ormlite 对比 android 自带数据库 api 的好处是可以基于类创建一个表, 及表中数据和类的映射.
-
-常见用法:
-1. 实现一个类 继承 OrmLiteSqliteOpenHelper(后者继承自 SQLiteOpenHelper), 
-   实现onCreate 和 onUpgrade 逻辑.
-2. 在调用 Orgmlite 的 api 时,传入这个 子类的调用.
-3. 在想要建表的类上,用注解  @DatabaseTable 和 @DatabaseField 类设置表的
-   名称和表项.
-4. 通过 Ormlite 的 api 获取上面类的一个 DAO(Ormlite 会给每个类创建一个 DAO 实例)
-  ,然后使用 DAO 来进行 CRUD 操作.  
-* app 常用库
-** gson操作json字符串
-** okhttp进行网络操作
-** fresco网络图片加载
-** umeng进行统计分析和反馈
-** sharesdk进行统一分享
-** 阿里聚安全进行加密
-** 广点通和百度的广告进行广告投放
-** 小米push和umengpush来推送消息
-* 设置多进程
-1. 方法: 设置 taskAffinity 
-2. 保持锁屏占用的资源变少. 避免被系统应用杀死.
-3. 加快应用的相应速度.
-* 让activity支持scheme
-通过在activity节点中设置 intent-filter 节点. 里面的内容
-1. 设置scheme格式, 包括 host 和 scheme
-2. 设置action为 VIEW. 
-3. 设置category为 DEFAULT. 
-   也可以设置browsable, 这样可以通过浏览器打开activity.
-* 在别人的页面(例如系统页面)显示指导
-  可以有两种方法:
-1. 先把别人页面调起, 同时设置一个 postDelay 操作推迟一段时间后再启动一个 activity.
-   activity 的背景可以设置为透明, 这样方便看到下面的内容.
-2. 在一个 service 里,通过 WindowManager 给当前的 window(其他页面) 添加 view.   
-* 通常可以放在Application类的动作
-1. 设置自定义异常捕获类.
-2. 统计, 注册, 反馈, 更新.
-3. 数据库.
-* 可替换库对比
-** recyclerView VS listView
-   CLOSED: [2016-05-27 Fri 22:54]
- 使用RecyclerView的一些好处:
- 1. 支持添加/删除的动画
- 2. 支持item的装饰
- 3. 支持layoutManager实现多重布局.
-
- [[http://www.truiton.com/2015/03/android-recyclerview-vs-listview-comparison/][这篇文章]] 比较了这两个控件, 主要包括:
- 总体来说就是RecyclerView提供了更多的客制化的功能, 尤其是对于
- 复杂的布局或者list实现. 
- 具体来说:
- 1. RecyclerView强制使用ViewHolder, 其ViewHolder与Adapter绑定. 
-    因为ListView并没有强制使用ViewHolder,如果不用时, 查找View会变得
-    麻烦, 可能导致性能下降.
- 2. RecyclerView通过LayoutManager的方式提供布局的多样化.
-    ListView默认只支持竖直方向(可以通过重写代码实现水平方向, 但是麻烦).
- 3. ItemDecoration 支持对每个项目进行修饰.
-** startService VS bindService					    :service:
-   CLOSED: [2016-05-27 Fri 23:27]
- http://codetheory.in/understanding-android-started-bound-services/
- 1. 如果需要和service进行交互,可以使用bindService.
- 2. startService的service可以一直运行, 即使创建他的组件挂掉.
-    而bindService不行, 跟组件的生命周期一样.
-* [[http://xuzhengchao.com/android/message.html][android消息机制]]
-* how to resolve ANR
-  CLOSED: [2016-05-27 Fri 14:26]
-  http://www.programering.com/a/MTMyEDMwATI.html
-1. first analysis log
-2. from the trace.txt file call stack.
-3. see code
-4. check the ANR origin(iowait?block?memoryleak?)
-* 使用 Resource 类来获取 resource 资源
-context 的 getResource 会返回一个 Resource 类, 使用该类可以获取定义的资源文件,
-例如 String,Drawable,Integer 等等.
-* 辅助功能
-通过开启辅助功能权限(也称作无障碍)可以模拟用户的点击,滚动等一切行为,
-同时可以监控屏幕的变化, 实现一些"自动化"操作. 比如设置自动设置一些权限.
-** 开启步骤
-1. 实现一个类继承自AccessibilityService类.
-2. 在AndroidManifest.xml里注册这个service, 并需要做如下配置
-   1. 为该service增加permission "android.permission.BIND_ACCESSIBILITY_SERVICE"
-   2. 为该service设置filter. action为android.accessibilityservice.AccessibilityService.
-      这样权限开启后才可以获得回调.
-   3. 如果需要在xml里(也可以在代码里)对service进行配置, 比如要过滤屏幕事件.则需要增加一个meta-data.
-      #+BEGIN_EXAMPLE
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/keyguard_accessibility_service_config"/>
-      #+END_EXAMPLE
-
-通过上面的设置, 就可以在辅助功能设置页面看到app的项,勾选就可以, 或者在程序里直接
-跳转到该页面, 使用如下代码:
-#+BEGIN_EXAMPLE
-Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-#+END_EXAMPLE
-** 自动控制逻辑
-1. 当用户在上一步中把权限开启后, 自定义的Service的onServiceConnected()函数
-   会被调用. 可以在这一步里进行配置. 或者如上一步所述在xml里配置.
-   并可以由此进行设置操作.
-2. 当有事件发生时, 例如窗口变化, 点击等, 会回调 onAccessibilityEvent()函数.
-   并传入事件.
-* 系统的"最近任务"中不现实activity
-可以在Actvivity的配置中加入 ~excludeFromRecents~, 
-或者Intent中设置相应的FLAG.
-* 打开"最近任务"窗口
-#+BEGIN_EXAMPLE
-    private static void openRecentApps() {
-        try {
-            Class serviceManagerClass = Class.forName("android.os.ServiceManager");
-            Method getService = serviceManagerClass.getMethod("getService", String.class);
-            IBinder retbinder = (IBinder) getService.invoke(serviceManagerClass, "statusbar");
-            Class statusBarClass = Class.forName(retbinder.getInterfaceDescriptor());
-            Object statusBarObject = statusBarClass.getClasses()[0].getMethod("asInterface", IBinder.class).invoke(null, new Object[] { retbinder });
-            Method clearAll = statusBarClass.getMethod("toggleRecentApps");
-            clearAll.setAccessible(true);
-            clearAll.invoke(statusBarObject);
-        } catch (Exception e) {
-            Log.d("Licc","Exception "+e.getMessage());
-        }
-    }
-#+END_EXAMPLE
-* 不同机型特殊配置
-** 判断是否为小米及获取小米版本
- 通过反射 =android.os.SystemProperties= 这个类, 调用其
- get()函数, 来获取属性"ro.miui.ui.version.name"的值.
-
- 通过Build.java的BRAND变量来获取品牌名称判断是否为xiaomi.
- #+BEGIN_SRC java
-     public static int getMIUIVersion() {
-         int versionName = UNKNOWN;
-         try {
-             Class<?> classType = Class.forName("android.os.SystemProperties");
-             Method getStringMethod = classType.getDeclaredMethod("get", String.class, String.class);
-             String version = (String) getStringMethod.invoke(classType, KEY_MIUI_VERSION_NAME, "");
-             if ("v5".equalsIgnoreCase(version)) {
-                 versionName = V5;
-             } else if ("v6".equalsIgnoreCase(version)) {
-                 versionName = V6;
-             } else if ("v7".equalsIgnoreCase(version)) {
-                 versionName = V7;
-             }
-         } catch (Exception e) {
-         }
-         return versionName;
-     }
-    
-     /** The consumer-visible brand with which the product/hardware will be associated, if any. */
-     public static final String BRAND = getString("ro.product.brand");
- #+END_SRC
-* 获取当前正在运行的应用 :system:
-CH在实现中从三个地方取数据, 因为使用的API都说系统级的api,
-在官方文档中明确支出这些api获取的数据是不可靠的, 
-所以多试几个以保证正确率.
-** getRunningAppProcess()
-   调用了ActivityManager的getRunningAppProcess()函数.获取
-   RunningAppProcessInfo的一个list.
-   
-   *注*: 在 L 及其以后的版本中, 首先会调用该方法, 观察系统的返回值,
-   如果系统返回的值为 null 或只包含 CH 的信息, 那么会设置一个 flag,
-   告知后面的程序需要打开下一步的 UsageStat 权限.
-** queryUsageStats()						       :stat:
-   调用了UsageStatManager的queryUsageStats()函数,
-   该函数返回UsageStats的一个list. UsageStatManager需要在权限中
-   申请 =android.permission.PACKAGE_USAGE_STATS=, 并需要用户
-   在手机中授权才可以使用.
-   
-   *注*:  可以通过 PackageManager 的 queryIntentActivities()  函数来查询是否有
-   响应  "android.settings.USAGE_ACCESS_SETTINGS" 这个 action 的 activity
-    来判断能否打开设置这个权限的页面.
-** getRunningTasks()
-   调用了 ActivityManager 的 getRunningTasks() 函数, 该函数返回正在运行
-   的 Task, 该函数 L 版本之后被抛弃.
-* 使用 native 程序保持进程不死 
- CH 的思路是 app 开启的时候通过 jni 来启动一个 native 程序
-每次 app 启动的时候,都会去检查这个程序进程是否还在, 如果不在就启动一下. 
-
-而这个 native 的进程会周期性的检查 app 的进程目录(/proc/pid)是否存在,
-如果发现不存在, 就会执行系统命令 "am" 发送 intent 来启动 Service.
-* 版本更新
-一般的版本更新分为两种情况:
-1. 强制更新, 每次启动 app 都弹出更新提示, 不更新进不去.
-2. 非强制更新, 用户可以选择取消更新. 
-
-更新同时也分为"免流量"或"需要流量"更新, "省流量"的伎俩就是在
- wifi 环境下偷偷把 apk 包下载下来,然后提示用户安装. "需要流量"
-则是在用户确认之后再下载. "需要流量"一般是在移动网络环境下使用.
-只要在 wifi 下测到有新版本就偷偷下载. 
-
-apk包下载中的一些知识:
-1. 何时去服务器检验是否有新包?
-   可以通过下载一个配置文件来获取服务器最新包的所有信息.
-   然后通过当前包的版本信息与配置文件做对比.
-2. 下载下来的包校验.
-   在配置文件中返回新包的 MD5值, 把 apk 下载之后计算新包的 MD5.
-   然后做对比.
-* 与服务器数据传输的加密 
-主要使用了两个东西, u-key 和 us.
-1. u-key:  通过 AESCoder来加密程序获取的一系列手机参数,
-    AESCoder 的 encoder() 函数的 key 放到 jni 层,通过
-    jni 获取.
-2. us:通过阿里聚安全再对上面的 u-key 做进一步加密生成 us.
-   这样传给服务器的加密数据有两个, 一般 us 不会被识破.
-
-*注*:  阿里聚安全还可以识别是否为虚拟机.
-* 通过 intentservice 来执行后台任务			      :intentservice:
-intentService 通过执行一个后台线程来处理接受到的 intent.所以可以让一些繁重的工作通过
- intentService 来处理. 但是 intentService 只启动一个线程, 对于接受到的 intent 都是
-依次处理的. 可能需要等待较长时间.
-
-*注:* intentService 是一个抽象类, 使用者必须自己实现一个其子类并实现 onHandleIntent() 函数.
-* JobScheduler
-** 一般使用流程
-1. 创建一个自定义JobService
-2. 使用JobInfo的builder基于上面的JobService创建一个JobInfo.
-3. 调用JobScheduler的schedule()函数安排工作.
-* ch
-** 常见的主页展示方式
- 目前国内主流的主页展示方式是下面一个 tab 栏, 然后
- 点击每个 tab 项展示不同的页面.
-
- CH 的实现使用了 TabLayout 和 FragmentPageAdapter.
-** 锁屏上的滑动解锁 view
- 1. 整个的这块区域就是一个 view, 图标都是通过画布画上去的.
- 2. 构造函数来获取要绘制的 drawable
- 3. onMeasure 中计算 view 的实际宽高.
- 4. onLayout  中确定各个 drawable 的摆放位置
- 5.  onDraw 中将各个 drawable 画到画布上.
-*** 通过 view 学习的思考自定义 view 的实现
- 1. 要确定好这个 view 的原型图和动画效果. 
-    控件要怎么布局, 控件支持的动画和控件之间的动画交互.
- 2. View 支持的自定义属性.
- 3. 尽量把 view 细分, 一个 view 可能包含多个组件. 每个组件要怎么
-    实现要想好. 组件之间有没有共性, 能否抽象.
- 4. 耦合性, 在这个例子里, 动画使用 ObjectAnimator, 可以支持
-    View 的封装对象(该对象本身不是 view, 但通过该对象的变化来支持 view).
- 5. 如果 view UI 有改变要记得调用 invalidate().
- 6. 要熟练画布的使用.
-    
-* jni
-** jni里分配的内存会算到OOM内存上吗?
-** jni原理
-* [[http://xuzhengchao.com/android/async-task.html][AsyncTask]]
-* 如何设计网络框架?
-* 前台service的好处?
-* ImageLoader如何同步
-* 单例模式使用volatile
-* MVVM 的一种实现
-原文 https://medium.com/@Miqubel/refactoring-to-mvvm-40ebafff43de#.3pd0ag4sb
-** MVVM 的含义
-1. M: model, 负责提供数据以及跟后台服务交互.
-2. VM: 中间件. 负责将 model 提供的数据进行转化, 方便 view 使用.并将 view
-   的请求发送给 model.
-3. V: 实现用户接口并包含一个 VM.
-
-** 主流的两种实现方式
-1. RxJava Observables.
-2. Android Data Binding.
-** 常见代码:activity 做所有事情
-    下述代码中, activity 同时负责数据的请求和 UI 的更新.这样做的弊端:
-1. MainActivity 知道的太多, 例如数据的获取方式.
-2. 测试代码不好写.
-#+BEGIN_EXAMPLE
-public class MainActivity extends AppCompatActivity {
-
-    EditText editText;
-    ImageButton imageButton;
-    BooksAdapter adapter;
-    ListView listView;
-    TextView textNoDataFound;
-    GoogleBooksService service;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        // Configure Retrofit
-        Retrofit retrofit = new Retrofit.Builder()
-                // Base URL can change for endpoints (dev, staging, live..)
-                .baseUrl("https://www.googleapis.com")
-                // Takes care of converting the JSON response into java objects
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        // Create the Google Book API Service
-        service = retrofit.create(GoogleBooksService.class);
-
-
-        editText = (EditText) findViewById(R.id.editText);
-        imageButton = (ImageButton) findViewById(R.id.imageButton);
-        textNoDataFound = (TextView) findViewById(R.id.text_no_data_found);
-
-        adapter = new BooksAdapter(this, -1);
-
-        listView = (ListView) findViewById(R.id.listView);
-        listView.setAdapter(adapter);
-
-        imageButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                performSearch();
-            }
-        });
-    }
-
-    private void performSearch() {
-        String formatUserInput = getUserInput().trim().replaceAll("\\s+", "+");
-        // Just call the method on the GoogleBooksService
-        service.search("search+" + formatUserInput)
-                // enqueue runs the request on a separate thread
-                .enqueue(new Callback<BookSearchResult>() {
-
-                    // We receive a Response with the content we expect already parsed
-                    @Override
-                    public void onResponse(Call<BookSearchResult> call, Response<BookSearchResult> books) {
-                        updateUi(books.body().getBooks());
-                    }
-
-                    // In case of error, this method gets called
-                    @Override
-                    public void onFailure(Call<BookSearchResult> call, Throwable t) {
-                        t.printStackTrace();
-                    }
-                });
-    }
-
-    private void updateUi(List<Book> books) {
-        if (books.isEmpty()) {
-            // if no books found, show a message
-            textNoDataFound.setVisibility(View.VISIBLE);
-        } else {
-            textNoDataFound.setVisibility(View.GONE);
-        }
-        adapter.clear();
-        adapter.addAll(books);
-    }
-
-    private String getUserInput() {
-        return editText.getText().toString();
-    }
-}
-#+END_EXAMPLE
-** 使用 RxJava 改造
-*** 创建 Model
-顶层的 model 使用接口实现, 接口定义了 model 的行为和返回的结果. 然后提供一个
-实现类. 实现类中使用 Retrofit 的 Observable 取代了 Callable.  返回的 Observable
- 已经配置为在线程中执行请求.
-#+BEGIN_EXAMPLE
-public interface BooksInteractor {
-    Observable<BookSearchResult> search(String search);
-}
-
-public class BooksInteractorImpl implements BooksInteractor {
-    private GoogleBooksService service;
-
-    public BooksInteractorImpl() {
-        // Configure Retrofit
-        Retrofit retrofit = new Retrofit.Builder()
-                // Base URL can change for endpoints (dev, staging, live..)
-                .baseUrl("https://www.googleapis.com")
-                // Takes care of converting the JSON response into java objects
-                .addConverterFactory(GsonConverterFactory.create())
-                // Retrofit Call to RxJava Observable
-                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .build();
-        // Create the Google Book API Service
-        service = retrofit.create(GoogleBooksService.class);
-    }
-
-    @Override
-    public Observable<BookSearchResult> search(String search) {
-        return service.search("search+" + search).subscribeOn(Schedulers.io());
-    }
-}
-#+END_EXAMPLE
-*** 创建 ViewModel
-ViewModel 的功能比较简单, 配置执行的线程.
- 如下例设置了返回的搜索结果在 scheduler 中被执行.
-#+BEGIN_EXAMPLE
-public class BooksViewModel {
-
-    private BooksInteractor interactor;
-    private Scheduler scheduler;
-
-    public BooksViewModel(BooksInteractor interactor, Scheduler scheduler) {
-        this.interactor = interactor;
-        this.scheduler = scheduler;
-    }
-
-    public Observable<BookSearchResult> search(String search) {
-        return interactor.search(search).observeOn(scheduler);
-    }
-}
-#+END_EXAMPLE
-*** 改造后的 activity
-#+BEGIN_EXAMPLE
-public class MainActivity extends AppCompatActivity {
-
-    EditText editText;
-    ImageButton imageButton;
-    BooksAdapter adapter;
-    ListView listView;
-    TextView textNoDataFound;
-
-    private CompositeSubscription subscriptions = new CompositeSubscription();
-    private BooksViewModel booksViewModel;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        booksViewModel = new BooksViewModel(new BooksInteractorImpl(), 
-                                            AndroidSchedulers.mainThread());
-
-        editText = (EditText) findViewById(R.id.editText);
-        imageButton = (ImageButton) findViewById(R.id.imageButton);
-        textNoDataFound = (TextView) findViewById(R.id.text_no_data_found);
-
-        adapter = new BooksAdapter(this, -1);
-
-        listView = (ListView) findViewById(R.id.listView);
-        listView.setAdapter(adapter);
-
-        imageButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                performSearch();
-            }
-        });
-    }
-  
-    @Override
-    protected void onDestroy() {
-        subscriptions.unsubscribe();
-        super.onDestroy();
-    }
-
-    private void performSearch() {
-        String formatUserInput = getUserInput().trim().replaceAll("\\s+", "+");
-        subscription = booksViewModel.search(formatUserInput)
-                .subscribe(new Observer<BookSearchResult>() {
-                    @Override
-                    public void onCompleted() {
-
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        e.printStackTrace();
-                    }
-
-                    @Override
-                    public void onNext(BookSearchResult bookSearchResult) {
-                        updateUi(bookSearchResult.getBooks());
-                    }
-                });
-    }
-
-    private void updateUi(List<Book> books) {
-        if (books.isEmpty()) {
-            // if no books found, show a message
-            textNoDataFound.setVisibility(View.VISIBLE);
-        } else {
-            textNoDataFound.setVisibility(View.GONE);
-        }
-        adapter.clear();
-        adapter.addAll(books);
-    }
-
-    private String getUserInput() {
-        return editText.getText().toString();
-    }
-}
-#+END_EXAMPLE
-** 好处
-1. 方便写测试用例.
-   #+BEGIN_EXAMPLE
-   public class BooksInteractorMock implements BooksInteractor {
-    @Override
-    public Observable<BookSearchResult> search(String search) {
-        return Observable.just(getMockedBookSearchResult());
-    }
-
-    private BookSearchResult getMockedBookSearchResult() {
-        BookSearchResult bookSearchResult = new BookSearchResult();
-//        bookSearchResult.setBooks(myListOfBooks);
-        return bookSearchResult;
-    }
-}
-   #+END_EXAMPLE
-2. ViewModel 不需要知道 View 的存在(对比 Presenter).
-3. 可以包含多个 ViewModel.

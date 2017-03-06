@@ -5,20 +5,23 @@
 #+DATE: <2016-08-20 Sat 00:05>
 #+TITLE: Java大笔记
 
+/日常积累的java经验及读书笔记, 琐碎, 自用/
+
 * 注释 :javadoc:
 1. 引用函数.
    Use the {@link #getComponentAt(int, int) getComponentAt} method.
 * enum :enum:
 1. values(): 返回所有的实例数组
-* abstract class VS interface :interface:
+* 抽象类和接口
 1. 只能继承一个abstract 类, 可以实现多个interface.
 2. 实现interface必须实现所有接口. 实现abstract类则不一定需要实现抽象接口(这个类是abstract).
 3. abstract类可以实现函数. interface不行.
-* static inner class VS inner class :inner:
+* 内部类
 ** why use inner class
 1. 架构明晰. 使用一个内部类可以使代码可读性更好, 更方便维护.
    尤其是内部类不会在其他的context中使用.
 2. 内部类可以访问外部类的private变量. 这也是一个便利性.
+3. 内部类就相当于一个闭包.
 ** static inner class
 1. 不能访问外部类的 non-static 成员变量.
 2. 可以访问外部类的 static 成员变量. 尤其是可以访问private的.
@@ -26,3 +29,27 @@
 ** non-static inner class
 1. 可以访问所有outer class 的变量.
 2. 不能直接用来创建实例. 必须在outer 类的一个实例里创建实例.
+3. 编译器自动为该类创建一个指向外部类的引用.
+* 初始化流程
+1. 类在第一次被使用时, classLoader()会加载该类的class文件.
+   初始化所有静态成员, 然后调用构造函数.
+2. 初始化流程: 根基类->子类->子类.
+3. 初始化流程: static成员的定义顺序.
+4. 在构造函数中调用其他成员函数可能会有风险. 如果子类覆盖了父类函数,
+   则父类构造函数中调用函数会调用到子类的.
+* 权限
+1. 私有构造函数的类无法被继承.
+2. 子类跟父类不同包, 则无法访问包权限的成员.
+3. package的public static 成员可以被外界访问.
+4. 无默认构造函数的类, 其子类必须显示调用其构造函数.
+* final的特性
+1. 修饰基本类型,不可更改.
+2. 修饰引用, 引用的地址不可更改, 引用对象内容可以更改.
+3. 和static共用, 占据的内存不可改变.
+4. 修饰参数则无法修改参数.
+5. 修饰方法, 无法被子类覆盖.
+6. 修饰类, 无法继承.
+* 匿名类
+1. 匿名类可以使用带参数的方法使用带参构造器.
+2. 匿名类可以通过初始化代码块来实现"构造函数"的功能.
+* 面向迭代器编程
