@@ -1,3 +1,10 @@
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-08-20 Sat 00:05>
+#+TITLE: Java大笔记
+
 * 注释 :javadoc:
 1. 引用函数.
    Use the {@link #getComponentAt(int, int) getComponentAt} method.

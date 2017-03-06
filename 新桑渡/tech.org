@@ -1,3 +1,10 @@
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2013-11-05 Thu 23:25>
+#+TITLE: 技术笔记
+
 * 常用linux命令
 1. 查找并删除
   #+BEGIN_EXAMPLE

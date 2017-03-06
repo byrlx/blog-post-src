@@ -1,3 +1,11 @@
+
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-08-20 Sat 00:05>
+#+TITLE: Scala大笔记
+
 * implicit
   1. 修饰函数参数时, 标志该参数不是在调用时必须提供的.\\
      如果没有提供, 会使用"范围"内的 该类型的默认值, 即用
