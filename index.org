@@ -12,7 +12,6 @@
      + [[file:android/open-libraries.org][【翻译】当我开始Android开发时，希望能早点认识的一些开源库]]
    + emacs
      + [[file:emacs/elisp.org][Elisp 大笔记]]
-     + [[file:emacs/elisp-fun-program.org][Elisp 小程序]]
      + [[file:emacs/emacs.org][Emacs大笔记]]
      + [[file:emacs/orgmode.org][OrgMode 手册阅读笔记]]
    + java

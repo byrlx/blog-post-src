@@ -130,6 +130,32 @@ View 在应用中通过"tree"的方式进行管理维护.创建 view 有两种�
     2. 第一次MOVE最终会变成CANCEL, 传给C.
     3. 后续的MOVE都会先经过A的onInterceptTouchEvent, 然后传给B的onTouchEvent.
     4. UP会变成CANCEL传给B的onTouchEvent.
+** findViewById()使用DFS来查找View
+#+BEGIN_EXAMPLE
+    @Override
+    protected View findViewTraversal(@IdRes int id) {
+        if (id == mID) {
+            return this;
+        }
+
+        final View[] where = mChildren;
+        final int len = mChildrenCount;
+
+        for (int i = 0; i < len; i++) {
+            View v = where[i];
+
+            if ((v.mPrivateFlags & PFLAG_IS_ROOT_NAMESPACE) == 0) {
+                v = v.findViewById(id);
+
+                if (v != null) {
+                    return v;
+                }
+            }
+        }
+
+        return null;
+    }
+#+END_EXAMPLE
 * [[http://xuzhengchao.com/android/async-task.html][AsyncTask]]
 * [[http://xuzhengchao.com/android/message.html][android消息机制]]
 * 四种启动模式
@@ -476,6 +502,24 @@ intentService 通过执行一个后台线程来处理接受到的 intent.所以�
 依次处理的. 可能需要等待较长时间.
 
 *注:* intentService 是一个抽象类, 使用者必须自己实现一个其子类并实现 onHandleIntent() 函数.
+* Apk启动简要流程
+1. 点击launcher的图标会调用launcher的startActivity()来启动应用的页面.
+2. AMS如果发现应用还未启动, 会通过socket通知Zygote来启动应用的进程.
+3. 应用进程启动完成后会调用ActivityThread的main()函数, 作为主线程.
+   该函数会实现了一个mainLooper, 然后循环等待消息.
+4. ActivityThread会将其ApplicationThread注册到AMS中,方便AMS调用其相关
+   的函数.
+5. AMS通过ApplicationThread通知应用程序进程创建Activity.
+** 代码简要流程
+第一次启动应用时的代码流程
+1. startActivityForResult() -> Instrumentation.execStartActivity -> 
+   AMS.startActivity() -> AMS.startActivityAsUser() -> AMS.startActivityMayWait()
+   -> ActivityStack.startActivityLocked() -> ActivityStack.startSpecificActivityLocked()
+   -> AMS.startProcessLocked -> Process.start() -> Process.startViaZygote()
+   -> ZygoteInit.invokeStaticMain(启动ActivityThread的main()函数) 
+   -> ActivityThread.attachApplication(绑定到AMS) -> AMS.realStartActivityLocked()
+   -> ApplicationThread.scheduleLaunchActivity() -> ActivityThread.sendMsg
+   -> H.handleLaunch...
 * JobScheduler
 ** 一般使用流程
 1. 创建一个自定义JobService
@@ -1171,7 +1215,6 @@ arraylsit里的[[AdapterDataObserver]]的对应api.
       3. 当LM调用addView(view,index), RV同样也会插入到正确的位置.
       4. 动画完成时, RV会移除并回收隐藏的view.
 
-
 * APK结构
 ** 结构
 .dex文件, resources, assets, 证书, mainifest文件,
@@ -1195,3 +1238,4 @@ lib目录
 
 
 ** [[http://tech.meituan.com/mt-apk-packaging.html][多渠道打包]]
+* [[http://tools.android.com/tech-docs/new-build-system/build-workflow][编译工作流]]
