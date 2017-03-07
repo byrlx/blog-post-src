@@ -137,6 +137,12 @@ View 在应用中通过"tree"的方式进行管理维护.创建 view 有两种�
 2. singleTop: 如果当前页面已经是栈顶, 则不新建, 否则新建.
 3. singleTask: 如果当前页面不是栈顶, 弹出所有.
 4. singleInstance: 给当前页面建立一个全新的task, 只有一个实例.
+   
+用途:
+BrowserActivity uses singleTask. There is only one browser activity at a time and it doesn't become part tasks that send it intents to open web pages. While it might return to whatever most recently launched it when you hit back it is actually fixed at the bottom of its own task activity stack. It will share its task with activities that it launches like bookmarks.
+BrowserBookmarksPage uses singleTop. While there can be multiple instances of this activity, if there is already one at the top of the task's activity stack it will be reused and onNewIntent() will be called. This way you only have to hit back once to return to the browser if the bookmarks activity is started multiple times.
+AlarmClock uses standard. The user can launch multiple instances of this activity and these instances can be part of any task and anywhere in the activity stack. As a fairly simple application it doesn't really demand tight control of its activity.
+AlarmAlert uses singleInstance. Only one alert activity at a time and it is always its own task. Anything it launches (if anything) becomes part of its own new task.
 
 * 一些性能技巧
 性能优化(最佳实践)的一些原则:
@@ -1164,3 +1170,28 @@ arraylsit里的[[AdapterDataObserver]]的对应api.
 	 正确的child.
       3. 当LM调用addView(view,index), RV同样也会插入到正确的位置.
       4. 动画完成时, RV会移除并回收隐藏的view.
+
+
+* APK结构
+** 结构
+.dex文件, resources, assets, 证书, mainifest文件,
+lib目录
+** dvm vs jvm
+ 1. DVM is the software that runs the applications on Android devices. It is open source.
+ 2. JVM is Stack based whereas DVM is Register based.
+    Stack-based machines require more instructions(i.e. larger instruction set) than register-based machines for the same task. Whereas, each instruction in the register-based machines are larger.
+
+ 3. Mobile Devices have limited memory and power , low CPU speed as compared to Desktops. 
+    So,  DVM is more efficient in terms of memory usage and performance.
+ 4. While running multiple instances of the DVM, DVM is supposed to be more efficient. In mobile phones, each application runs on its own sand box and thus each active application requires its own DVM instance.
+    Single instance of JVM is shared with multiple applications.
+ 5. Java compiler complies Java source code into .class files. Then dx (dexer) tool, which is a part of the Android SDK,  processes the .class files into .DEX files that contains Dalvik bytecode.
+    DVM runs .Dex file (Dalvik Executable File) whereas JVM runs .class files.
+    With dx tool, all the classes of the application are packed into one file. Also, all the classes in the same DEX file share field, method etc if they are same and these classes are loaded by the same class loader instance.
+    Thus dx tool eliminate all the redundant information that is present in the classes. 
+ 6. JVM supports multiple operating systems. DVM only supports Android operating system.
+ 7. In case if DVM, executable is APK whereas in JVM, executable is JAR.
+ 8. In case of JVM, each class has its own constant pool. In the dex conversion,  all of the separate constant pools are collapsed into a single shared constant pool which is used by all classes in an application. Thus, storage space to store the shared constant pool is also conserved.
+
+
+** [[http://tech.meituan.com/mt-apk-packaging.html][多渠道打包]]
