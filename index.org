@@ -25,6 +25,7 @@
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
    + translate
      + [[file:translate/android-annotation.org][【翻译】 10步教你在Android中写"注解"处理程序]]
+     + [[file:translate/android-tensorflow.org][【翻译】Android + TensorFlow机器学习示例]]
      + [[file:translate/gradle.org][【翻译】Android Gradle 插件用户手册]]
      + [[file:translate/open-libraries.org][【翻译】当我开始Android开发时，希望能早点认识的一些开源库]]
    + 新桑渡
