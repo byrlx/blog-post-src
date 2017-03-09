@@ -29,8 +29,10 @@
 4. 必须有一个预训模型文件和标签文件用于分类.
 
 我们会构建如下的物体识别. 
-[[file:../img/tensor1]]
-[[file:../img/tensor2]]
+
+[[file:../img/tensor1.png]]
+
+[[file:../img/tensor2.png]]
 * 编译jar包和 .so 文件
 1. 下载tensorflow:
     #+BEGIN_EXAMPLE
