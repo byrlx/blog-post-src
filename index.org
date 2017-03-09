@@ -7,9 +7,6 @@
      + [[file:android/async-task.org][AsyncTask源码阅读笔记]]
      + [[file:android/butterknife.org][ButterKnife源码阅读笔记]]
      + [[file:android/plaid.org][Plaid源码阅读笔记]]
-     + [[file:android/android-annotation.org][【翻译】 10步教你在Android中写"注解"处理程序]]
-     + [[file:android/gradle.org][【翻译】Android Gradle 插件用户手册]]
-     + [[file:android/open-libraries.org][【翻译】当我开始Android开发时，希望能早点认识的一些开源库]]
    + emacs
      + [[file:emacs/elisp.org][Elisp 大笔记]]
      + [[file:emacs/emacs.org][Emacs大笔记]]
@@ -26,6 +23,10 @@
      + [[file:reading/scala.org][Scala大笔记]]
      + [[file:reading/sicp.org][SICP 阅读笔记]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
+   + translate
+     + [[file:translate/android-annotation.org][【翻译】 10步教你在Android中写"注解"处理程序]]
+     + [[file:translate/gradle.org][【翻译】Android Gradle 插件用户手册]]
+     + [[file:translate/open-libraries.org][【翻译】当我开始Android开发时，希望能早点认识的一些开源库]]
    + 新桑渡
      + [[file:新桑渡/wutaishan.org][五台山]]
      + [[file:新桑渡/tech.org][技术笔记]]
