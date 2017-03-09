@@ -5,7 +5,446 @@
 
 #+TITLE: ArrayList, LinkedList源码笔记
 
-最近工作不忙, 抽空看了一下ArrayList和LinkedList的源码. 下面是一些主要知识点的笔记. 
+最近工作不忙, 抽空看了一下ArrayList和LinkedList的源码. 
+这两个类是List的具体实现类, 所以在它们之上还有许多的
+抽象接口和抽象类, 下面源码分析的笔记
+
+/代码基于JDK/
+
+* 标记接口
+在Java中有一类接口叫做"标记接口"(Marker Interface). 标记接口
+是没有任何方法的接口, 它仅仅标志实现它的类具有"某个特点", 而系统的
+其他应用可能会在对类做操作时先判断其是否具有这个特点(例如下面的Cloneable).
+** Cloneable
+标志该类可以继承. Object类的clone()函数会先判断该类是否具有该特性,
+如果没有则报错:
+#+BEGIN_EXAMPLE
+    protected Object clone() throws CloneNotSupportedException {
+        if (!(this instanceof Cloneable)) {
+            throw new CloneNotSupportedException("Class " + getClass().getName() +
+                                                 " doesn't implement Cloneable");
+        }
+
+        return internalClone();
+    }
+#+END_EXAMPLE
+** Serializable
+标志该类可以被序列化和反序列化.
+** RandomAccess
+这个标记接口被List类使用,标志该List具备
+快速随机访问功能.
+* ArrayList
+** 定义
+ArrayList直接继承自[[AbstractList]], 并实现了以下接口:
+1. [[List]] : 说明ArrayList具备List接口的功能.  
+2. [[RandomAccess]]: 说明ArrayList是支持快速访问的.
+3. [[Cloneable]]: 可以被clone.
+4. [[Serializable]]: 可以被序列化和反序列化.
+#+BEGIN_SRC java
+public class ArrayList<E> extends AbstractList<E>
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
+{
+#+END_SRC
+
+** 主要成员
+1. ArrayList的底层数据存储就像它的名字一样, 使用了一个 Object[] 数组,
+   因为ArrayList是支持泛型的, 所以在添加数据时,数据被转成了Object存储,
+   在获取数据时,又将其转化成相应的类型. 
+2. 同时, AL还维护了一个size变量用来记录当前的数组大小.
+** 构造函数
+ArrayList支持三种类型的构造函数.
+1. 默认构造函数. 默认构造函数只有一行代码,
+   就是把存放数据的数组指向一个空数组
+   DEFAULTCAPACITY_EMPTY_ELEMENTDATA.
+   #+BEGIN_EXAMPLE
+    public ArrayList() {
+        this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+    }   
+   #+END_EXAMPLE
+   另外AL里还定义了另外一个空数组EMPTY_ELEMENTDATA. 
+   之所以要定义两个空数组, 是因为DEFAULTCAPACITY_EMPTY_ELEMENTDATA
+   是与DEFAULT_CAPACITY来结合使用的, 该数组标志着第一次添加
+   元素时elementData要扩容的大小. 可以看如下代码:
+   #+BEGIN_EXAMPLE
+    private void ensureCapacityInternal(int minCapacity) {
+        if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+            minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
+        }
+
+        ensureExplicitCapacity(minCapacity);
+    }   
+   #+END_EXAMPLE
+   当第一次添加元素时, minCapacity的值为1, 所以会将
+   elementData扩容到DEFAULT_CAPACITY的大小.
+2. 带size的构造函数.
+   使用该构造函数可以指定数组的初始大小.会直接创建一个
+   Object数组.
+   #+BEGIN_EXAMPLE
+    public ArrayList(int initialCapacity) {
+        if (initialCapacity > 0) {
+            this.elementData = new Object[initialCapacity];
+        } else if (initialCapacity == 0) {
+            this.elementData = EMPTY_ELEMENTDATA;
+        } else {
+            throw new IllegalArgumentException("Illegal Capacity: "+
+                                               initialCapacity);
+        }
+    }   
+   #+END_EXAMPLE
+3. 使用集合创建ArrayList,
+   这个构造函数接受一个集合, 并使用该集合去初始化
+   elementData. 因为AL是接受泛型参数, 所以集合参数的
+   类型是该泛型的任意子类. 该函数的步骤
+   1. 调用集合的toArray()函数.
+
+   2. 赋值size值. 如果size大于0, 判断集合的class
+      是否为Object[].class, 如果不是, 则调用Arrays
+      的函数 copyOf() 将其转化成Object[]类型.
+   #+BEGIN_EXAMPLE
+    public ArrayList(Collection<? extends E> c) {
+        elementData = c.toArray();
+        if ((size = elementData.length) != 0) {
+            // c.toArray might (incorrectly) not return Object[] (see 6260652)
+            if (elementData.getClass() != Object[].class)
+                elementData = Arrays.copyOf(elementData, size, Object[].class);
+        } else {
+            // replace with empty array.
+            this.elementData = EMPTY_ELEMENTDATA;
+        }
+    }   
+   #+END_EXAMPLE
+** 添加数据
+ArrayList提供了两个添加数据的接口. add(E e)及
+add(int index, E element). 这两个函数的实现都分为
+两步:
+1. 查看当前空间是否够用, 不够则扩容.
+2. 插入数据. 第一个add()函数直接将数据放到指定位置.
+   第二个则调用了系统的arraycopy()函数将整体元素后移,
+   然后将元素放到指定位置.
+#+BEGIN_EXAMPLE
+    public boolean add(E e) {
+        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        elementData[size++] = e;
+        return true;
+    }
+
+    public void add(int index, E element) {
+        rangeCheckForAdd(index);
+
+        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        System.arraycopy(elementData, index, elementData, index + 1,
+                         size - index);
+        elementData[index] = element;
+        size++;
+    }
+#+END_EXAMPLE
+*** 查看当前空间
+查看当前空间是通过调用ensureCapacityInternal()函数来实现的
+   需要传递给函数一个参数, 标志需要确保的最小size值.
+   该函数调用了ensureExplicitCapacity()来做扩容的工作(不一定必做).
+   如果需要扩容, 后者则会调用到了grow()函数做实际扩容, 该函数的步骤
+   + 将当前容量增大1.5倍.
+   + 如果增大后的容量还小于要求的容量, 
+     则将其设为要求的容量.
+   + 将增大后的容量与最大的阈值MAX_ARRAY_SIZE
+     作比较, 如果比它大, 那么调用hugeCapacity()
+     函数确定最后的容量大小:
+     + 如果要求的容量是负数, overflow, 报错.
+     + 如果大于MAX_ARRAY_SIZE, 则新容量为
+       Integer.MAX_VALUE. 否则为 MAX_ARRAY_SIZE.
+   + 调用Arrays的copyOf()函数生成一个新容量大小的数组.
+代码如下:
+#+BEGIN_EXAMPLE
+    private void ensureCapacityInternal(int minCapacity) {
+        if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+            minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
+        }
+
+        ensureExplicitCapacity(minCapacity);
+    }
+
+    private void ensureExplicitCapacity(int minCapacity) {
+        modCount++;
+
+        // overflow-conscious code
+        if (minCapacity - elementData.length > 0)
+            grow(minCapacity);
+    }
+
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+
+    private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        if (newCapacity - minCapacity < 0)
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        // minCapacity is usually close to size, so this is a win:
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
+    }
+#+END_EXAMPLE
+** 查找数据
+ArrayList支持基于下标查找数据, 并且该操作是O(1)
+操作. 不过会将返回的数据强制转化为泛型类型.
+#+BEGIN_EXAMPLE
+    public E get(int index) {
+        rangeCheck(index);
+
+        return elementData(index);
+    }
+
+    E elementData(int index) {
+        return (E) elementData[index];
+    }
+#+END_EXAMPLE
+** 删除数据
+ArrayList提供了以下的删除API:
+remove(int), remove(Object), clear(),
+removeAll(Collection), removeIf(Predicate).
+
+*注:这些删除操作都会修改modCount的值, 该值用来判断List是否被多进程修改*
+*** 按坐标删除
+步骤:
+1. 计算要移动的元素数: num = size - index - 1
+2. 调用System.arraycopy()移动数组.
+3. 将数组的最后一个元素置为null.
+#+BEGIN_EXAMPLE
+    public E remove(int index) {
+        rangeCheck(index);
+
+        modCount++;
+        E oldValue = elementData(index);
+
+        int numMoved = size - index - 1;
+        if (numMoved > 0)
+            System.arraycopy(elementData, index+1, elementData, index,
+                             numMoved);
+        elementData[--size] = null; // clear to let GC do its work
+
+        return oldValue;
+    }
+#+END_EXAMPLE
+*** 删除指定元素
+该函数先知道元素位置, 然后在做数组移动
+和置null工作. 
+*注: 由于AL支持存放null元素, 所以删除的时候null和实际元素要区分对待*
+*** 清空所有
+把所有元素置null就可以了.
+*** 批量删除
+(即删除交集)
+removeAll()函数接受一个集合参数, 然后调用
+batchRemove()做实际的删除工作.
+batchRemove()接受两个参数, 第一个就是上面的集合, 第二个
+参数是boolean类型, 标志集合中的元素是否保留, 如果该参数
+值为TRUE,则标志集合中的元素要保留, 否则删除. 
+
+removeAll()函数在调用该函数时传入的参数为false.
+batchRemove()会遍历当前所有元素, 然后判断是否在传入的集合中
+也包含, 同时更新当前数组. 
+#+BEGIN_EXAMPLE
+   public boolean removeAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        return batchRemove(c, false);
+    }
+
+    private boolean batchRemove(Collection<?> c, boolean complement) {
+        final Object[] elementData = this.elementData;
+        int r = 0, w = 0;
+        boolean modified = false;
+        try {
+            for (; r < size; r++)
+                if (c.contains(elementData[r]) == complement)
+                    elementData[w++] = elementData[r];
+        } finally {
+            // Preserve behavioral compatibility with AbstractCollection,
+            // even if c.contains() throws.
+            if (r != size) {
+                System.arraycopy(elementData, r,
+                                 elementData, w,
+                                 size - r);
+                w += size - r;
+            }
+            if (w != size) {
+                // clear to let GC do its work
+                for (int i = w; i < size; i++)
+                    elementData[i] = null;
+                modCount += size - w;
+                size = w;
+                modified = true;
+            }
+        }
+        return modified;
+    }
+#+END_EXAMPLE
+*** 保留交集
+retainAll()函数与removeAll()类似, 
+只不过retainAll()里传入的集合内容都会在
+数组里保存, 其余的删除.
+#+BEGIN_EXAMPLE
+    public boolean retainAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        return batchRemove(c, true);
+    }
+#+END_EXAMPLE
+*** 条件删除
+removeIf()是提供了条件删除的功能, 该函数接受一个
+Predicate的参数, predicate提供了判断条件, 如果
+AL里的元素满足条件, 则将其删除. 
+#+BEGIN_EXAMPLE
+    @Override
+    public boolean removeIf(Predicate<? super E> filter) {
+        Objects.requireNonNull(filter);
+        // figure out which elements are to be removed
+        // any exception thrown from the filter predicate at this stage
+        // will leave the collection unmodified
+        int removeCount = 0;
+        final BitSet removeSet = new BitSet(size);
+        final int expectedModCount = modCount;
+        final int size = this.size;
+        for (int i=0; modCount == expectedModCount && i < size; i++) {
+            @SuppressWarnings("unchecked")
+            final E element = (E) elementData[i];
+            if (filter.test(element)) {
+                removeSet.set(i);
+                removeCount++;
+            }
+        }
+        if (modCount != expectedModCount) {
+            throw new ConcurrentModificationException();
+        }
+
+        // shift surviving elements left over the spaces left by removed elements
+        final boolean anyToRemove = removeCount > 0;
+        if (anyToRemove) {
+            final int newSize = size - removeCount;
+            for (int i=0, j=0; (i < size) && (j < newSize); i++, j++) {
+                i = removeSet.nextClearBit(i);
+                elementData[j] = elementData[i];
+            }
+            for (int k=newSize; k < size; k++) {
+                elementData[k] = null;  // Let gc do its work
+            }
+            this.size = newSize;
+            if (modCount != expectedModCount) {
+                throw new ConcurrentModificationException();
+            }
+            modCount++;
+        }
+
+        return anyToRemove;
+    }
+#+END_EXAMPLE
+removeIf()的实现使用了BitSet类, 该类提供了bitmap
+功能.主要步骤:
+1. 遍历元素, 如果满足Predicate的test条件, 则设置
+   removeSet的相应bit位.
+   遍历过程中会一直检查modCount有没有被其他线程修改.
+   如果修改则终止遍历并抛异常.
+2. 再次遍历元素, 获取removeSet里被设为没被设为true的
+   index,并存入elementData.
+3. 将elmentData剩下的元素设为null以方便GC回收.
+4. 修改modCount的值.   
+*** 批量修改
+replaceAll()函数提供了批量修改功能,
+该函数接受一个一元操作符的类 UnaryOperator 实例.
+然后将操作应用于所有元素.
+** 关于fail-fast
+在需要遍历元素的过程中, 经常会在for()
+循环里判断modCount的值有没有变化, 如果
+有变化则立即停止循环并抛出并发异常.
+
+而modCount会变化的唯一可能是其他线程同时
+在操作这个ArrayList.
+
+注: 在add()类相关函数中没有发现modCount的操作.
+** 迭代器
+ArrayList支持两种迭代器: iterator和listIterator.
+*** Iterator实现: Itr
+通过iterator()函数可以获取AL的Iterator, 函数的实现中
+创建了一个AL自定义的内部类Itr. Itr继承自抽象类 Iterator.
+
+Itr内部定义了一个cursor变量, 以及一个expectedModCount,
+一个lastRet(用来保存上一次的位置).
+当创建一个新实例时, 会将其赋值为modCount. 看一下对Iterator
+所提供的API的实现.
+1. hasNext(): 将cursor当前值与size做比较, 如果不相等则表示还有
+   元素.
+2. next(): 返回一个泛型的值. 函数实现步骤:
+   1. 检查是否被其他线程修改. 如果是报同步异常.
+   2. 检查cursor的值是否超出了size, 如果是报异常.
+      (是不是modCount未修改, 但元素已删除的时候会出现这种情况?).
+   3. 检查i的值是否超出了AL的数组长度, 如果是则抛同步异常.
+   4. 将cursor的值加1, 并返回之前cursor位置的元素.
+      并讲之前值赋值给lastRet.
+3. remove(): 删除当前cursor指向的元素. 函数实现步骤:
+   1. 判断lastRet是否小于0, 如果是, 说明还没调用next()就调用remove.
+      抛非法状态异常.
+   2. 检查是否有其他线程修改.
+   3. [[按坐标删除][调用remove()]]删除lastRet当前指向的元素.
+      将cursor的值更新为lastRet, 并把lastRet设为-1(从这儿可以看出不能连续调用两次remove()).
+      更新expectedModCount. 如果这一步抛出边界异常, 则捕获并重新抛出同步异常.
+#+BEGIN_EXAMPLE
+  public boolean hasNext() {
+            return cursor != size;
+        }
+
+        @SuppressWarnings("unchecked")
+        public E next() {
+            checkForComodification();
+            int i = cursor;
+            if (i >= size)
+                throw new NoSuchElementException();
+            Object[] elementData = ArrayList.this.elementData;
+            if (i >= elementData.length)
+                throw new ConcurrentModificationException();
+            cursor = i + 1;
+            return (E) elementData[lastRet = i];
+        }
+
+        public void remove() {
+            if (lastRet < 0)
+                throw new IllegalStateException();
+            checkForComodification();
+
+            try {
+                ArrayList.this.remove(lastRet);
+                cursor = lastRet;
+                lastRet = -1;
+                expectedModCount = modCount;
+            } catch (IndexOutOfBoundsException ex) {
+                throw new ConcurrentModificationException();
+            }
+        }
+#+END_EXAMPLE
+*** ListIterator实现: ListItr
+ListItr继承Itr并实现了ListIterator接口. 包括: previous(), hasPrevious(),
+nextIndex(), previousIndex()等.
+** 子列表
+ArrayList提供了接口subList()来获取该AL的一个子集. 这是通过创建
+一个新的SubList类实例来实现的.
+#+BEGIN_EXAMPLE
+        public List<E> subList(int fromIndex, int toIndex) {
+            subListRangeCheck(fromIndex, toIndex, size);
+            return new SubList(this, offset, fromIndex, toIndex);
+        }
+#+END_EXAMPLE
+
+SubList类是ArrayList的一个子类, 它的底层数据存储仍然是ArrayList的elementData
+数组, 所以对SubList的修改也会反馈到ArrayList中.
+SubList重要维护了一个索引来记录它所包含的数据. 包括 offset, size等. 
+由于SubList也继承自AbstractList, 所以它也提供了List的所有增删查的行为,
+当都是在函数内部通过坐标索引计算后调用ArrayList相应的api实现.
+同时, SubList也提供Iterator接口.
 
 * Iterable
 实现了Iterable的接口类, 可以使用 "for-loop" 形式的语法. 
@@ -337,64 +776,6 @@ List相关的一些共同操作. 包括:
                 new SubList<>(this, fromIndex, toIndex));
     }
 #+END_SRC
-* ArrayList
-介绍了这么多之后, 终于来到了ArrayList的实现, 该类直接继承
-自[[AbstractList]], 并实现了 [[List]] 和 RandomAccess 接口.
-#+BEGIN_SRC java
-public class ArrayList<E> extends AbstractList<E>
-        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
-{
-#+END_SRC
-
-这里主要介绍其底层数据存储的实现及与LinkedList不同的API:
-1. ArrayList的元素都存放在底层Object数组elementData中.
-2. int变量size存放元素数量.
-3. get(index): 获取元素, 直接访问数组对应位置, O(1).
-4. set(index, e): 更新元素, 同上, O(1).
-5. add(index, e): index位置插入元素, 这里会做两步:
-   + 如果数组已满, 分配新数组, *这样会做一次整个数组的copy*.
-   + 插入新元素, 此时会将index后的内容做整体移动.
-6. remove(index): 对index后的内容做整体前移动作.
-7. batchRemove(c, flag): 批量删除, flag是一个boolean变量, 
-   其含义是: 如果为true, 保留c和该list的交集, 而删除其他元素.
-   如果为false, 则删除交集.
-   #+BEGIN_SRC java
-    private boolean batchRemove(Collection<?> c, boolean complement) {
-        final Object[] elementData = this.elementData;
-        int r = 0, w = 0;
-        boolean modified = false;
-        try {
-            for (; r < size; r++)
-                if (c.contains(elementData[r]) == complement)
-                    elementData[w++] = elementData[r];
-        } finally {
-            // Preserve behavioral compatibility with AbstractCollection,
-            // even if c.contains() throws.
-            if (r != size) {
-                System.arraycopy(elementData, r,
-                                 elementData, w,
-                                 size - r);
-                w += size - r;
-            }
-            if (w != size) {
-                // clear to let GC do its work
-                for (int i = w; i < size; i++)
-                    elementData[i] = null;
-                modCount += size - w;
-                size = w;
-                modified = true;
-            }
-        }
-        return modified;
-    }   
-   #+END_SRC
-
-所以对于ArrayList的所有的插入/删除动作, 都会涉及到底层数组的
-"移动", 这个移动最终是调用 =System.arraycopy()= 函数实现的.
-所以插入/删除的效率直接与该函数的实现有关. 
-
-ArryaList的其他实现, 例如 Iterator 和 ListIterator, 基本与
-[[AbstractList]]大同小异.
 * AbstractSequentialList
 在介绍LinkedList之前, 先看一下它的父类, 该类是[[AbstractList]]的
 子类, 但是它具有"顺序"的属性, 这是相对于ArrayList的RandomAccess属性而言. 
