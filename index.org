@@ -2,6 +2,7 @@
 
    + android
      + [[file:android/log-system.org][Android Log 系统]]
+     + [[file:android/view.org][View 源码阅读及使用笔记]]
      + [[file:android/android.org][Android 大笔记]]
      + [[file:android/message.org][Android 消息机制源码笔记]]
      + [[file:android/async-task.org][AsyncTask源码阅读笔记]]

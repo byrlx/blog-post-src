@@ -1,0 +1,224 @@
+#+OPTIONS: toc:t H:3
+#+AUTHOR: Luis Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2016-05-14 Sat>
+
+#+TITLE: View 源码阅读及使用笔记
+
+/基于android-16的代码/
+
+* View树的绘制
+一般来说, 公认的View树的绘制入口为 ViewRootImpl类的
+performTraversals()函数. 在该函数中调用三个主要的函数来
+实现这个过程:
+#+BEGIN_EXAMPLE
+    private void performTraversals() {
+        ...
+	performMeasure(childWidthMeasureSpec, childHeightMeasureSpec);
+	...
+        performLayout();
+	...
+	performDraw();
+	...
+    }
+#+END_EXAMPLE
+** 测量
+ViewRootImpl的测量入口函数为performMeasure(), 该函数会调用
+其mView成员变量的measure()函数. 由代码可知, 这个mView指的
+就是window的decoreView. 是一个FrameLayout.
+
+由于View的measure()函数是一个final函数, 不能被重写, 
+所以该函数的只有View的唯一实现. 看一下该函数的实现:
+1. 函数参数, ViewRootImple在调用view的measure()函数时, 
+   会传入两个参数, widthMeasureSpec和heightMeasureSpec.
+   这是传给decoreView的测量规范, 这两个值一般为屏幕的
+   可用宽高. mode应该为match_parent???
+2. 函数实现, 该函数的代码实现很简单, 代码量很小, 
+   首先判断是否需要重新测量, 如果需要, 调用onMeasure().
+   判断是否需要重绘的条件有两个:
+   1. FORCE_LAYOUT标记位被设置.
+   2. 传入的spec参数跟之前view标记的不相等.
+
+   如果需要重新测量, 则会执行以下步骤:
+   1. 清空 MEASURED_DIMENSION_SET.
+   2. 调用onMeasure()函数.
+   3. 判断MEASURED_DIMENSION_SET是否被设置(在onMeasure()里必须调用),
+      没有则报错.
+   4. 设置LAYOUT_REQUIRED标记
+      
+    #+BEGIN_EXAMPLE
+   public final void measure(int widthMeasureSpec, int heightMeasureSpec) {
+         if ((mPrivateFlags & FORCE_LAYOUT) == FORCE_LAYOUT ||
+                 widthMeasureSpec != mOldWidthMeasureSpec ||
+                 heightMeasureSpec != mOldHeightMeasureSpec) {
+
+             // first clears the measured dimension flag
+             mPrivateFlags &= ~MEASURED_DIMENSION_SET;
+
+             // measure ourselves, this should set the measured dimension flag back
+             onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+             // flag not set, setMeasuredDimension() was not invoked, we raise
+             // an exception to warn the developer
+             if ((mPrivateFlags & MEASURED_DIMENSION_SET) != MEASURED_DIMENSION_SET) {
+                 throw new IllegalStateException("onMeasure() did not set the"
+                         + " measured dimension by calling"
+                         + " setMeasuredDimension()");
+             }
+
+             mPrivateFlags |= LAYOUT_REQUIRED;
+         }
+
+         mOldWidthMeasureSpec = widthMeasureSpec;
+         mOldHeightMeasureSpec = heightMeasureSpec;
+     }
+    #+END_EXAMPLE
+3. onMeasure的默认实现.
+   View的onMeasure()函数只有一行代码, 即调用setMeasuredDimension()函数.
+   并将处理后的spec值作为参数传给该函数.
+   #+BEGIN_EXAMPLE
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        setMeasuredDimension(getDefaultSize(getSuggestedMinimumWidth(), widthMeasureSpec),
+                getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec));
+    }   
+   #+END_EXAMPLE
+    
+   setMeasuredDimension()函数的实现也很简单, 即简单的赋值,
+   并设置 MEASURED_DIMENSION_SET标记位.
+   #+BEGIN_EXAMPLE
+    protected final void setMeasuredDimension(int measuredWidth, int measuredHeight) {
+        mMeasuredWidth = measuredWidth;
+        mMeasuredHeight = measuredHeight;
+
+        mPrivateFlags |= MEASURED_DIMENSION_SET;
+    }   
+   #+END_EXAMPLE
+  
+    所以,主要的测量逻辑都在getDefaultSize()函数中, 下面看下
+   这个函数的代码. 该函数接受两个参数, 一个是size表示默认大小,
+    一个是传给measure的SPEC. 在上面的onMeasure()中, 第一个参数
+   是通过调用getSuggestedMinimumWidth()/xxHeight()实现的. 
+   是view的最小值.
+   #+BEGIN_EXAMPLE
+    public static int getDefaultSize(int size, int measureSpec) {
+        int result = size;
+        int specMode = MeasureSpec.getMode(measureSpec);
+        int specSize = MeasureSpec.getSize(measureSpec);
+
+        switch (specMode) {
+        case MeasureSpec.UNSPECIFIED:
+            result = size;
+            break;
+        case MeasureSpec.AT_MOST:
+        case MeasureSpec.EXACTLY:
+            result = specSize;
+            break;
+        }
+        return result;
+    }
+   #+END_EXAMPLE
+   getDefaultSize()通过SPEC的值来设置最终的view宽或高, 这主要是
+    通过解析SPEC的mode, View的SPEC mode有以下三种:
+   AT_MOST, EXACTLY, UNSPECIFIED. 这几个mode与xml中定义的
+    *android:width* 和 *android:height* 是对应的.
+   对应关系如下:
+    | 指定值       |         |
+    | match_parent | EXACTLY |
+    |--------------+---------|
+    | wrap_content | AT_MOST |
+
+    getDefaultSize()函数根据上面的mode来确定最后的size值,
+    确定逻辑如下:
+   1. UNSPECIFIED, 设为第一个参数的值.
+
+   2. AT_MOST/EXACTLY, 设为SPEC里包含的测量值.
+      可以通过 MeasureSpec.getSize()函数获取.
+      /注:所以在LinearLayout里,如果子view设为wrap_content,默认会占满屏幕/
+    
+*注:* 对于自定义view,如果要对view的宽高有特殊的处理,
+一般都要重写onMeasure()函数. 然后根据不同的mode做判断.
+并在最后调用setMeasuredDimension().
+** 布局
+入口为ViewRootImpl的performLayout()函数, 调用的是mView的
+layout()函数. 并传入四个参数:0,0,测量后的宽,测量后的高.
+
+ViewGroup的layout()函数是一个final函数,所以不能被重写.
+该函数代码如下. 如果当前VG没有Transition或者Transition没有正在
+改变layout,那么就会调用到其父类,也就是View的layout()函数.
+#+BEGIN_EXAMPLE
+    @Override
+    public final void layout(int l, int t, int r, int b) {
+        if (mTransition == null || !mTransition.isChangingLayout()) {
+            if (mTransition != null) {
+                mTransition.layoutChange(this);
+            }
+            super.layout(l, t, r, b);
+        } else {
+            // record the fact that we noop'd it; request layout when transition finishes
+            mLayoutSuppressed = true;
+        }
+    }
+#+END_EXAMPLE
+
+View的layout()函数的参数为view的四个边界位置. 其工作流程如下:
+1. 缓存之前的位置.
+2. 调用setFrame()函数, 给view赋予一个新的位置.
+3. 如果位置有改变(判断条件:上一步的返回值或LAYOUT_REQUIRED被设置), 
+   + 调用onLayout()函数.
+   + 清空LAYOUT_REQUIRED标记位
+   + 如果有监听函数, 调用所有监听函数的onLayoutChange()回调.
+4. 清空FORCE_LAYOUT标记位.
+#+BEGIN_EXAMPLE
+    public void layout(int l, int t, int r, int b) {
+        int oldL = mLeft;
+        int oldT = mTop;
+        int oldB = mBottom;
+        int oldR = mRight;
+        boolean changed = setFrame(l, t, r, b);
+        if (changed || (mPrivateFlags & LAYOUT_REQUIRED) == LAYOUT_REQUIRED) {
+            onLayout(changed, l, t, r, b);
+            mPrivateFlags &= ~LAYOUT_REQUIRED;
+
+            ListenerInfo li = mListenerInfo;
+            if (li != null && li.mOnLayoutChangeListeners != null) {
+                ArrayList<OnLayoutChangeListener> listenersCopy =
+                        (ArrayList<OnLayoutChangeListener>)li.mOnLayoutChangeListeners.clone();
+                int numListeners = listenersCopy.size();
+                for (int i = 0; i < numListeners; ++i) {
+                    listenersCopy.get(i).onLayoutChange(this, l, t, r, b, oldL, oldT, oldR, oldB);
+                }
+            }
+        }
+        mPrivateFlags &= ~FORCE_LAYOUT;
+    }
+#+END_EXAMPLE
+
+第2步的setFrame()用于给view设置新的位置, 如果新位置跟老位置
+有变化的话, 该函数会返回一个true标志有改变. 该函数的主要流程:
+1. 判断位置是否有变化. 没有直接返回false.
+2. 判断宽高是否发生变化. 
+3. 并调用 invalidate().
+4. 如果有mDisplayList, 调用其setLeftTopRightBottom()函数.
+5. 如果size发生变化. 调用onSizeChanged()函数.
+6. 如果view可见, 调用 invalidate()和invalidateParentClass()函数.
+
+** 绘图
+绘图通过调用ViewRootImpl的performDraw()函数实现, 
+该函数通过调用drawSoftware()->draw()最后调用view的
+draw()函数. 
+
+对于ViewGroup来说, 通过调用drawChild()来调用每个
+child的draw()函数. draw()的流程:
+1. Draw the background
+2. If necessary, save the canvas' layers to prepare for fading
+3. Draw view's content(调用onDraw())
+4. Draw children (调用dispatchDraw())
+5. If necessary, draw the fading edges and restore layers
+6. Draw decorations (scrollbars for instance)
+** 实验
+1. 调用requestLayout(), onMeasure(),onLayout(),onDraw()都会被调用.
+   onLayout()的第一个参数changed为false.
+2. invalidate(), onDraw()被调用.
+3. 修改LayoutParams然后调用requestLayout,也会调用三个流程.
+   onLayout()的第一个参数changed为true.
+4. 对view实施动画则不会调用这三个流程.
