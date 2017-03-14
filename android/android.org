@@ -158,6 +158,56 @@ View 在应用中通过"tree"的方式进行管理维护.创建 view 有两种�
 #+END_EXAMPLE
 * [[http://xuzhengchao.com/android/async-task.html][AsyncTask]]
 * [[http://xuzhengchao.com/android/message.html][android消息机制]]
+* Apk启动简要流程
+1. 点击launcher的图标会调用launcher的startActivity()来启动应用的页面.
+2. AMS如果发现应用还未启动, 会通过socket通知Zygote来启动应用的进程.
+3. 应用进程启动完成后会调用ActivityThread的main()函数, 作为主线程.
+   该函数会实现了一个mainLooper, 然后循环等待消息.
+4. ActivityThread会将其ApplicationThread注册到AMS中,方便AMS调用其相关
+   的函数.
+5. AMS通过ApplicationThread通知应用程序进程创建Activity.
+** 代码简要流程
+第一次启动应用时的代码流程
+1. startActivityForResult() -> Instrumentation.execStartActivity -> 
+   AMS.startActivity() -> AMS.startActivityAsUser() -> AMS.startActivityMayWait()
+   -> ActivityStack.startActivityLocked() -> ActivityStack.startSpecificActivityLocked()
+   -> AMS.startProcessLocked -> Process.start() -> Process.startViaZygote()
+   -> ZygoteInit.invokeStaticMain(启动ActivityThread的main()函数) 
+   -> ActivityThread.attachApplication(绑定到AMS) -> AMS.realStartActivityLocked()
+   -> ApplicationThread.scheduleLaunchActivity() -> ActivityThread.sendMsg
+   -> H.handleLaunch...
+* 补间动画vs属性动画
+(1)对于 Animation 动画:
+
+他的实现机制是,在每次进行绘图的时候,通过对整块画布的矩阵进行变换,从而实现一种视图坐标的移动,但实际上其在 View 内部真实的坐标位置及其他相关属性始终恒定.
+
+(2)对于 Animator 动画:
+
+Animator 动画的实现机制说起来其实更加简单一点,因为他其实只是计算动画开启之后,结束之前,到某个时间点得时候,某个属性应该有的值,然后通过回调接口去设置具体值,其实 Animator 内部并没有针对某个 view 进行刷新,来实现动画的行为,动画的实现是在设置具体值的时候,方法内部自行调取的类似 invalidate 之类的方法实现的.也就是说,使用 Animator ,内部的属性发生了变化.
+
+
+
+说完他们的基本实现原理,我们现在来对比一下他们的优势劣势:
+
+(1)版本兼容
+
+不得不说,相对于 Animation,Animator 的版本兼容性还是太差,直到 Android3.0才开始出现的 Animator, 是无法满足目前开发环境2.x 的兼容支持的,而且在 android 官方的 support 包中也没有对于低版本的 Animator 进行支持,所以单从版本兼容来看, Animator 还是不够的,不过这是系统历史原因,我们只能接受.
+
+(2)实现效率
+
+同样的,这也是 Animator 的一个缺点,由于 Animator 是直接通过设置对象的 setter,getter 方法,来起到动画显示效果的,所以为了满足对任意对象调用正确方法, Animator 使用了 Java 反射机制, 而 Animation 则是直接通过代码对矩阵进行处理,所以就效率这一方面而言, Animator比不上 Animation
+
+已经说了 Animator 相较于 Animation 的两种劣势了,那么我们再来说说 Animator 相较于 Animation 的优势
+
+(3)适用性
+
+在上一个分析中,我们看到了由于 Animator 使用了反射机制导致其效率偏低,但是这也带来了他适用的对象范围的增加, Animation 仅对 View 这一种对象有用,但是 Animator 可以设置任意对象的属性,使其在某段时间内进行变化
+
+(4)使用效果
+
+相信大家平时使用 Animation 的时候,都有发现当正在进行平移移动,或者动画结束后,但位置发生改变的时候,你点击之前的位置,点击效果仍然存在,这就是因为 View 在内部的坐标位置其实没有发生改变,而如果使用 Animator 进行位移变换,那么你的点击位置就会随着动画效果发生相应改变,所以即使你正处在动画过程中,你也可以去点击按钮得到你想要的效果.
+
+
 * 四种启动模式
 1. standard: 标准模式, 建立一个新的栈放入task中, 什么都不判断.
 2. singleTop: 如果当前页面已经是栈顶, 则不新建, 否则新建.
@@ -502,24 +552,6 @@ intentService 通过执行一个后台线程来处理接受到的 intent.所以�
 依次处理的. 可能需要等待较长时间.
 
 *注:* intentService 是一个抽象类, 使用者必须自己实现一个其子类并实现 onHandleIntent() 函数.
-* Apk启动简要流程
-1. 点击launcher的图标会调用launcher的startActivity()来启动应用的页面.
-2. AMS如果发现应用还未启动, 会通过socket通知Zygote来启动应用的进程.
-3. 应用进程启动完成后会调用ActivityThread的main()函数, 作为主线程.
-   该函数会实现了一个mainLooper, 然后循环等待消息.
-4. ActivityThread会将其ApplicationThread注册到AMS中,方便AMS调用其相关
-   的函数.
-5. AMS通过ApplicationThread通知应用程序进程创建Activity.
-** 代码简要流程
-第一次启动应用时的代码流程
-1. startActivityForResult() -> Instrumentation.execStartActivity -> 
-   AMS.startActivity() -> AMS.startActivityAsUser() -> AMS.startActivityMayWait()
-   -> ActivityStack.startActivityLocked() -> ActivityStack.startSpecificActivityLocked()
-   -> AMS.startProcessLocked -> Process.start() -> Process.startViaZygote()
-   -> ZygoteInit.invokeStaticMain(启动ActivityThread的main()函数) 
-   -> ActivityThread.attachApplication(绑定到AMS) -> AMS.realStartActivityLocked()
-   -> ApplicationThread.scheduleLaunchActivity() -> ActivityThread.sendMsg
-   -> H.handleLaunch...
 * JobScheduler
 ** 一般使用流程
 1. 创建一个自定义JobService
@@ -649,9 +681,6 @@ intentService 通过执行一个后台线程来处理接受到的 intent.所以�
  + Canvas.cliprect(): 该函数可以让你定义 boundaries.所以只有 boundaries 区域内的内容会被绘制.
    屏幕上的其他区域会被忽略.在底层实现上,也只有该区域内的数据会传输给 GPU.
  + quickreject: 规划不用 draw 的区域.
-* 如何设计网络框架?
-* 前台service的好处?
-* ImageLoader如何同步
 * 单例模式使用volatile
 * MVVM 的一种实现
 原文 https://medium.com/@Miqubel/refactoring-to-mvvm-40ebafff43de#.3pd0ag4sb
@@ -1239,3 +1268,7 @@ lib目录
 
 ** [[http://tech.meituan.com/mt-apk-packaging.html][多渠道打包]]
 * [[http://tools.android.com/tech-docs/new-build-system/build-workflow][编译工作流]]
+* 思考
+** 前台service的好处?
+** 如何设计网络框架?
+** ImageLoader如何同步?

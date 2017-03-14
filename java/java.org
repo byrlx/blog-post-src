@@ -7,11 +7,13 @@
 
 /日常积累的java经验及读书笔记, 琐碎, 自用/
 
-* 注释 :javadoc:
-1. 引用函数.
-   Use the {@link #getComponentAt(int, int) getComponentAt} method.
-* enum :enum:
-1. values(): 返回所有的实例数组
+* final的特性
+1. 修饰基本类型,不可更改.
+2. 修饰引用, 引用的地址不可更改, 引用对象内容可以更改.
+3. 和static共用, 占据的内存不可改变.
+4. 修饰参数则无法修改参数.
+5. 修饰方法, 无法被子类覆盖.
+6. 修饰类, 无法继承.
 * 抽象类和接口
 1. 只能继承一个abstract 类, 可以实现多个interface.
 2. 实现interface必须实现所有接口. 实现abstract类则不一定需要实现抽象接口(这个类是abstract).
@@ -30,6 +32,15 @@
 1. 可以访问所有outer class 的变量.
 2. 不能直接用来创建实例. 必须在outer 类的一个实例里创建实例.
 3. 编译器自动为该类创建一个指向外部类的引用.
+* enum :enum:
+1. values(): 返回所有的实例数组
+* 单例的几种写法
+1. double check, 变量设为volatile.
+2. 使用enum, enum的初始化是thread-safe的
+3. 静态工厂方法
+   #+BEGIN_EXAMPLE
+   private static final Singleton INSTANCE = new Singleton();
+   #+END_EXAMPLE
 * 初始化流程
 1. 类在第一次被使用时, classLoader()会加载该类的class文件.
    初始化所有静态成员, 然后调用构造函数.
@@ -42,13 +53,9 @@
 2. 子类跟父类不同包, 则无法访问包权限的成员.
 3. package的public static 成员可以被外界访问.
 4. 无默认构造函数的类, 其子类必须显示调用其构造函数.
-* final的特性
-1. 修饰基本类型,不可更改.
-2. 修饰引用, 引用的地址不可更改, 引用对象内容可以更改.
-3. 和static共用, 占据的内存不可改变.
-4. 修饰参数则无法修改参数.
-5. 修饰方法, 无法被子类覆盖.
-6. 修饰类, 无法继承.
+* 注释 :javadoc:
+1. 引用函数.
+   Use the {@link #getComponentAt(int, int) getComponentAt} method.
 * 匿名类
 1. 匿名类可以使用带参数的方法使用带参构造器.
 2. 匿名类可以通过初始化代码块来实现"构造函数"的功能.
