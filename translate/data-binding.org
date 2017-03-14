@@ -1,0 +1,321 @@
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:t H:2
+#+AUTHOR: Zhengchao Xu
+#+EMAIL: xuzhengchaojob@gmail.com
+#+DATE: <2017-03-14 Tue>
+#+TITLE: 【翻译】 Android Data Binding系列
+
+在Medium上看到[[https://medium.com/@georgemount007][George Mount]]的Data Binding系列文章, 觉得很好.
+
+* 不需要findViewById了
+Android应用开发有一个鲜为人知的特性:data binding. 我准备写一系列的文章来描述讲述data binding的许多令人兴奋的特性. 最基本的一个特性就是消除了"findViewById"的使用.
+
+经常写这种代码是不是脖子会酸痛?
+#+BEGIN_EXAMPLE
+TextView hello = (TextView) findViewById(R.id.hello);
+#+END_EXAMPLE
+
+现在有许多工具来减少这种重复代码的编写. 从Android Studio1.5版本之后, 有了一个官方的方法.
+
+1. 首先, 编辑build.gradle, 加入如下代码:
+   #+BEGIN_EXAMPLE
+android {
+    …
+    dataBinding.enabled = true
+}
+   #+END_EXAMPLE
+2. 然后, 修改layout文件, 最外层的tag改为 <layout>.
+   #+BEGIN_EXAMPLE
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools">
+    <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingLeft="@dimen/activity_horizontal_margin"
+            android:paddingRight="@dimen/activity_horizontal_margin"
+            android:paddingTop="@dimen/activity_vertical_margin"
+            android:paddingBottom="@dimen/activity_vertical_margin"
+            tools:context=".MainActivity">
+
+        <TextView
+                android:id="@+id/hello"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+    </RelativeLayout>
+</layout>
+
+   #+END_EXAMPLE
+   layout 标签会告知Android Studio,这个layout文件在编译阶段需要额外处理, 寻找有趣的View并在下一阶段使用. 没有该标签的 layout文件则不会做额外处理. 所以你可以在你的应用程序里对这样的修改.
+3. 下一步是告知程序在运行时用另一种方法加载layout文件. 如下修改你的加载 代码. 例如, 对于Activity, 将下面的代码:
+   #+BEGIN_EXAMPLE
+setContentView(R.layout.hello_world);
+TextView hello = (TextView) findViewById(R.id.hello);
+hello.setText("Hello World"); // for example, but you'd use
+                              // resources, right?
+   #+END_EXAMPLE
+   改为:
+   #+BEGIN_EXAMPLE
+HelloWorldBinding binding = 
+    DataBindingUtil.setContentView(this, R.layout.hello_world);
+binding.hello.setText("Hello World"); // you should use resources!   
+   #+END_EXAMPLE
+   类 *HelloWorldBinding* 是在编译阶段基于hello_world.xml文件生成的, 并且 id 为"@+id/hello"的View被赋值给了一个final的成员变量hello以供使用. 没有类型转换, 没有findViewById.
+
+使用这种机制来访问view不仅更简单, 而且更快! binding过程只遍历一次layout 文件里的所有View, 然后赋值给成员变量. 当使用findViewById时, 每次调用该函数 view树就会被遍历一次.
+
+正如代码所示, 该过程会"驼峰化"你的变量名称(例如hello_world.xml变成了类 HelloWorldBinding), 所以, 如果你的id为"@+id/hello_text", 变量名则为 helloText.
+
+当你为RecyclerView, ViewPager或其不设置Activity内容的组件渲染layout时, 你可能也想使用data binding生成的类. 这里有几个类似LayoutInflater的方法 供大家使用. 例如
+#+BEGIN_EXAMPLE
+HelloWorldBinding binding = HelloWorldBinding.inflate(
+    getLayoutInflater(), container, attachToContainer);
+#+END_EXAMPLE
+
+如果你不想将渲染的view附属到包含它的ViewGroup上, 那么当你需要访问渲染后的view时, 可以使用getRoot()方法.
+#+BEGIN_EXAMPLE
+linearLayout.addView(binding.getRoot());
+#+END_EXAMPLE
+
+你可能会想, 如果我有一个layout文件包含不同的配置, 每个配置的view可能会不同怎么办?
+layout预处理和运行时渲染流程会小心处理这个过程, 把所有的带id的view添加到
+生成的类中, 如果某些view并没有在被渲染时的layout里, 其在生成类中对应的变量会被置位null.
+
+很神奇吗? 这个功能的一大好处就是没有反射或其他运行时"高成本"技术.
+将它应用到你的应用上是很简单的事情, 这会让你的生活变得轻松, 而且, 你的layout会加载更快一点.
+* <include>标签
+在上篇文章中, 讲述了在Android Studio1.5及之后的版本上, 使用data binding来替代findViewById是多么
+简单的一件事. 我展示了如何使用Android Studio来基于layout文件生成一个类似ViewHolder的类.
+但是如果layout中使用了"include"或"merge"标签怎么办? 
+
+Data Binding默认也支持这些标签, 但是每个layout文件都会被生成一个不同的类. 例如
+#+BEGIN_EXAMPLE
+hello_world.xml
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+        <TextView
+                android:id="@+id/hello"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        <include
+                android:id="@+id/included"
+                layout="@layout/included_layout"/>
+    </LinearLayout>
+</layout>
+included_layout.xml
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/world"/>
+</layout>
+#+END_EXAMPLE
+
+需要用下面的方式来访问不同的TextView:
+#+BEGIN_EXAMPLE
+HelloWorldBinding binding =
+    HelloWorldBinding.inflate(getLayoutInflater());
+binding.hello.setText(“Hello”);
+binding.included.world.setText(“World”);
+#+END_EXAMPLE
+
+include标签的命名规则跟View的命名规则是一样的: "include"标签的id被
+当作成员变量名. 被include的layout文件会生成一个自己的类, 里面的view
+也会被赋值给成员变量. 开发者也可以很容易的分别共享的id, 例如如果你
+include了一个layout两次:
+#+BEGIN_EXAMPLE
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+        <TextView
+                android:id="@+id/hello"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        <include
+                android:id="@+id/world1"
+                layout="@layout/included_layout"/>
+        <include
+                android:id="@+id/world2"
+                layout="@layout/included_layout"/>
+    </LinearLayout>
+</layout>
+
+#+END_EXAMPLE
+
+同名的"world" TextView可以很容易被访问:
+#+BEGIN_EXAMPLE
+HelloWorldBinding binding =
+    HelloWorldBinding.inflate(getLayoutInflater());
+binding.hello.setText(“Hello”);
+binding.world1.world.setText(“First World”);
+binding.world2.world.setText(“Second World”);
+#+END_EXAMPLE
+
+*记住要给include标签一个id, 否则不会为其生成公共成员变量*. 同时,记住在外面
+使用 <layout> 标签. 这回触发预处理过程, 生成类并绑定view.
+
+如果你去查看生成的类, 会发现无论被include多少次, 他们使用的都是同一个类. 
+例如你有另外一个layout文件goodbye_world.xml也包含了included_layout.xml文件,
+那么只会生成一个类. 
+* 让view id变得不必要
+你是否看过别人的layout并想:这个值在哪里设置和获取.或者,
+你觉得[[不需要findViewById了]]是很好的一个开始,但仍然存在很多样板代码.
+Android Data Binding让这个变得简单.
+
+** 使用ViewHolder模式
+假设我们需要在应用中显示用户信息. 在前面,我展示了使用Android Studio
+通过如下的layout文件生成一个"View Holder"类:
+#+BEGIN_EXAMPLE
+user_info.xml
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+        <ImageView
+                android:id="@+id/userImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        <TextView
+                android:id="@+id/userFirstName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+        <TextView
+                android:id="@+id/userLastName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+    </LinearLayout>
+</layout>
+#+END_EXAMPLE
+然后给View设置数据:
+#+BEGIN_EXAMPLE
+private void setUser(User user, ViewGroup root) {
+    UserInfoBinding binding =
+        UserInfoBinding.inflate(getLayoutInflater(), root, true);
+    binding.userFirstName.setText(user.firstName);
+    binding.userLastName.setText(user.lastName);
+    binding.userImage.setImageBitmap(user.image);
+}
+#+END_EXAMPLE
+虽然这看上去要比findViewById好, 但仍然存在很多的样板代码!
+可以通过在layout文件中使用data binding表达式来消除这些样板代码,
+实现自动赋值.
+
+** 给变量赋值
+首先, 增加一个binding表达式需要的 *data* 标签以及一个相关变量.
+然后, 对于layout中需要赋值的属性, 使用binding表达式.
+#+BEGIN_EXAMPLE
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <data>
+        <variable
+            name="user"
+            type="com.example.myapp.model.User"/>
+    </data>
+    <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+        <ImageView
+                android:src="@{user.image}"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        <TextView
+                android:text="@{user.firstName}"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+        <TextView
+                android:text="@{user.lastName}"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+    </LinearLayout>
+</layout>
+#+END_EXAMPLE
+标签中的binding表达式表示为 "@{...}" 格式.
+上述表达式直接将用户的image,firstName,lastName赋值给view的source和text.
+这样就不用再写样板代码了.但是仍然不知道需要使用那个用户所以需要做分配:
+#+BEGIN_EXAMPLE
+private void setUser(User user, ViewGroup root) {
+    UserInfoBinding binding =
+        UserInfoBinding.inflate(getLayoutInflater(), root, true);
+    binding.setUser(user);
+}
+#+END_EXAMPLE
+很简单!
+
+从上述layout文件可以看到,View没有ID. 那我们在前面文章中试图生成的View Holder
+呢? 因为数据直接被绑定到了view上, 所以这里就不需要再去访问view了! 
+只是简单的设置变量,所有事情就完成了.
+
+而且犯错的几率也变小了.例如, 你在横屏模式下没有用户图片,那么就不需要检查ImageView
+是否存在. 每个layout都会计算binding表达式, 如果没有ImageView,就不会执行更新代码.
+
+这并不意味着View Holder就过时了. 还有很多时候你会需要直接访问view.只是这种情况比以前少了很多.
+
+** Include Layouts
+那么, 包含的layout怎么办? 同样可以使用该功能, 就想View Holder模式一样.
+例如, 假设展示用户名称的TextView在一个被包含的layout中:
+#+BEGIN_EXAMPLE
+user_name.xml
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <data>
+        <variable
+                name="user"
+                type="com.example.myapp.model.User"/>
+    </data>
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{user.firstName}"/>
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{user.lastName}"/>
+    </LinearLayout>
+</layout>
+#+END_EXAMPLE
+可以在外层的layout中用如下方式来赋值user变量:
+#+BEGIN_EXAMPLE
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+    <data>
+        <variable
+                name="user"
+                type="com.example.myapp.model.User"/>
+    </data>
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+        <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@{user.image}"/>
+        <include
+                layout="@layout/user_name"
+                app:user="@{user}"/>
+    </LinearLayout>
+</layout>
+#+END_EXAMPLE
+当user被设置时(通过代码 binding.setUser(...)), 被包含的layout的user变量也会被设置,
+因为设置了 *app:user="@{user}"*. 再次注意, 因为被包含的layout的view不需要被直接访问,
+(我甚至都没有设置id), 这里没有给include设置ID.
