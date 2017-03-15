@@ -319,3 +319,111 @@ user_name.xml
 当user被设置时(通过代码 binding.setUser(...)), 被包含的layout的user变量也会被设置,
 因为设置了 *app:user="@{user}"*. 再次注意, 因为被包含的layout的view不需要被直接访问,
 (我甚至都没有设置id), 这里没有给include设置ID.
+* 表达自己
+在前面提到, 通过Android Studio, 你可以在layout文件里给变量赋值.
+下面的例子把展示用户名的text的值设成如下表达式
+#+BEGIN_EXAMPLE
+android:text="@{user.firstName}"
+#+END_EXAMPLE
+
+用户类被定义成传统Java对象(POJO):
+#+BEGIN_EXAMPLE
+public class User {
+    public String firstName;
+    public String lastName;
+    public Bitmap image;
+}
+#+END_EXAMPLE
+
+你的大多数类都不是用public域(我认为), 而且为其提供访问函数.
+但是,layout文件中的表达式应该简短而且易于阅读, 所以我们不希望
+开发者不得不在表达式中添加类似getFirstName()或getLastName()
+这样的函数.表达式解析器会自动尝试为属性去寻找Java Bean的访问函数
+(getXxx()或isXxx()).当你的类有访问函数时,使用上面的(即变量名)
+表达式也会工作.
+#+BEGIN_EXAMPLE
+public class User {
+    private String firstName;
+    private String lastName;
+    private Bitmap image;
+
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public Bitmap getImage() { return image; }
+}
+#+END_EXAMPLE
+如果解析器找不到类似于getXxx()的函数,那么它会寻找类似xxx()的函数.
+所以你可以使用user.hasFriend来访问函数hasFriend().
+
+Android Data Binding表达式语法同样支持类似Java的数组访问:
+#+BEGIN_EXAMPLE
+android:text="@{user.friends[0].firstName}"
+#+END_EXAMPLE
+所以可以使用中括号作为get函数的简写.
+
+Data Binding同样支持几乎所有的java语言表达式,包括函数调用,
+三元操作符及数学操作. 但不要太疯狂:
+#+BEGIN_EXAMPLE
+android:text='@{user.adult ? ((user.male ? "Mr. " : "Ms. ") + user.lastName) : (user.firstName instanceof String ? user.firstName : "kid") }'
+#+END_EXAMPLE
+上面的代码没人能读懂!而且使用硬编码字符串非常难维护.
+把复杂的表达式放到模块中.
+
+另外,Data Binding提供了"null-合并"操作符 *??* 来简化三元操作符.
+#+BEGIN_EXAMPLE
+android:text=”@{user.firstName ?? user.userName}”
+#+END_EXAMPLE
+相当于:
+#+BEGIN_EXAMPLE
+android:text=”@{user.firstName != null ? user.firstName : user.userName}”
+#+END_EXAMPLE
+
+binding表达式另一个更酷的事情就是可以使用资源:
+#+BEGIN_EXAMPLE
+android:padding=”@{@dim/textPadding + @dim/headerPadding}
+#+END_EXAMPLE
+这可以节省很多不必要的单独值定义.你是不是经常会只想添加或去除尺寸?
+目前还不支持style.
+
+你同样可以使用字符串,数量和精度格式, 只要符合资源方法getString,
+getQuantitiString和getFraction的语法即可.
+直接想资源中传递参数即可.
+#+BEGIN_EXAMPLE
+android:text=”@{@string/nameFormat(user.firstName, user.lastName)}”
+#+END_EXAMPLE
+
+** NullPointerException
+Data Binding表达式一个很方便的地方就是执行时总是会检查null值.
+这意思着对于如下表达式:
+#+BEGIN_EXAMPLE
+android:text=”@{user.firstName ?? user.userName}”
+#+END_EXAMPLE
+如果user是null,那么user.firstName和user.userName也会被解析成null.
+不会触发NullPointerException.
+
+但这并不意味着就不会产生NullPointerException.例如下面的表达式:
+#+BEGIN_EXAMPLE
+android:text=”@{com.example.StringUtils.capitalize(user.firstName)}”
+
+public static String capitalize(String str) {
+    return Character.toUpperCase(str.charAt(0)) + str.substring(1);
+}
+#+END_EXAMPLE
+当传入的参数为null时,必然会产生NullPointerException.
+
+** 导入
+在上面的例子中, 表达式很长. 我们想导入类型使得表达式变短.
+可以通过在data块中导入:
+#+BEGIN_EXAMPLE
+<data>
+    <variable
+        name="user"
+        type="com.example.myapp.model.User"/>
+    <import
+        type="com.example.StringUtils"/>
+</data>
+#+END_EXAMPLE
+表达式则简化为:
+#+BEGIN_EXAMPLE
+android:text=”@{StringUtils.capitalize(user.firstName)}”
+#+END_EXAMPLE
