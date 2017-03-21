@@ -427,3 +427,105 @@ public static String capitalize(String str) {
 #+BEGIN_EXAMPLE
 android:text=”@{StringUtils.capitalize(user.firstName)}”
 #+END_EXAMPLE
+* 事件监听
+在前面的系列中,我介绍了怎么消除程序中的findViewById,甚至在某些情况下可以
+消除view的ID. 但是我在这些文章中还没有明确提及怎么处理事件监听, 例如View的
+OnClickListener和TextView的TextWatcher.
+
+Android Data Binding提供了三种机制来在layout文件中设置事件监听器, 
+你可以选择最顺手的一种. 不像Android的标准的onClick属性, 这几种机制并没有
+使用反射, 所以无论选择那种性能都很好.
+
+** 监听对象
+ 对于使用 /set*/ 类方法(对应于 /add*/ 类方法), 你可以直接在属性上绑定一个
+ 监听对象. 例如:
+ #+BEGIN_EXAMPLE
+ <View android:onClickListener="@{callbacks.clickListener}" .../>
+ #+END_EXAMPLE
+
+ 监听对象可以设置为公共域或者具有getter方法:
+ #+BEGIN_EXAMPLE
+ public class Callbacks {
+     public View.OnClickListener clickListener;
+ }
+ #+END_EXAMPLE
+ 或者也可以把"Listener"去掉, 使用简写的方法:
+ #+BEGIN_EXAMPLE
+ <View android:onClick="@{listeners.clickListener}" .../>
+ #+END_EXAMPLE
+
+ 当程序已经在使用这些监听对象时, 可以使用绑定监听对象的方法.
+ 但在大多数情况下,你会使用另外两种方法.
+
+** 函数引用
+ 使用函数引用, 你可以独立的将方法绑定到监听器上. 
+ 无论是静态方法或是实例方法, 只要其跟listenr方法具有相同的参数和返回值,
+ 都可以使用. 例如:
+ #+BEGIN_EXAMPLE
+ <EditText
+     android:afterTextChanged="@{callbacks::nameChanged}" .../>
+    
+ public class Callbacks {
+     public void nameChanged(Editable editable) {
+         //...
+     }
+ }
+ #+END_EXAMPLE
+ 虽然不推荐, 但是你仍然可以在绑定中做一些逻辑判断:
+ #+BEGIN_EXAMPLE
+ <EditText android:afterTextChanged=
+     "@{user.hasName?callbacks::nameChanged:callbacks::idChanged}"
+     .../>
+ #+END_EXAMPLE
+ 大多数情况下将逻辑放到被调函数中会更好. 尤其是当你需要向函数中传递额外信息时,
+ (例如上面的user). 可以通过lambda表达式来这么做.
+
+** Lambda表达式
+ 使用Lambda表达式可以传入你想传入的参数. 例如:
+ #+BEGIN_EXAMPLE
+ <EditText
+  android:afterTextChanged="@{(e)->callbacks.textChanged(user, e)}"
+  ... />
+ 
+ public class Callbacks {
+     public void textChanged(User user, Editable editable) {
+         if (user.hasName()) {
+             //...
+         } else {
+             //...
+         }
+     }
+ }
+ #+END_EXAMPLE
+ 如果不需要listener中参数, 也可以通过如下语法移除:
+ #+BEGIN_EXAMPLE
+ <EditText
+  android:afterTextChanged="@{()->callbacks.textChanged(user)}"
+  ... />
+ #+END_EXAMPLE
+ 但是你不能只移除部分:要么使用所有,要么全不使用.
+
+ 函数引用和Lambda表达式求值时间也不相同. 函数引用的表达式求值发生在绑定阶段.
+ Lambda表达式求值发生在事件发生时. 如果,举例来说, callbacks变量没有被设置,
+ 对于函数引用, 表达式求值为Null,所有不会给view设置任何listener. 对于Lambda
+ 表达式,总是会设置一个listener, 当事件发生时, 表达式就会被求值. 
+ 一般这不会有什么影响, 但是对于有返回值的事件监听函数, 会返回一个默认值.
+ 例如:
+ #+BEGIN_EXAMPLE
+ <View android:onLongClick=”@{()->callbacks.longClick()}” …/>
+ #+END_EXAMPLE
+ 如果callbacks是null,会返回false. 这是不对的,因为longClick事件被消耗掉了.
+ 所以你可以通过使用更长的表达式来返回正确的结果:
+ #+BEGIN_EXAMPLE
+ <View android:onLongClick=”@{()->callbacks == null ? true : callbacks.longClick()}” …/>
+ #+END_EXAMPLE
+ 你通常应该通过确保不会传入null表达式求值的方法来避免上述情况. Lambda
+ 表达式可以跟函数引用互换.
+
+** 用哪一个? 
+最灵活的机制是lambda表达式, 与事件监听函数相比, 它允许你传递不同的参数.
+
+大多数情况下, 你的回调会使用跟监听函数相同的参数. 这种情况下使用函数引用更简洁易读.
+
+如果你正在现有程序中想Android Data Binding转换, 你可能已经给view设置了一些监听对象.
+你可以将这些对象当作变量传给layout文件中相应的view属性.
