@@ -6,6 +6,7 @@
 #+TITLE: 【翻译】 Android Data Binding系列
 
 在Medium上看到[[https://medium.com/@georgemount007][George Mount]]的Data Binding系列文章, 觉得很好.
+故翻译之, 同时将系列文章发布于[[http://www.jianshu.com/u/7da73cc925b0][简书.]] 
 
 * 不需要findViewById了
 Android应用开发有一个鲜为人知的特性:data binding. 我准备写一系列的文章来描述讲述data binding的许多令人兴奋的特性. 最基本的一个特性就是消除了"findViewById"的使用.
