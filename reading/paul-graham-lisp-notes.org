@@ -139,7 +139,7 @@ On these occasions, use the eval function.
 参数e为一个list, 代表需要被执行的表达式. 
 参数a为pair生成的list, 代表参数1的"执行上下文".
 
-file:../../../../public/img/eval.png
+file:../img/eval.png
 
 代码主体由主要四个cond条件组成, 代表e的四种表现形式:
 1. e为atom, 则调用assoc查找a中是否有相应的e对, 
@@ -186,4 +186,3 @@ evcon是自定义函数, 在解析cond表达式中使用, 其代码实现如下.
 写出任意的函数, 甚至可以在运行时将生成的数据作为代码来执行.
 
 Paul Graham说理解了McCarthy的eval, 你就理解了Lisp. 
-嗯, 我还在尝试.

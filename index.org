@@ -21,6 +21,7 @@
      + [[file:java/bitmap-implementation.org][一个bitmap的实现代码]]
      + [[file:java/rbtree.org][红黑树]]
    + reading
+     + [[file:reading/understanding-the-jvm.org][<深入理解Java虚拟机>阅读笔记]]
      + [[file:reading/scala.org][Scala大笔记]]
      + [[file:reading/sicp.org][SICP 阅读笔记]]
      + [[file:reading/paul-graham-lisp-notes.org][The Roots of Lisp阅读笔记]]
